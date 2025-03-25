@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>Salama_tsaa</title>
+        <link rel="shortcut icon" href="image/salama.png" type="image/x-icon">
         @if(app()->environment('local'))
             <script type="module" src="http://localhost:5173/@vite/client"></script>
             <script type="module" src="http://localhost:5173/resources/js/app.js"></script>
