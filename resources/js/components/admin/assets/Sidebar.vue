@@ -27,7 +27,7 @@
             <!-- Utilisateurs -->
             <div>
                 <button
-                    class="flex items-center space-x-2 p-3 w-full rounded-lg transition duration-300"
+                    class="flex p-3 w-full rounded-lg transition duration-300"
                     :class="{
                         'bg-white text-black': openMenu === 'utilisateurs',
                         'hover:bg-white hover:text-black':
@@ -35,8 +35,11 @@
                     }"
                     @click="toggleMenu('utilisateurs')"
                 >
-                    <Users />
-                    <span>Utilisateurs</span>
+                    <Users class="basis-[10%]" />
+                    <span class="basis-[80%] text-left pl-2.5"
+                        >Utilisateurs</span
+                    >
+                    <ChevronDown class="basis-[10%]" />
                 </button>
                 <div
                     v-if="openMenu === 'utilisateurs'"
@@ -62,7 +65,7 @@
             <!-- Informations -->
             <div>
                 <button
-                    class="flex items-center space-x-2 p-3 w-full hover:bg-white hover:text-black rounded-lg"
+                    class="flex p-3 w-full hover:bg-white hover:text-black rounded-lg"
                     :class="{
                         'bg-white text-black': openMenu === 'informations',
                         'hover:bg-white hover:text-black':
@@ -70,8 +73,11 @@
                     }"
                     @click="toggleMenu('informations')"
                 >
-                    <ListOrdered />
-                    <span>Informations</span>
+                    <ListOrdered class="basis-[10%]" />
+                    <span class="basis-[80%] text-left pl-2.5"
+                        >Informations</span
+                    >
+                    <ChevronDown class="basis-[10%]" />
                 </button>
                 <div
                     v-if="openMenu === 'informations'"
@@ -140,6 +146,7 @@ import {
     UserCircle2,
     Users2,
     ClipboardList,
+    ChevronDown,
 } from "lucide-vue-next";
 
 const openMenu = ref(null);
