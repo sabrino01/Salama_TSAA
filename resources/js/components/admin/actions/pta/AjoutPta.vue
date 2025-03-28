@@ -15,7 +15,7 @@
                     <div
                         class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
                     >
-                        Ajout Types d'Actions
+                        Ajout Sources
                     </div>
                     <div class="basis-[2%]">
                         <Info />
@@ -25,8 +25,8 @@
                 <!-- Phrase introductive -->
                 <div class="w-full text-gray-600 mt-5">
                     <p class="indent-4 font-poppins">
-                        Ajouter des types d'actions pour avoir des types
-                        d'actions à faire.
+                        Ajouter de nouvelle source pour mieux connaître les
+                        actions à faire.
                     </p>
                 </div>
 
@@ -35,7 +35,7 @@
                     <div class="flex w-[60%] items-center">
                         <label
                             for="code"
-                            class="w-[14%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Code :
                         </label>
@@ -48,7 +48,7 @@
                     <div class="flex w-[60%] items-center mt-5">
                         <label
                             for="libelle"
-                            class="w-[14%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Libelle :
                         </label>
@@ -58,23 +58,8 @@
                             class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         />
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="actionpour"
-                            class="w-[14%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Action pour :
-                        </label>
-                        <select
-                            id="actionpour"
-                            class="w-[20%] border border-gray-400 rounded-md px-4 py-2"
-                        >
-                            <option value="1">Audit Interne</option>
-                            <option value="2">PTA</option>
-                        </select>
-                    </div>
-                    <div class="flex w-[64%] justify-center mt-5">
-                        <router-link to="/admin/informations/typeactions"
+                    <div class="flex w-[60%] justify-center mt-5">
+                        <router-link to="/admin/informations/sources"
                             ><button
                                 class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
                             >

@@ -132,7 +132,9 @@
                 class="flex items-center space-x-2 p-3 hover:bg-white hover:text-black rounded-lg"
             >
                 <Settings />
-                <span>Actions</span>
+                <router-link to="/admin/actions/auditinterne"
+                    >Actions</router-link
+                >
             </button>
             <button
                 class="flex items-center space-x-2 p-3 hover:bg-white hover:text-black rounded-lg"

@@ -25,6 +25,14 @@ import Constat from "../components/admin/informations/constat/Constat.vue";
 import AjoutConstat from "../components/admin/informations/constat/AjoutConstat.vue";
 import VoirConstat from "../components/admin/informations/constat/VoirConstat.vue";
 import EditConstat from "../components/admin/informations/constat/EditConstat.vue";
+import AuditInterne from "../components/admin/actions/auditinterne/AuditInterne.vue";
+import AjoutAuditInterne from "../components/admin/actions/auditinterne/AjoutAuditInterne.vue";
+import VoirAuditInterne from "../components/admin/actions/auditinterne/VoirAuditInterne.vue";
+import EditAuditInterne from "../components/admin/actions/auditinterne/EditAuditInterne.vue";
+import Pta from "../components/admin/actions/pta/Pta.vue";
+import AjoutPta from "../components/admin/actions/pta/AjoutPta.vue";
+import VoirPta from "../components/admin/actions/pta/VoirPta.vue";
+import EditPta from "../components/admin/actions/pta/EditPta.vue";
 
 const routes = [
     {
@@ -151,6 +159,46 @@ const routes = [
         path: "/admin/informations/constat/editer",
         name: "admin.informations.constat.editer",
         component: EditConstat,
+    },
+    {
+        path: "/admin/actions/auditinterne",
+        name: "admin.actions.auditinterne",
+        component: AuditInterne,
+    },
+    {
+        path: "/admin/actions/auditinterne/ajouter",
+        name: "admin.actions.auditinterne.ajouter",
+        component: AjoutAuditInterne,
+    },
+    {
+        path: "/admin/actions/auditinterne/voir",
+        name: "admin.actions.auditinterne.voir",
+        component: VoirAuditInterne,
+    },
+    {
+        path: "/admin/actions/auditinterne/editer",
+        name: "admin.actions.auditinterne.editer",
+        component: EditAuditInterne,
+    },
+    {
+        path: "/admin/actions/pta",
+        name: "admin.actions.pta",
+        component: Pta,
+    },
+    {
+        path: "/admin/actions/pta/ajouter",
+        name: "admin.actions.pta.ajouter",
+        component: AjoutPta,
+    },
+    {
+        path: "/admin/actions/pta/voir",
+        name: "admin.actions.pta.voir",
+        component: VoirPta,
+    },
+    {
+        path: "/admin/actions/pta/editer",
+        name: "admin.actions.pta.editer",
+        component: EditPta,
     },
     {
         path: "/:pathMatch(.*)*",

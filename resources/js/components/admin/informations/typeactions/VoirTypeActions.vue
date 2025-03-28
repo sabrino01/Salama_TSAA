@@ -34,7 +34,7 @@
                 <div class="w-full mt-5">
                     <div class="flex w-[60%] items-center">
                         <span
-                            class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Code :
                         </span>
@@ -44,12 +44,22 @@
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
-                            class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Libelle :
                         </span>
                         <span class="w-[50%] px-4 text-lg font-semibold"
                             >Actions Corrective</span
+                        >
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <span
+                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Action pour :
+                        </span>
+                        <span class="w-[50%] px-4 text-lg font-semibold"
+                            >Audit Interne</span
                         >
                     </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
