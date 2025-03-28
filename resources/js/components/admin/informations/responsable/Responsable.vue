@@ -15,7 +15,7 @@
                     <div
                         class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
                     >
-                        Membres
+                        Responsables
                     </div>
                     <div class="basis-[2%]">
                         <Info />
@@ -25,20 +25,21 @@
                 <!-- Phrase introductive -->
                 <div class="w-full text-gray-600 mt-5">
                     <p class="indent-4 font-poppins">
-                        Dans l'espace membres, vous pouvez voir et gérer les
-                        membres de votre association, ajouter des membres et de
-                        les supprimer.
+                        Dans l'espace responsable, vous pouvez voir et gérer les
+                        responsables pour les actions, ajouter et de faire plus.
                     </p>
                 </div>
 
                 <!-- Ajout et barre de recherche -->
                 <div class="flex w-full mt-5 ml-4">
                     <!-- Bouton d'ajout -->
-                    <button
-                        class="flex items-center justify-center bg-[#0062ff] text-white px-4 py-2 rounded-md w-40"
+                    <router-link to="/admin/informations/responsable/ajouter">
+                        <button
+                            class="flex items-center justify-center bg-[#0062ff] text-white px-4 py-2 rounded-md w-38"
+                        >
+                            <Plus class="w-5 h-5 mr-2" /> Ajouter
+                        </button></router-link
                     >
-                        <Plus class="w-5 h-5 mr-2" /> Ajouter
-                    </button>
 
                     <!-- Barre de recherche -->
                     <div
@@ -58,38 +59,85 @@
                     <table class="table-fixed w-full h-[11.5rem]">
                         <thead class="bg-gray-300 text-lg h-[2.5rem]">
                             <tr>
-                                <th>Nom</th>
-                                <th>Nom d'utilisateur</th>
-                                <th>Département</th>
+                                <th>Code</th>
+                                <th>Libelle</th>
+                                <th>Description</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody class="font-poppins text-center">
                             <tr>
-                                <td>Lorem ipsum dolor</td>
-                                <td>Lorem</td>
-                                <td class="text-gray-600">RSI</td>
-                                <td>
+                                <td>DG</td>
+                                <td>Directeur Générale</td>
+                                <td class="text-gray-400">dg.salama@iris.mg</td>
+                                <td class="space-x-2 items-center">
+                                    <button type="button" class="text-blue-500">
+                                        <router-link
+                                            to="/admin/informations/responsable/voir"
+                                            >Voir</router-link
+                                        >
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="text-green-500"
+                                    >
+                                        <router-link
+                                            to="/admin/informations/responsable/editer"
+                                            >Editer</router-link
+                                        >
+                                    </button>
                                     <button type="button" class="text-red-500">
                                         Supprimer
                                     </button>
                                 </td>
                             </tr>
                             <tr>
-                                <td>Lorem ipsum dolor</td>
-                                <td>Lorem</td>
-                                <td class="text-gray-600">RSI</td>
-                                <td>
+                                <td>RA</td>
+                                <td>Responsable d'Approvisionnement</td>
+                                <td class="text-gray-400">ra.salama@iris.mg</td>
+                                <td class="space-x-2 items-center">
+                                    <button type="button" class="text-blue-500">
+                                        <router-link
+                                            to="/admin/informations/responsable/voir"
+                                            >Voir</router-link
+                                        >
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="text-green-500"
+                                    >
+                                        <router-link
+                                            to="/admin/informations/responsable/editer"
+                                            >Editer</router-link
+                                        >
+                                    </button>
                                     <button type="button" class="text-red-500">
                                         Supprimer
                                     </button>
                                 </td>
                             </tr>
                             <tr>
-                                <td>Lorem ipsum dolor</td>
-                                <td>Lorem</td>
-                                <td class="text-gray-600">RSI</td>
-                                <td>
+                                <td>DSI</td>
+                                <td>Directeur du Service Informatique</td>
+                                <td class="text-gray-400">
+                                    dsi.salama@iris.mg
+                                </td>
+                                <td class="space-x-2 items-center">
+                                    <button type="button" class="text-blue-500">
+                                        <router-link
+                                            to="/admin/informations/responsable/voir"
+                                            >Voir</router-link
+                                        >
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="text-green-500"
+                                    >
+                                        <router-link
+                                            to="/admin/informations/responsable/editer"
+                                            >Editer</router-link
+                                        >
+                                    </button>
                                     <button type="button" class="text-red-500">
                                         Supprimer
                                     </button>
@@ -103,9 +151,12 @@
                 <div class="flex w-full mt-5 justify-between">
                     <!-- Résultat -->
                     <div
-                        class="flex items-center text-gray-500 justify-start px-4"
+                        class="flex items-center text-gray-500 justify-start px-4 space-x-2"
                     >
-                        Résultat <strong>1-10</strong> sur <strong>50</strong>
+                        <span>Résultat</span>
+                        <strong>1-10</strong>
+                        <span>sur</span>
+                        <strong>50</strong>
                     </div>
 
                     <!-- Pagination -->
@@ -149,8 +200,9 @@
 </template>
 
 <script setup>
-import Sidebar from "./assets/Sidebar.vue";
-import Navbar from "./assets/Navbar.vue";
-import Footer from "./assets/Footer.vue";
+import Sidebar from "../../assets/Sidebar.vue";
+import Navbar from "../../assets/Navbar.vue";
+import Footer from "../../assets/Footer.vue";
 import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
+import router from "../../../../router";
 </script>

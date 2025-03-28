@@ -21,13 +21,14 @@
 
             <div
                 v-if="isDropdownOpen"
-                class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg overflow-hidden z-50"
+                class="absolute right-0 mt-2 w-48 bg-white border shadow-lg rounded-lg overflow-hidden z-50"
             >
                 <button
                     class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left"
                 >
                     Profile
                 </button>
+                <div class="border-b border-gray-300"></div>
                 <button
                     class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left"
                 >

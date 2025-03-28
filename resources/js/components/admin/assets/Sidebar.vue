@@ -43,7 +43,7 @@
                 </button>
                 <div
                     v-if="openMenu === 'utilisateurs'"
-                    class="bg-white text-black rounded-lg p-2 space-y-1"
+                    class="bg-white text-black rounded-lg p-2 space-y-1 mt-1"
                 >
                     <button
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
@@ -57,7 +57,9 @@
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <UserCircle2 />
-                        <span>Profile</span>
+                        <router-link to="/admin/utilisateurs/profile"
+                            >Profile</router-link
+                        >
                     </button>
                 </div>
             </div>
@@ -81,37 +83,47 @@
                 </button>
                 <div
                     v-if="openMenu === 'informations'"
-                    class="bg-white text-black rounded-lg p-2 space-y-1"
+                    class="bg-white text-black rounded-lg p-2 space-y-1 mt-1"
                 >
                     <button
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <Search />
-                        <span>Sources</span>
+                        <router-link to="/admin/informations/sources"
+                            >Sources</router-link
+                        >
                     </button>
                     <button
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
-                        <Settings />
-                        <span>Type Actions</span>
+                        <FileCog />
+                        <router-link to="/admin/informations/typeactions"
+                            >Type Actions</router-link
+                        >
                     </button>
                     <button
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <User />
-                        <span>Responsable</span>
+                        <router-link to="/admin/informations/responsable"
+                            >Responsable</router-link
+                        >
                     </button>
                     <button
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <ClipboardList />
-                        <span>Suivi</span>
+                        <router-link to="/admin/informations/suivi"
+                            >Suivi</router-link
+                        >
                     </button>
                     <button
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
-                        <BarChart />
-                        <span>Constat</span>
+                        <ChartNoAxesCombined />
+                        <router-link to="/admin/informations/constat"
+                            >Constat</router-link
+                        >
                     </button>
                 </div>
             </div>
@@ -142,12 +154,15 @@ import {
     Search,
     Settings,
     BarChart,
+    FileCog,
     Bell,
     UserCircle2,
     Users2,
     ClipboardList,
     ChevronDown,
+    ChartNoAxesCombined,
 } from "lucide-vue-next";
+import router from "../../../router";
 
 const openMenu = ref(null);
 
