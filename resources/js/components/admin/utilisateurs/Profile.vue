@@ -30,7 +30,7 @@
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Information et modification sur le profile -->
                 <div class="w-full mt-5">
                     <div class="flex w-[60%] items-center">
                         <span

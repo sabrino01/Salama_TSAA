@@ -33,6 +33,7 @@ import Pta from "../components/admin/actions/pta/Pta.vue";
 import AjoutPta from "../components/admin/actions/pta/AjoutPta.vue";
 import VoirPta from "../components/admin/actions/pta/VoirPta.vue";
 import EditPta from "../components/admin/actions/pta/EditPta.vue";
+import Notifications from "../components/admin/Notifications.vue";
 
 const routes = [
     {
@@ -199,6 +200,11 @@ const routes = [
         path: "/admin/actions/pta/editer",
         name: "admin.actions.pta.editer",
         component: EditPta,
+    },
+    {
+        path: "/admin/notifications",
+        name: "admin.notifications",
+        component: Notifications,
     },
     {
         path: "/:pathMatch(.*)*",

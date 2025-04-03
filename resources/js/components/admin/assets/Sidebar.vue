@@ -11,7 +11,8 @@
 
         <!-- Navigation -->
         <nav class="flex flex-col space-y-2">
-            <button
+            <router-link
+                to="/admin/dashboard"
                 @click="selectButton('dashboard')"
                 :class="[
                     'flex items-center space-x-2 p-3 rounded-lg',
@@ -20,10 +21,8 @@
                         : 'hover:bg-white hover:text-black',
                 ]"
             >
-                <LayoutDashboard />
-                <router-link to="/admin/dashboard">Dashboard</router-link>
-            </button>
-
+                <LayoutDashboard /><span>Dashboard</span>
+            </router-link>
             <!-- Utilisateurs -->
             <div>
                 <button
@@ -45,22 +44,20 @@
                     v-if="openMenu === 'utilisateurs'"
                     class="bg-white text-black rounded-lg p-2 space-y-1 mt-1"
                 >
-                    <button
+                    <router-link
+                        to="/admin/utilisateurs/membres"
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <Users2 />
-                        <router-link to="/admin/utilisateurs/membres"
-                            >Membres</router-link
-                        >
-                    </button>
-                    <button
+                        <span>Membres</span>
+                    </router-link>
+                    <router-link
+                        to="/admin/utilisateurs/profile"
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <UserCircle2 />
-                        <router-link to="/admin/utilisateurs/profile"
-                            >Profile</router-link
-                        >
-                    </button>
+                        <span>Profile</span>
+                    </router-link>
                 </div>
             </div>
 
@@ -85,63 +82,59 @@
                     v-if="openMenu === 'informations'"
                     class="bg-white text-black rounded-lg p-2 space-y-1 mt-1"
                 >
-                    <button
+                    <router-link
+                        to="/admin/informations/sources"
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <Search />
-                        <router-link to="/admin/informations/sources"
-                            >Sources</router-link
-                        >
-                    </button>
-                    <button
+                        <span>Sources</span>
+                    </router-link>
+                    <router-link
+                        to="/admin/informations/typeactions"
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <FileCog />
-                        <router-link to="/admin/informations/typeactions"
-                            >Type Actions</router-link
-                        >
-                    </button>
-                    <button
+
+                        <span>Type Actions</span>
+                    </router-link>
+                    <router-link
+                        to="/admin/informations/responsable"
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <User />
-                        <router-link to="/admin/informations/responsable"
-                            >Responsable</router-link
-                        >
-                    </button>
-                    <button
+                        <span>Responsable</span>
+                    </router-link>
+                    <router-link
+                        to="/admin/informations/suivi"
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <ClipboardList />
-                        <router-link to="/admin/informations/suivi"
-                            >Suivi</router-link
-                        >
-                    </button>
-                    <button
+                        <span>Suivi</span>
+                    </router-link>
+                    <router-link
+                        to="/admin/informations/constat"
                         class="flex items-center space-x-2 p-2 w-full hover:bg-gray-200 rounded-lg"
                     >
                         <ChartNoAxesCombined />
-                        <router-link to="/admin/informations/constat"
-                            >Constat</router-link
-                        >
-                    </button>
+                        <span>Constat</span>
+                    </router-link>
                 </div>
             </div>
 
-            <button
+            <router-link
+                to="/admin/actions/auditinterne"
                 class="flex items-center space-x-2 p-3 hover:bg-white hover:text-black rounded-lg"
             >
                 <Settings />
-                <router-link to="/admin/actions/auditinterne"
-                    >Actions</router-link
-                >
-            </button>
-            <button
+                <span>Actions</span>
+            </router-link>
+            <router-link
+                to="/admin/notifications"
                 class="flex items-center space-x-2 p-3 hover:bg-white hover:text-black rounded-lg"
             >
                 <Bell />
                 <span>Notifications</span>
-            </button>
+            </router-link>
         </nav>
     </div>
 </template>

@@ -87,11 +87,34 @@
                     >
                         Importer
                     </button>
-                    <button
-                        class="flex items-center justify-center border border-gray-400 ml-4 transparent text-black px-4 py-2 rounded-md w-38"
-                    >
-                        Exporter
-                    </button>
+                    <div class="relative">
+                        <!-- Bouton Exporter -->
+                        <button
+                            @click="toggleExportMenu"
+                            class="flex items-center justify-center border border-gray-400 ml-4 text-black px-4 py-2 rounded-md w-38"
+                        >
+                            Exporter
+                        </button>
+
+                        <!-- Menu déroulant pour les options d'exportation -->
+                        <div
+                            v-if="showExportMenu"
+                            class="absolute mt-2 right-0 bg-white border border-gray-300 rounded-md shadow-lg w-40"
+                        >
+                            <button
+                                @click="exportToExcel"
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 text-green-600"
+                            >
+                                Exporter en Excel
+                            </button>
+                            <button
+                                @click="exportToPdf"
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                            >
+                                Exporter en PDF
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Tableau Audit Interne -->
@@ -122,7 +145,8 @@
                                     <th>Action</th>
                                     <th>Mesure</th>
                                     <th>Date suivi</th>
-                                    <!-- <th>Statut</th> -->
+                                    <th class="w-40">Obsérvation</th>
+                                    <th>Statut</th>
                                     <th class="w-56">-</th>
                                 </tr>
                             </thead>
@@ -202,9 +226,12 @@
                                     </td>
                                     <td>{{ item.mesure }}</td>
                                     <td>{{ item.datesuivi }}</td>
-                                    <!-- <td>
+                                    <td class="truncate">
+                                        {{ item.observation }}
+                                    </td>
+                                    <td>
                                         {{ item.statut }}
-                                    </td> -->
+                                    </td>
                                     <td class="space-x-2 items-center">
                                         <button
                                             type="button"
@@ -287,6 +314,26 @@
     </div>
 </template>
 
+<script>
+export const auditInterneData = ref([
+    {
+        sources: "Audit Interne",
+        action: "Demande le statut",
+        datesuivi: "14/10/2025",
+    },
+    {
+        sources: "Audit Interne",
+        action: "Exploiter les informations",
+        datesuivi: "13/10/2025",
+    },
+    {
+        sources: "Audit Interne",
+        action: "Renforcer la coordination",
+        datesuivi: "10/10/2024",
+    },
+]);
+</script>
+
 <script setup>
 import Sidebar from "../../assets/Sidebar.vue";
 import Navbar from "../../assets/Navbar.vue";
@@ -315,7 +362,8 @@ const tableData = ref([
         constat: "Non réalisé",
         action: "Demande le statut",
         mesure: "Alerte",
-        datesuivi: "14/10/2024",
+        datesuivi: "14/10/2025",
+        observation: "C'est un problème grave",
         statut: "En cours",
         viewLink: "/admin/actions/auditinterne/voir",
         editLink: "/admin/actions/auditinterne/editer",
@@ -330,7 +378,8 @@ const tableData = ref([
         constat: "Réalisé",
         action: "Exploiter les informations",
         mesure: "Alerte",
-        datesuivi: "13/10/2024",
+        datesuivi: "13/10/2025",
+        observation: "C'est un problème pas trop grave",
         statut: "Clôturé",
         viewLink: "/admin/actions/auditinterne/voir",
         editLink: "/admin/actions/auditinterne/editer",
@@ -346,6 +395,7 @@ const tableData = ref([
         action: "Renforcer la coordination",
         mesure: "Alerte",
         datesuivi: "10/10/2024",
+        observation: "C'est un problème assez grave",
         statut: "Abandonné",
         viewLink: "/admin/actions/auditinterne/voir",
         editLink: "/admin/actions/auditinterne/editer",
@@ -362,5 +412,26 @@ const toggleSelectAll = () => {
     } else {
         selectedItems.value = [];
     }
+};
+
+const showExportMenu = ref(false); // État pour afficher ou masquer le menu exporter
+
+// Fonction pour basculer l'affichage du menu
+const toggleExportMenu = () => {
+    showExportMenu.value = !showExportMenu.value;
+};
+
+// Fonction pour exporter en Excel
+const exportToExcel = () => {
+    console.log("Exportation en Excel...");
+    // Ajoutez ici la logique pour exporter en Excel
+    showExportMenu.value = false; // Masquer le menu après l'action
+};
+
+// Fonction pour exporter en PDF
+const exportToPdf = () => {
+    console.log("Exportation en PDF...");
+    // Ajoutez ici la logique pour exporter en PDF
+    showExportMenu.value = false; // Masquer le menu après l'action
 };
 </script>

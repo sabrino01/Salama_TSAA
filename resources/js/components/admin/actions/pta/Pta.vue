@@ -87,11 +87,34 @@
                     >
                         Importer
                     </button>
-                    <button
-                        class="flex items-center justify-center border border-gray-400 ml-4 transparent text-black px-4 py-2 rounded-md w-38"
-                    >
-                        Exporter
-                    </button>
+                    <div class="relative">
+                        <!-- Bouton Exporter -->
+                        <button
+                            @click="toggleExportMenu"
+                            class="flex items-center justify-center border border-gray-400 ml-4 text-black px-4 py-2 rounded-md w-38"
+                        >
+                            Exporter
+                        </button>
+
+                        <!-- Menu déroulant pour les options d'exportation -->
+                        <div
+                            v-if="showExportMenu"
+                            class="absolute mt-2 right-0 bg-white border border-gray-300 rounded-md shadow-lg w-40"
+                        >
+                            <button
+                                @click="exportToExcel"
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 text-green-600"
+                            >
+                                Exporter en Excel
+                            </button>
+                            <button
+                                @click="exportToPdf"
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                            >
+                                Exporter en PDF
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Tableau PTA -->
@@ -122,7 +145,8 @@
                                     <th class="w-40">Action</th>
                                     <th>Mesure</th>
                                     <th>Date suivi</th>
-                                    <!-- <th>Statut</th> -->
+                                    <th class="w-40">Obsérvation</th>
+                                    <th>Statut</th>
                                     <th class="w-56">-</th>
                                 </tr>
                             </thead>
@@ -166,17 +190,18 @@
                                         <span
                                             :class="{
                                                 'text-red-500':
-                                                    item.action ===
+                                                    item.actions ===
                                                     'Non réalisé',
                                                 'text-green-500':
-                                                    item.action === 'Réalisé',
+                                                    item.actions === 'Réalisé',
                                                 'text-purple-500':
-                                                    item.action === 'Abandonné',
+                                                    item.actions ===
+                                                    'Abandonné',
                                             }"
                                         >
                                             <template
                                                 v-if="
-                                                    item.action ===
+                                                    item.actions ===
                                                     'Non réalisé'
                                                 "
                                             >
@@ -184,26 +209,29 @@
                                             </template>
                                             <template
                                                 v-else-if="
-                                                    item.action === 'Réalisé'
+                                                    item.actions === 'Réalisé'
                                                 "
                                             >
                                                 <Check />
                                             </template>
                                             <template
                                                 v-else-if="
-                                                    item.action === 'Abandonné'
+                                                    item.actions === 'Abandonné'
                                                 "
                                             >
                                                 <Ban />
                                             </template>
                                         </span>
-                                        <span>{{ item.action }}</span>
+                                        <span>{{ item.actions }}</span>
                                     </td>
                                     <td>{{ item.mesure }}</td>
                                     <td>{{ item.datesuivi }}</td>
-                                    <!-- <td>
+                                    <td class="truncate">
+                                        {{ item.observation }}
+                                    </td>
+                                    <td>
                                         {{ item.statut }}
-                                    </td> -->
+                                    </td>
                                     <td class="space-x-2 items-center">
                                         <button
                                             type="button"
@@ -286,6 +314,16 @@
     </div>
 </template>
 
+<script>
+export const ptaData = ref([
+    {
+        sources: "PTA",
+        dns: "Planifier les réunions",
+        datesuivi: "15/11/2025",
+    },
+]);
+</script>
+
 <script setup>
 import Sidebar from "../../assets/Sidebar.vue";
 import Navbar from "../../assets/Navbar.vue";
@@ -307,14 +345,15 @@ const tableData = ref([
     {
         numero: "1",
         date: "12/10/2024",
-        sources: "P24",
+        sources: "PTA",
         typeactions: "Action à planifier",
         frequence: "Mensuel",
-        dns: "Demande le statut",
+        dns: "Planifier les réunions",
         suivi: "Dominique",
-        action: "Non réalisé",
+        actions: "Non réalisé",
         mesure: "Alerte",
-        datesuivi: "14/10/2024",
+        datesuivi: "15/11/2025",
+        observation: "C'est pas un problème très grave",
         statut: "En cours",
         viewLink: "/admin/actions/pta/voir",
         editLink: "/admin/actions/pta/editer",
@@ -327,9 +366,10 @@ const tableData = ref([
         frequence: "Mensuel",
         dns: "Exploiter les informations",
         suivi: "Nasandratra",
-        action: "Non réalisé",
+        actions: "Non réalisé",
         mesure: "Alerte",
-        datesuivi: "13/10/2024",
+        datesuivi: "13/10/2025",
+        observation: "C'est pas un problème assez grave",
         statut: "En retard",
         viewLink: "/admin/actions/pta/voir",
         editLink: "/admin/actions/pta/editer",
@@ -342,9 +382,10 @@ const tableData = ref([
         frequence: "Mensuel",
         dns: "Renforcer la coordination",
         suivi: "Malala",
-        action: "Abandonné",
+        actions: "Abandonné",
         mesure: "Alerte",
         datesuivi: "10/10/2024",
+        observation: "C'est pas un problème grave",
         statut: "Abandonné",
         viewLink: "/admin/actions/pta/voir",
         editLink: "/admin/actions/pta/editer",
@@ -361,5 +402,26 @@ const toggleSelectAll = () => {
     } else {
         selectedItems.value = [];
     }
+};
+
+const showExportMenu = ref(false); // État pour afficher ou masquer le menu
+
+// Fonction pour basculer l'affichage du menu
+const toggleExportMenu = () => {
+    showExportMenu.value = !showExportMenu.value;
+};
+
+// Fonction pour exporter en Excel
+const exportToExcel = () => {
+    console.log("Exportation en Excel...");
+    // Ajoutez ici la logique pour exporter en Excel
+    showExportMenu.value = false; // Masquer le menu après l'action
+};
+
+// Fonction pour exporter en PDF
+const exportToPdf = () => {
+    console.log("Exportation en PDF...");
+    // Ajoutez ici la logique pour exporter en PDF
+    showExportMenu.value = false; // Masquer le menu après l'action
 };
 </script>
