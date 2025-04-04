@@ -357,9 +357,9 @@
 </template>
 
 <script setup>
-import Sidebar from "./assets/Sidebar.vue";
-import Navbar from "./assets/Navbar.vue";
-import Footer from "./assets/Footer.vue";
+import Sidebar from "../assets/Sidebar.vue";
+import Navbar from "../assets/Navbar.vue";
+import Footer from "../assets/Footer.vue";
 import BarChart from "../charts/BarChart.vue";
 
 import { ref } from "vue";

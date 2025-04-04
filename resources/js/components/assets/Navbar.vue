@@ -11,12 +11,11 @@
         <!-- Image de profil et dropdown -->
         <div class="relative">
             <button @click="toggleDropdown" class="focus:outline-none">
-                <!-- <img
-                    src="https://via.placeholder.com/40"
+                <img
+                    src="/image/user.png"
                     alt="Profile"
                     class="w-10 h-10 rounded-full border border-gray-300"
-                /> -->
-                <UserCircle2 />
+                />
             </button>
 
             <div

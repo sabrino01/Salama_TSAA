@@ -319,7 +319,7 @@ export const auditInterneData = ref([
     {
         sources: "Audit Interne",
         action: "Demande le statut",
-        datesuivi: "14/10/2025",
+        datesuivi: "14/04/2025",
     },
     {
         sources: "Audit Interne",
@@ -335,9 +335,9 @@ export const auditInterneData = ref([
 </script>
 
 <script setup>
-import Sidebar from "../../assets/Sidebar.vue";
-import Navbar from "../../assets/Navbar.vue";
-import Footer from "../../assets/Footer.vue";
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
 import {
     Info,
     Plus,

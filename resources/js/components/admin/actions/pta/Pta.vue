@@ -319,15 +319,15 @@ export const ptaData = ref([
     {
         sources: "PTA",
         dns: "Planifier les réunions",
-        datesuivi: "15/11/2025",
+        datesuivi: "15/11/2024",
     },
 ]);
 </script>
 
 <script setup>
-import Sidebar from "../../assets/Sidebar.vue";
-import Navbar from "../../assets/Navbar.vue";
-import Footer from "../../assets/Footer.vue";
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
 import {
     Info,
     Plus,
@@ -352,7 +352,7 @@ const tableData = ref([
         suivi: "Dominique",
         actions: "Non réalisé",
         mesure: "Alerte",
-        datesuivi: "15/11/2025",
+        datesuivi: "15/11/2024",
         observation: "C'est pas un problème très grave",
         statut: "En cours",
         viewLink: "/admin/actions/pta/voir",

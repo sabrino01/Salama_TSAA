@@ -34,6 +34,37 @@ import AjoutPta from "../components/admin/actions/pta/AjoutPta.vue";
 import VoirPta from "../components/admin/actions/pta/VoirPta.vue";
 import EditPta from "../components/admin/actions/pta/EditPta.vue";
 import Notifications from "../components/admin/Notifications.vue";
+import DashboardUser from "../components/user/Dashboard.vue";
+import NotificationsUser from "../components/user/Notifications.vue";
+import ProfileUser from "../components/user/Profile.vue";
+import ConstatUser from "../components/user/informations/constat/Constat.vue";
+import AjoutConstatUser from "../components/user/informations/constat/AjoutConstat.vue";
+import EditConstatUser from "../components/user/informations/constat/EditConstat.vue";
+import VoirConstatUser from "../components/user/informations/constat/VoirConstat.vue";
+import ResponsableUser from "../components/user/informations/responsable/Responsable.vue";
+import AjoutResponsableUser from "../components/user/informations/responsable/AjoutResponsable.vue";
+import VoirResponsableUser from "../components/user/informations/responsable/VoirResponsable.vue";
+import EditResponsableUser from "../components/user/informations/responsable/EditResponsable.vue";
+import SourcesUser from "../components/user/informations/sources/Sources.vue";
+import AjoutSourcesUser from "../components/user/informations/sources/AjoutSources.vue";
+import VoirSourcesUser from "../components/user/informations/sources/VoirSources.vue";
+import EditSourcesUser from "../components/user/informations/sources/EditSources.vue";
+import SuiviUser from "../components/user/informations/suivi/Suivi.vue";
+import AjoutSuiviUser from "../components/user/informations/suivi/AjoutSuivi.vue";
+import VoirSuiviUser from "../components/user/informations/suivi/VoirSuivi.vue";
+import EditSuiviUser from "../components/user/informations/suivi/EditSuivi.vue";
+import AjoutTypeActionsUser from "../components/user/informations/typeactions/AjoutTypeActions.vue";
+import VoirTypeActionsUser from "../components/user/informations/typeactions/VoirTypeActions.vue";
+import EditTypeActionsUser from "../components/user/informations/typeactions/EditTypeActions.vue";
+import TypeActionsUser from "../components/user/informations/typeactions/TypeActions.vue";
+import AuditInterneUser from "../components/user/actions/auditinterne/AuditInterne.vue";
+import AjoutAuditInterneUser from "../components/user/actions/auditinterne/AjoutAuditInterne.vue";
+import VoirAuditInterneUser from "../components/user/actions/auditinterne/VoirAuditInterne.vue";
+import EditAuditInterneUser from "../components/user/actions/auditinterne/EditAuditInterne.vue";
+import PtaUser from "../components/user/actions/pta/Pta.vue";
+import AjoutPtaUser from "../components/user/actions/pta/AjoutPta.vue";
+import VoirPtaUser from "../components/user/actions/pta/VoirPta.vue";
+import EditPtaUser from "../components/user/actions/pta/EditPta.vue";
 
 const routes = [
     {
@@ -206,6 +237,163 @@ const routes = [
         name: "admin.notifications",
         component: Notifications,
     },
+    // Route for user
+    {
+        path: "/user/dashboard",
+        name: "user.dashboard",
+        component: DashboardUser,
+    },
+    {
+        path: "/user/notifications",
+        name: "user.notifications",
+        component: NotificationsUser,
+    },
+    {
+        path: "/user/profile",
+        name: "user.profile",
+        component: ProfileUser,
+    },
+    {
+        path: "/user/informations/constat",
+        name: "user.informations.constat",
+        component: ConstatUser,
+    },
+    {
+        path: "/user/informations/constat/ajouter",
+        name: "user.informations.constat.ajouter",
+        component: AjoutConstatUser,
+    },
+    {
+        path: "/user/informations/constat/editer",
+        name: "user.informations.constat.editer",
+        component: EditConstatUser,
+    },
+    {
+        path: "/user/informations/constat/voir",
+        name: "user.informations.constat.voir",
+        component: VoirConstatUser,
+    },
+    {
+        path: "/user/informations/responsable",
+        name: "user.informations.responsable",
+        component: ResponsableUser,
+    },
+    {
+        path: "/user/informations/responsable/ajouter",
+        name: "user.informations.responsable.ajouter",
+        component: AjoutResponsableUser,
+    },
+    {
+        path: "/user/informations/responsable/voir",
+        name: "user.informations.responsable.voir",
+        component: VoirResponsableUser,
+    },
+    {
+        path: "/user/informations/responsable/editer",
+        name: "user.informations.responsable.editer",
+        component: EditResponsableUser,
+    },
+    {
+        path: "/user/informations/sources",
+        name: "user.informations.sources",
+        component: SourcesUser,
+    },
+    {
+        path: "/user/informations/sources/ajouter",
+        name: "user.informations.sources.ajouter",
+        component: AjoutSourcesUser,
+    },
+    {
+        path: "/user/informations/sources/voir",
+        name: "user.informations.sources.voir",
+        component: VoirSourcesUser,
+    },
+    {
+        path: "/user/informations/sources/editer",
+        name: "user.informations.sources.editer",
+        component: EditSourcesUser,
+    },
+    {
+        path: "/user/informations/suivi",
+        name: "user.informations.suivi",
+        component: SuiviUser,
+    },
+    {
+        path: "/user/informations/suivi/ajouter",
+        name: "user.informations.suivi.ajouter",
+        component: AjoutSuiviUser,
+    },
+    {
+        path: "/user/informations/suivi/voir",
+        name: "user.informations.suivi.voir",
+        component: VoirSuiviUser,
+    },
+    {
+        path: "/user/informations/suivi/editer",
+        name: "user.informations.suivi.editer",
+        component: EditSuiviUser,
+    },
+    {
+        path: "/user/informations/typeactions",
+        name: "user.informations.typeactions",
+        component: TypeActionsUser,
+    },
+    {
+        path: "/user/informations/typeactions/ajouter",
+        name: "user.informations.typeactions.ajouter",
+        component: AjoutTypeActionsUser,
+    },
+    {
+        path: "/user/informations/typeactions/voir",
+        name: "user.informations.typeactions.voir",
+        component: VoirTypeActionsUser,
+    },
+    {
+        path: "/user/informations/typeactions/editer",
+        name: "user.informations.typeactions.editer",
+        component: EditTypeActionsUser,
+    },
+    {
+        path: "/user/actions/auditinterne",
+        name: "user.actions.auditinterne",
+        component: AuditInterneUser,
+    },
+    {
+        path: "/user/actions/auditinterne/ajouter",
+        name: "user.actions.auditinterne.ajouter",
+        component: AjoutAuditInterneUser,
+    },
+    {
+        path: "/user/actions/auditinterne/voir",
+        name: "user.actions.auditinterne.voir",
+        component: VoirAuditInterneUser,
+    },
+    {
+        path: "/user/actions/auditinterne/editer",
+        name: "user.actions.auditinterne.editer",
+        component: EditAuditInterneUser,
+    },
+    {
+        path: "/user/actions/pta",
+        name: "user.actions.pta",
+        component: PtaUser,
+    },
+    {
+        path: "/user/actions/pta/ajouter",
+        name: "user.actions.pta.ajouter",
+        component: AjoutPtaUser,
+    },
+    {
+        path: "/user/actions/pta/voir",
+        name: "user.actions.pta.voir",
+        component: VoirPtaUser,
+    },
+    {
+        path: "/user/actions/pta/editer",
+        name: "user.actions.pta.editer",
+        component: EditPtaUser,
+    },
+    // Not found route
     {
         path: "/:pathMatch(.*)*",
         name: "notfound",

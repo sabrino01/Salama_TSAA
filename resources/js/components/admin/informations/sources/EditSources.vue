@@ -84,7 +84,7 @@
 </template>
 
 <script setup>
-import Sidebar from "../../assets/Sidebar.vue";
-import Navbar from "../../assets/Navbar.vue";
-import Footer from "../../assets/Footer.vue";
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
 </script>
