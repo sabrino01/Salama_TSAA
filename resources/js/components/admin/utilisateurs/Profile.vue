@@ -35,36 +35,60 @@
                     <div class="flex w-[60%] items-center">
                         <span
                             for="nom"
-                            class="w-[26%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Nom :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold">
-                            RATOVOARIVONY Aina
-                        </span>
+                        <input
+                            type="text"
+                            id="nom"
+                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            value="RATOVOARIVONY Aina"
+                        />
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
-                            class="w-[26%] ml-4 text-lg font-semibold text-gray-800"
+                            for="nom d'utilisateur"
+                            class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Nom d'utilisateur :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >Aina
-                        </span>
+                        <input
+                            type="text"
+                            id="nomutilisateur"
+                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            value="Aina"
+                        />
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
-                            class="w-[26%] ml-4 text-lg font-semibold text-gray-800"
+                            for="email"
+                            class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Email :
+                        </span>
+                        <input
+                            type="text"
+                            id="email"
+                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            value="aina@gmail.com"
+                        />
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <span
+                            for="departement"
+                            class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Département :
                         </span>
-                        <span
-                            class="w-[50%] px-4 text-lg font-semibold text-gray-400"
-                            >RSI</span
-                        >
+                        <input
+                            type="text"
+                            id="departement"
+                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            value="RSI"
+                        />
                     </div>
-                    <div class="flex w-[46.6%] justify-end mt-5">
+                    <div class="flex w-[47%] justify-end mt-5">
                         <button
                             class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
@@ -88,7 +112,7 @@
                         <input
                             type="password"
                             id="mot de passe"
-                            class="w-[48.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            class="w-[49.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         />
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
@@ -101,10 +125,10 @@
                         <input
                             type="password"
                             id="confirmer mot de passe"
-                            class="w-[48.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            class="w-[49.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         />
                     </div>
-                    <div class="flex w-[46.6%] justify-end mt-5">
+                    <div class="flex w-[47%] justify-end mt-5">
                         <button
                             class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >

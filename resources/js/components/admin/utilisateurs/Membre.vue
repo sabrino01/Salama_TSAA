@@ -62,6 +62,7 @@
                             <tr>
                                 <th>Nom</th>
                                 <th>Nom d'utilisateur</th>
+                                <th>Email</th>
                                 <th>Département</th>
                                 <th>Rôle</th>
                                 <th>Actions</th>
@@ -71,6 +72,7 @@
                             <tr>
                                 <td>Lorem ipsum dolor</td>
                                 <td>Lorem</td>
+                                <td>lorem@gmail.com</td>
                                 <td class="text-gray-400">RSI</td>
                                 <td>Admin</td>
                                 <!-- <td>
@@ -82,6 +84,7 @@
                             <tr>
                                 <td>Lorem ipsum dolor</td>
                                 <td>Lorem</td>
+                                <td>lorem@gmail.com</td>
                                 <td class="text-gray-400">RSI</td>
                                 <td>User</td>
                                 <td>
@@ -93,6 +96,7 @@
                             <tr>
                                 <td>Lorem ipsum dolor</td>
                                 <td>Lorem</td>
+                                <td>lorem@gmail.com</td>
                                 <td class="text-gray-400">RSI</td>
                                 <td>User</td>
                                 <td>

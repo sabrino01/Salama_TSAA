@@ -61,6 +61,19 @@
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
+                            for="email"
+                            class="w-[26%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Email :
+                        </label>
+                        <input
+                            type="text"
+                            id="email"
+                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        />
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <label
                             for="departement"
                             class="w-[26%] ml-4 text-lg font-semibold text-gray-800"
                         >
