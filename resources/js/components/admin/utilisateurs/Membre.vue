@@ -1,3 +1,107 @@
+<script setup>
+import Sidebar from "../../assets/Sidebar.vue";
+import Navbar from "../../assets/Navbar.vue";
+import Footer from "../../assets/Footer.vue";
+import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
+
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
+
+const membres = ref([]);
+const totalMembres = ref(0);
+const currentPage = ref(1);
+const searchQuery = ref("");
+const perPage = ref(4); // Même valeur que dans votre backend
+const lastPage = ref(1);
+
+// Charger les membres depuis l'API
+const chargerMembres = async (page = 1, search = "") => {
+    try {
+        const response = await axios.get("/api/users", {
+            params: { page, search },
+        });
+        membres.value = response.data.data;
+        totalMembres.value = response.data.total;
+        currentPage.value = response.data.current_page;
+        lastPage.value = response.data.last_page;
+        perPage.value = response.data.per_page;
+    } catch (error) {
+        console.error("Erreur lors du chargement des membres :", error);
+    }
+};
+
+// Générer les numéros de page pour la pagination
+const pages = computed(() => {
+    // Limitons à 5 numéros de page maximum pour éviter trop de boutons
+    const totalPages = lastPage.value;
+    const current = currentPage.value;
+    let pageNumbers = [];
+
+    if (totalPages <= 5) {
+        // Si moins de 5 pages, affichons-les toutes
+        for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+        }
+    } else {
+        // Sinon, affichons les 5 pages pertinentes
+        // Toujours inclure la première et la dernière page
+        if (current <= 3) {
+            // Début: 1, 2, 3, 4, ..., n
+            pageNumbers = [1, 2, 3, 4, totalPages];
+        } else if (current >= totalPages - 2) {
+            // Fin: 1, ..., n-3, n-2, n-1, n
+            pageNumbers = [
+                1,
+                totalPages - 3,
+                totalPages - 2,
+                totalPages - 1,
+                totalPages,
+            ];
+        } else {
+            // Milieu: 1, ..., current-1, current, current+1, ..., n
+            pageNumbers = [1, current - 1, current, current + 1, totalPages];
+        }
+    }
+
+    return pageNumbers;
+});
+
+// Aller à une page spécifique
+const goToPage = (page) => {
+    chargerMembres(page, searchQuery.value);
+};
+
+// Supprimer un membre
+const supprimerMembre = async (id) => {
+    toast.confirm(
+        "Êtes-vous sûr de vouloir supprimer ce membre ?",
+        async () => {
+            try {
+                await axios.delete(`/api/users/${id}`);
+                toast.success("Membre supprimé avec succès !");
+                chargerMembres(currentPage.value, searchQuery.value);
+            } catch (error) {
+                toast.error("Erreur lors de la suppression du membre.");
+                console.error(
+                    "Erreur lors de la suppression du membre :",
+                    error
+                );
+            }
+        }
+    );
+};
+
+// Fonction de recherche
+const rechercherMembres = () => {
+    chargerMembres(1, searchQuery.value);
+};
+
+// Charger les membres au montage du composant
+onMounted(() => {
+    chargerMembres();
+});
+</script>
+
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -8,7 +112,7 @@
             <!-- Navbar -->
             <Navbar />
 
-            <!-- Contenu principal avec padding en bas -->
+            <!-- Contenu principal -->
             <div class="flex-1 p-5 bg-gray-50 pb-16">
                 <!-- Titre -->
                 <div class="flex w-full">
@@ -22,27 +126,16 @@
                     </div>
                 </div>
 
-                <!-- Phrase introductive -->
-                <div class="w-full text-gray-600 mt-5">
-                    <p class="indent-4 font-poppins">
-                        Dans l'espace membres, vous pouvez voir et gérer les
-                        membres de votre association, ajouter des membres et de
-                        les supprimer.
-                    </p>
-                </div>
-
-                <!-- Ajout et barre de recherche -->
+                <!-- Barre de recherche -->
                 <div class="flex w-full mt-5 ml-4">
-                    <!-- Bouton d'ajout -->
-                    <router-link to="/admin/utilisateurs/membres/ajouter"
-                        ><button
+                    <router-link to="/admin/utilisateurs/membres/ajouter">
+                        <button
                             class="flex items-center justify-center bg-[#0062ff] text-white px-4 py-2 rounded-md w-38"
                         >
                             <Plus class="w-5 h-5 mr-2" /> Ajouter
-                        </button></router-link
-                    >
+                        </button>
+                    </router-link>
 
-                    <!-- Barre de recherche -->
                     <div
                         class="flex items-center ml-6 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                     >
@@ -51,6 +144,8 @@
                             type="text"
                             placeholder="Rechercher...."
                             class="outline-none bg-transparent text-gray-800 placeholder-gray-500"
+                            v-model="searchQuery"
+                            @input="chargerMembres(1, searchQuery)"
                         />
                     </div>
                 </div>
@@ -69,38 +164,20 @@
                             </tr>
                         </thead>
                         <tbody class="font-poppins text-center">
-                            <tr>
-                                <td>Lorem ipsum dolor</td>
-                                <td>Lorem</td>
-                                <td>lorem@gmail.com</td>
-                                <td class="text-gray-400">RSI</td>
-                                <td>Admin</td>
-                                <!-- <td>
-                                    <button type="button" class="text-red-500">
-                                        Supprimer
-                                    </button>
-                                </td> -->
-                            </tr>
-                            <tr>
-                                <td>Lorem ipsum dolor</td>
-                                <td>Lorem</td>
-                                <td>lorem@gmail.com</td>
-                                <td class="text-gray-400">RSI</td>
-                                <td>User</td>
-                                <td>
-                                    <button type="button" class="text-red-500">
-                                        Supprimer
-                                    </button>
+                            <tr v-for="membre in membres" :key="membre.id">
+                                <td>{{ membre.nom }}</td>
+                                <td>{{ membre.nom_utilisateur }}</td>
+                                <td>{{ membre.email }}</td>
+                                <td class="text-gray-400">
+                                    {{ membre.departement }}
                                 </td>
-                            </tr>
-                            <tr>
-                                <td>Lorem ipsum dolor</td>
-                                <td>Lorem</td>
-                                <td>lorem@gmail.com</td>
-                                <td class="text-gray-400">RSI</td>
-                                <td>User</td>
+                                <td>{{ membre.role }}</td>
                                 <td>
-                                    <button type="button" class="text-red-500">
+                                    <button
+                                        type="button"
+                                        class="text-red-500"
+                                        @click="supprimerMembre(membre.id)"
+                                    >
                                         Supprimer
                                     </button>
                                 </td>
@@ -116,40 +193,48 @@
                         class="flex items-center text-gray-500 justify-start px-4 space-x-2"
                     >
                         <span>Résultat</span>
-                        <strong>1-10</strong>
+                        <strong>{{ (currentPage - 1) * perPage + 1 }}</strong>
+                        <span>à</span>
+                        <strong>{{
+                            Math.min(currentPage * perPage, totalMembres)
+                        }}</strong>
                         <span>sur</span>
-                        <strong>50</strong>
+                        <strong>{{ totalMembres }}</strong>
                     </div>
 
                     <!-- Pagination -->
-                    <div class="flex items-center justify-end space-x-4">
-                        <!-- Bouton Précédent -->
+                    <div class="flex items-center justify-end space-x-2">
                         <button
-                            class="flex items-center bg-white text-black px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                            :disabled="currentPage === 1"
+                            @click="goToPage(currentPage - 1)"
                         >
-                            <ChevronLeft class="w-5 h-5" /> Préc.
+                            <ChevronLeft class="w-4 h-4" /> Préc.
                         </button>
 
-                        <!-- Pagination -->
-                        <div class="flex items-center space-x-2">
+                        <!-- Numéros de page -->
+                        <div class="flex space-x-1">
                             <button
-                                class="px-3 py-1 rounded-md bg-gray-200 text-black font-medium"
+                                v-for="page in pages"
+                                :key="page"
+                                class="flex items-center justify-center w-8 h-8 rounded-md border"
+                                :class="
+                                    page === currentPage
+                                        ? 'bg-[#0062ff] text-white'
+                                        : 'bg-white text-black border-gray-300'
+                                "
+                                @click="goToPage(page)"
                             >
-                                1
-                            </button>
-                            <span class="text-gray-500">...</span>
-                            <button
-                                class="px-3 py-1 rounded-md bg-gray-200 text-black font-medium"
-                            >
-                                5
+                                {{ page }}
                             </button>
                         </div>
 
-                        <!-- Bouton Suivant -->
                         <button
-                            class="flex items-center bg-white text-black px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                            :disabled="currentPage >= lastPage"
+                            @click="goToPage(currentPage + 1)"
                         >
-                            Suiv. <ChevronRight class="w-5 h-5" />
+                            Suiv. <ChevronRight class="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -160,10 +245,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../assets/Sidebar.vue";
-import Navbar from "../../assets/Navbar.vue";
-import Footer from "../../assets/Footer.vue";
-import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
-</script>
