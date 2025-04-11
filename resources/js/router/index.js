@@ -70,6 +70,10 @@ import EditPtaUser from "../components/user/actions/pta/EditPta.vue";
 
 const routes = [
     {
+        path: "/",
+        redirect: "/login",
+    },
+    {
         path: "/login",
         name: "login",
         component: Login,
