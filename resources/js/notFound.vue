@@ -5,10 +5,5 @@
         >
             Page non trouvé !
         </h1>
-        <div
-            class="mt-6 text-gray-800 text-3xl font-sans font-semibold text-transform: uppercase hover:text-blue-600 text-decoration: underline"
-        >
-            <router-link to="/">Login</router-link>
-        </div>
     </div>
 </template>

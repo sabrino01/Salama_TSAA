@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -51,7 +52,7 @@ class UserController extends Controller
             'nom_utilisateur' => $validateData['nom_utilisateur'],
             'email' => $validateData['email'],
             'departement' => $validateData['departement'],
-            'mot_de_passe' => bcrypt($validateData['mot_de_passe']),
+            'mot_de_passe' => bcrypt($validateData['mot_de_passe'])
         ]);
         return response()->json([
             'message' => 'Utilisateur ajouté avec succès',
@@ -60,7 +61,8 @@ class UserController extends Controller
 
     public function show($id)
     {
-        // Code to display a specific user
+        $user = User::findOrFail($id);
+        return response()->json($user);
     }
 
     public function edit($id)
@@ -70,7 +72,18 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
-        // Code to update a specific user in the database
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'nom' => 'required',
+            'nom_utilisateur' => 'required|unique:users,nom_utilisateur,'.$id,
+            'email' => 'required|email|unique:users,email,'.$id,
+            'departement' => 'required',
+        ]);
+
+        $user->update($validated);
+
+        return response()->json($user);
     }
 
     public function destroy($id)
@@ -81,8 +94,16 @@ class UserController extends Controller
             'message' => 'Utilisateur supprimé avec succès',
         ], 200);
     }
-    public function search(Request $request)
+    public function updatePassword(Request $request, $id)
     {
-        // Code to search for users based on the request parameters
+        $request->validate([
+            'mot_de_passe' => 'required|min:6'
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->mot_de_passe = Hash::make($request->mot_de_passe);
+        $user->save();
+
+        return response()->json(['message' => 'Mot de passe mis à jour avec succès']);
     }
 }

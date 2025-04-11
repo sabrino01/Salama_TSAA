@@ -56,7 +56,7 @@
                         <span>Membres</span>
                     </router-link>
                     <router-link
-                        to="/admin/utilisateurs/profile"
+                        :to="`/admin/utilisateurs/profile/${userId}`"
                         :class="[
                             'flex items-center space-x-2 p-2 w-full rounded-lg',
                             isRouteActive('/admin/utilisateurs/profile')
@@ -183,7 +183,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import {
     LayoutDashboard,
@@ -203,6 +203,12 @@ import {
 
 const route = useRoute();
 const openMenu = ref(null);
+
+// Ajouter un computed property pour l'ID de l'utilisateur connecté
+const userId = computed(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    return user ? user.id : null;
+});
 
 // Détecter le chemin actuel et ouvrir le menu correspondant
 onMounted(() => {

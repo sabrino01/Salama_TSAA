@@ -43,7 +43,7 @@
                             type="text"
                             id="nom"
                             class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="RATOVOARIVONY Aina"
+                            v-model="userData.nom"
                         />
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
@@ -57,7 +57,7 @@
                             type="text"
                             id="nomutilisateur"
                             class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="Aina"
+                            v-model="userData.nom_utilisateur"
                         />
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
@@ -71,7 +71,7 @@
                             type="text"
                             id="email"
                             class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="aina@gmail.com"
+                            v-model="userData.email"
                         />
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
@@ -85,11 +85,12 @@
                             type="text"
                             id="departement"
                             class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="RSI"
+                            v-model="userData.departement"
                         />
                     </div>
                     <div class="flex w-[47%] justify-end mt-5">
                         <button
+                            @click="updateProfile"
                             class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Modifier
@@ -104,32 +105,35 @@
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
-                            for="mot de passe"
+                            for="mot_de_passe"
                             class="w-[25%] ml-10 text-lg font-semibold text-gray-800"
                         >
                             Mot de passe :
                         </label>
                         <input
                             type="password"
-                            id="mot de passe"
+                            id="mot_de_passe"
+                            v-model="passwordData.mot_de_passe"
                             class="w-[49.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         />
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
-                            for="confirmer mot de passe"
+                            for="confirmer_mot_de_passe"
                             class="w-[25%] ml-10 text-lg font-semibold text-gray-800"
                         >
                             Confirmer Mot de passe :
                         </label>
                         <input
                             type="password"
-                            id="confirmer mot de passe"
+                            id="confirmer_mot_de_passe"
+                            v-model="passwordData.confirmer_mot_de_passe"
                             class="w-[49.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         />
                     </div>
                     <div class="flex w-[47%] justify-end mt-5">
                         <button
+                            @click="updatePassword"
                             class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Enregistrer
@@ -145,7 +149,92 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
+
 import Sidebar from "../assets/SidebarUser.vue";
 import Navbar from "../assets/Navbar.vue";
 import Footer from "../assets/Footer.vue";
+import emitter from "../../utils/eventBus";
+
+const route = useRoute();
+const userData = ref({
+    nom: "",
+    nom_utilisateur: "",
+    email: "",
+    departement: "",
+});
+
+const passwordData = ref({
+    mot_de_passe: "",
+    confirmer_mot_de_passe: "",
+});
+
+const loadUserData = async () => {
+    try {
+        const response = await axios.get(`/api/users/${route.params.id}`);
+        userData.value = response.data;
+    } catch (error) {
+        toast.error("Erreur lors du chargement des données", error);
+    }
+};
+
+const updateProfile = async () => {
+    try {
+        const response = await axios.put(
+            `/api/users/${route.params.id}`,
+            userData.value
+        );
+
+        // Mettre à jour le localStorage
+        const currentUser = JSON.parse(localStorage.getItem("user"));
+        const updatedUser = { ...currentUser, ...userData.value };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+
+        // Émettre l'événement de mise à jour
+        emitter.emit("user-updated", updatedUser);
+    } catch (error) {
+        toast.error("Erreur lors de la mise à jour", error);
+    }
+};
+
+const updatePassword = async () => {
+    try {
+        // Vérifier si les mots de passe correspondent
+        if (
+            passwordData.value.mot_de_passe !==
+            passwordData.value.confirmer_mot_de_passe
+        ) {
+            toast.error("Les mots de passe ne correspondent pas");
+            return;
+        }
+
+        // Vérifier si le mot de passe n'est pas vide
+        if (!passwordData.value.mot_de_passe) {
+            toast.error("Le mot de passe ne peut pas être vide");
+            return;
+        }
+
+        const response = await axios.put(
+            `/api/users/${route.params.id}/password`,
+            {
+                mot_de_passe: passwordData.value.mot_de_passe,
+            }
+        );
+
+        // Réinitialiser les champs après la mise à jour
+        passwordData.value.mot_de_passe = "";
+        passwordData.value.confirmer_mot_de_passe = "";
+
+        // Afficher un message de succès
+        toast.success("Mot de passe mis à jour avec succès");
+    } catch (error) {
+        toast.error("Erreur lors de la mise à jour du mot de passe", error);
+    }
+};
+
+onMounted(() => {
+    loadUserData();
+});
 </script>

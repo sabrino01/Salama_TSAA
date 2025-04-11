@@ -25,10 +25,10 @@
 
             <!-- Utilisateurs -->
             <router-link
-                to="/user/profile"
+                :to="`/user/profile/${userId}`"
                 :class="[
                     'flex items-center space-x-2 p-3 rounded-lg',
-                    isRouteActive('/user/profile')
+                    isRouteActive('/user/profile/')
                         ? 'bg-white text-black'
                         : 'hover:bg-white hover:text-black',
                 ]"
@@ -150,11 +150,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import {
     LayoutDashboard,
-    Users,
     User,
     ListOrdered,
     Search,
@@ -162,7 +161,6 @@ import {
     FileCog,
     Bell,
     UserCircle2,
-    Users2,
     ClipboardList,
     ChevronDown,
     ChartNoAxesCombined,
@@ -170,6 +168,12 @@ import {
 
 const route = useRoute();
 const openMenu = ref(null);
+
+// Ajouter un computed property pour l'ID de l'utilisateur connecté
+const userId = computed(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    return user ? user.id : null;
+});
 
 // Détecter le chemin actuel et ouvrir le menu correspondant
 onMounted(() => {

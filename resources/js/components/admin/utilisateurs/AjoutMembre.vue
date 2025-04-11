@@ -3,7 +3,7 @@ import Sidebar from "../../assets/Sidebar.vue";
 import Navbar from "../../assets/Navbar.vue";
 import Footer from "../../assets/Footer.vue";
 
-import { ref, reactive } from "vue";
+import { reactive } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 
@@ -64,6 +64,11 @@ const enregistrerMembre = async () => {
         }
     }
 };
+
+// Fonction pour réinitialiser l'erreur d'un champ spécifique
+const resetError = (field) => {
+    erreurs[field] = "";
+};
 </script>
 
 <template>
@@ -118,6 +123,7 @@ const enregistrerMembre = async () => {
                                     'border-red-500': erreurs.nom,
                                 }"
                                 v-model="membre.nom"
+                                @input="resetError('nom')"
                             />
                             <p
                                 v-if="erreurs.nom"
@@ -144,6 +150,7 @@ const enregistrerMembre = async () => {
                                     'border-red-500': erreurs.nom_utilisateur,
                                 }"
                                 v-model="membre.nom_utilisateur"
+                                @input="resetError('nom_utilisateur')"
                             />
                             <p
                                 v-if="erreurs.nom_utilisateur"
@@ -170,6 +177,7 @@ const enregistrerMembre = async () => {
                                     'border-red-500': erreurs.email,
                                 }"
                                 v-model="membre.email"
+                                @input="resetError('email')"
                             />
                             <p
                                 v-if="erreurs.email"
@@ -196,6 +204,7 @@ const enregistrerMembre = async () => {
                                     'border-red-500': erreurs.departement,
                                 }"
                                 v-model="membre.departement"
+                                @input="resetError('departement')"
                             />
                             <p
                                 v-if="erreurs.departement"
@@ -222,7 +231,7 @@ const enregistrerMembre = async () => {
                                     'border-red-500': erreurs.mot_de_passe,
                                 }"
                                 v-model="membre.mot_de_passe"
-                                required
+                                @input="resetError('mot_de_passe')"
                             />
                             <p
                                 v-if="erreurs.mot_de_passe"
@@ -251,6 +260,7 @@ const enregistrerMembre = async () => {
                                         erreurs.confirmer_mot_de_passe,
                                 }"
                                 v-model="membre.confirmer_mot_de_passe"
+                                @input="resetError('confirmer_mot_de_passe')"
                             />
                             <p
                                 v-if="erreurs.confirmer_mot_de_passe"

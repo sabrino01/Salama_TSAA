@@ -2,6 +2,7 @@
 import Sidebar from "../../assets/Sidebar.vue";
 import Navbar from "../../assets/Navbar.vue";
 import Footer from "../../assets/Footer.vue";
+import Table from "../../assets/Table.vue";
 import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
 
 import { ref, onMounted, computed } from "vue";
@@ -96,6 +97,32 @@ const rechercherMembres = () => {
     chargerMembres(1, searchQuery.value);
 };
 
+// Colonnes pour le tableau
+const columns = [
+    { label: "Nom", field: "nom" },
+    { label: "Nom d'utilisateur", field: "nom_utilisateur" },
+    { label: "Email", field: "email" },
+    { label: "Département", field: "departement" },
+    { label: "Rôle", field: "role" },
+];
+
+// Actions pour le tableau
+const actions = [
+    {
+        label: "Supprimer",
+        class: "text-red-500",
+        handler: (row) => supprimerMembre(row.id),
+    },
+];
+
+// Fonction pour filtrer les actions selon le rôle
+const filterActions = (row, actions) => {
+    if (row.role === "admin") {
+        return []; // Pas d'actions pour les admins
+    }
+    return actions; // Toutes les actions pour les autres rôles
+};
+
 // Charger les membres au montage du composant
 onMounted(() => {
     chargerMembres();
@@ -152,38 +179,12 @@ onMounted(() => {
 
                 <!-- Tableau des membres -->
                 <div class="mt-5 ml-4">
-                    <table class="table-fixed w-full h-[11.5rem]">
-                        <thead class="bg-gray-300 text-lg h-[2.5rem]">
-                            <tr>
-                                <th>Nom</th>
-                                <th>Nom d'utilisateur</th>
-                                <th>Email</th>
-                                <th>Département</th>
-                                <th>Rôle</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="font-poppins text-center">
-                            <tr v-for="membre in membres" :key="membre.id">
-                                <td>{{ membre.nom }}</td>
-                                <td>{{ membre.nom_utilisateur }}</td>
-                                <td>{{ membre.email }}</td>
-                                <td class="text-gray-400">
-                                    {{ membre.departement }}
-                                </td>
-                                <td>{{ membre.role }}</td>
-                                <td>
-                                    <button
-                                        type="button"
-                                        class="text-red-500"
-                                        @click="supprimerMembre(membre.id)"
-                                    >
-                                        Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <Table
+                        :columns="columns"
+                        :data="membres"
+                        :actions="actions"
+                        :filterActions="filterActions"
+                    />
                 </div>
 
                 <!-- Footer -->
