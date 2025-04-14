@@ -1,3 +1,63 @@
+<script setup>
+import Sidebar from "../../../assets/SidebarUser.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { reactive } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
+
+const router = useRouter();
+
+const source = reactive({
+    code: "",
+    libelle: "",
+    sources_pour: "auditinterne", // Valeur par défaut
+});
+const erreurs = reactive({
+    code: "",
+    libelle: "",
+    sources_pour: "",
+});
+
+const enregistrerSource = async () => {
+    // Réinitialiser les erreurs
+    Object.keys(erreurs).forEach((key) => (erreurs[key] = ""));
+
+    // Validation côté frontend
+    if (!source.code) erreurs.code = "Le champ Code pour le source est requis.";
+    if (!source.libelle)
+        erreurs.libelle = "Le champ Libelle pour le source est requis.";
+    if (!source.sources_pour)
+        erreurs.sources_pour = "Le champ de choix pour le source est requis.";
+
+    // Si des erreurs existent, arrêter l'exécution
+    if (Object.values(erreurs).some((err) => err)) return;
+
+    try {
+        const userData = {
+            ...source,
+        };
+
+        await axios.post("/api/sources", userData).then(() => {
+            router.push("/user/informations/sources");
+            toast.success("Source ajouté avec succès !");
+        });
+    } catch (error) {
+        if (error.response && error.response.data.errors) {
+            Object.keys(error.response.data.errors).forEach((key) => {
+                erreurs[key] = error.response.data.errors[key][0];
+            });
+        }
+    }
+};
+
+// Fonction pour réinitialiser l'erreur d'un champ spécifique
+const resetError = (field) => {
+    erreurs[field] = "";
+};
+</script>
+
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -39,11 +99,25 @@
                         >
                             Code :
                         </label>
-                        <input
-                            type="text"
-                            id="code"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="code"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                :class="{
+                                    'border-gray-400': !erreurs.code,
+                                    'border-red-500': erreurs.code,
+                                }"
+                                v-model="source.code"
+                                @input="resetError('code')"
+                            />
+                            <p
+                                v-if="erreurs.code"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.code }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
@@ -52,11 +126,56 @@
                         >
                             Libelle :
                         </label>
-                        <input
-                            type="text"
-                            id="libelle"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="libelle"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                :class="{
+                                    'border-gray-400': !erreurs.libelle,
+                                    'border-red-500': erreurs.libelle,
+                                }"
+                                v-model="source.libelle"
+                                @input="resetError('libelle')"
+                            />
+                            <p
+                                v-if="erreurs.libelle"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.libelle }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <label
+                            for="source_pour"
+                            class="w-[14%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Sources pour :
+                        </label>
+                        <div class="w-[50%]">
+                            <select
+                                id="source_pour"
+                                v-model="source.sources_pour"
+                                class="w-[32%] border border-gray-400 rounded-md px-4 py-2"
+                                :class="{
+                                    'border-gray-400': !erreurs.sources_pour,
+                                    'border-red-500': erreurs.sources_pour,
+                                }"
+                                @change="resetError('sources_pour')"
+                            >
+                                <option value="auditinterne">
+                                    Audit Interne
+                                </option>
+                                <option value="pta">PTA</option>
+                            </select>
+                            <p
+                                v-if="erreurs.sources_pour"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.sources_pour }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[60%] justify-center mt-5">
                         <router-link to="/user/informations/sources"
@@ -67,6 +186,7 @@
                             </button></router-link
                         >
                         <button
+                            @click="enregistrerSource"
                             class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Enregistrer
@@ -80,9 +200,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/SidebarUser.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

@@ -28,7 +28,7 @@
                     </td>
                     <td
                         v-if="actions.length > 0"
-                        class="border border-gray-300 px-4 py-2"
+                        class="border border-gray-300 px-4 py-2 space-x-2"
                     >
                         <button
                             v-for="(action, actionIndex) in getFilteredActions(
@@ -48,8 +48,6 @@
 </template>
 
 <script setup>
-import { defineProps } from "vue";
-
 const props = defineProps({
     columns: {
         type: Array,

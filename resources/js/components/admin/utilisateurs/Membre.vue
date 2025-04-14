@@ -153,6 +153,15 @@ onMounted(() => {
                     </div>
                 </div>
 
+                <!-- Description -->
+                <div class="w-full text-gray-600 mt-5">
+                    <p class="indent-4 font-poppins">
+                        Dans l'espace membres, vous pouvez voir la liste de tous
+                        les membres de l'application, d'y ajouter et de faire
+                        plus.
+                    </p>
+                </div>
+
                 <!-- Barre de recherche -->
                 <div class="flex w-full mt-5 ml-4">
                     <router-link to="/admin/utilisateurs/membres/ajouter">

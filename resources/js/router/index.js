@@ -115,12 +115,12 @@ const routes = [
                 component: AjoutSources,
             },
             {
-                path: "informations/sources/voir",
+                path: "informations/sources/voir/:id",
                 name: "admin.informations.sources.voir",
                 component: VoirSources,
             },
             {
-                path: "informations/sources/editer",
+                path: "informations/sources/editer/:id",
                 name: "admin.informations.sources.editer",
                 component: EditSources,
             },
@@ -135,12 +135,12 @@ const routes = [
                 component: AjoutTypeActions,
             },
             {
-                path: "informations/typeactions/voir",
+                path: "informations/typeactions/voir/:id",
                 name: "admin.informations.typeactions.voir",
                 component: VoirTypeActions,
             },
             {
-                path: "informations/typeactions/editer",
+                path: "informations/typeactions/editer/:id",
                 name: "admin.informations.typeactions.editer",
                 component: EditTypeActions,
             },
@@ -324,12 +324,12 @@ const routes = [
                 component: AjoutSourcesUser,
             },
             {
-                path: "informations/sources/voir",
+                path: "informations/sources/voir/:id",
                 name: "user.informations.sources.voir",
                 component: VoirSourcesUser,
             },
             {
-                path: "informations/sources/editer",
+                path: "informations/sources/editer/:id",
                 name: "user.informations.sources.editer",
                 component: EditSourcesUser,
             },
@@ -364,12 +364,12 @@ const routes = [
                 component: AjoutTypeActionsUser,
             },
             {
-                path: "informations/typeactions/voir",
+                path: "informations/typeactions/voir/:id",
                 name: "user.informations.typeactions.voir",
                 component: VoirTypeActionsUser,
             },
             {
-                path: "informations/typeactions/editer",
+                path: "informations/typeactions/editer/:id",
                 name: "user.informations.typeactions.editer",
                 component: EditTypeActionsUser,
             },

@@ -1,3 +1,26 @@
+<script setup>
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const source = ref({});
+
+onMounted(async () => {
+    const id = route.params.id;
+    try {
+        const response = await axios.get(`/api/sources/${id}`);
+        source.value = response.data;
+    } catch (error) {
+        toast.error("Erreur lors du chargement de la source", error);
+    }
+});
+</script>
+
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -38,9 +61,9 @@
                         >
                             Code :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >AUI</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            source.code
+                        }}</span>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
@@ -48,8 +71,19 @@
                         >
                             Libelle :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >Audit Interne</span
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            source.libelle
+                        }}</span>
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <span
+                            class="w-[15%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Source pour :
+                        </span>
+                        <span
+                            class="w-[45%] px-4 text-lg font-semibold uppercase"
+                            >{{ source.sources_pour }}</span
                         >
                     </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
@@ -60,13 +94,16 @@
                                 Retour
                             </button></router-link
                         >
-                        <button
-                            class="w-[12%] bg-green-500 text-white font-semibold rounded-md px-4 py-2"
+                        <router-link
+                            :to="`/admin/informations/sources/editer/${source.id}`"
+                            class="w-[15%]"
                         >
-                            <router-link to="/admin/informations/sources/editer"
-                                >Editer</router-link
+                            <button
+                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
                             >
-                        </button>
+                                Editer
+                            </button>
+                        </router-link>
                     </div>
                 </div>
             </div>
@@ -76,9 +113,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/Sidebar.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

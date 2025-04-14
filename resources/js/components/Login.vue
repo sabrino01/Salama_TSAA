@@ -23,6 +23,12 @@
             </div>
             <div class="mt-8">
                 <form class="space-y-8" @submit.prevent="handleLogin">
+                    <p
+                        v-if="erreurs.login"
+                        class="text-white text-center text-sm mt-1 border bg-red-500 p-2"
+                    >
+                        {{ erreurs.login }}
+                    </p>
                     <div class="rounded-md shadow-sm -space-y-px">
                         <div>
                             <label
@@ -39,7 +45,10 @@
                                     'border-gray-400': !erreurs.nom_utilisateur,
                                     'border-red-500': erreurs.nom_utilisateur,
                                 }"
-                                @input="resetError('nom_utilisateur')"
+                                @input="
+                                    resetError('nom_utilisateur');
+                                    resetError('login');
+                                "
                             />
                             <p
                                 v-if="erreurs.nom_utilisateur"
@@ -54,17 +63,42 @@
                                 class="block text-sm mt-4 mb-3 dark:text-white font-poppins"
                                 >Mot de passe</label
                             >
-                            <input
-                                id="mot_de_passe"
-                                v-model="credentials.mot_de_passe"
-                                type="password"
-                                class="py-2 px-4 block w-full border-gray-400 border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600"
-                                :class="{
-                                    'border-gray-400': !erreurs.mot_de_passe,
-                                    'border-red-500': erreurs.mot_de_passe,
-                                }"
-                                @input="resetError('mot_de_passe')"
-                            />
+                            <div class="relative">
+                                <input
+                                    id="mot_de_passe"
+                                    v-model="credentials.mot_de_passe"
+                                    :type="
+                                        showPassword.mot_de_passe
+                                            ? 'text'
+                                            : 'password'
+                                    "
+                                    class="py-2 px-4 block w-full border-gray-400 border rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600"
+                                    :class="{
+                                        'border-gray-400':
+                                            !erreurs.mot_de_passe,
+                                        'border-red-500': erreurs.mot_de_passe,
+                                    }"
+                                    @input="
+                                        resetError('mot_de_passe');
+                                        resetError('login');
+                                    "
+                                />
+                                <button
+                                    v-if="credentials.mot_de_passe"
+                                    type="button"
+                                    class="absolute right-3 top-2 text-gray-500"
+                                    @click="
+                                        showPassword.mot_de_passe =
+                                            !showPassword.mot_de_passe
+                                    "
+                                >
+                                    <Eye
+                                        v-if="showPassword.mot_de_passe"
+                                        class="w-5 h-5"
+                                    />
+                                    <EyeOff v-else class="w-5 h-5" />
+                                </button>
+                            </div>
                             <p
                                 v-if="erreurs.mot_de_passe"
                                 class="text-red-500 text-sm mt-1"
@@ -93,6 +127,9 @@ import { reactive } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 
+// Import des icônes Lucide
+import { Eye, EyeOff } from "lucide-vue-next";
+
 const router = useRouter();
 const credentials = reactive({
     nom_utilisateur: "",
@@ -102,6 +139,10 @@ const credentials = reactive({
 const erreurs = reactive({
     nom_utilisateur: "",
     mot_de_passe: "",
+});
+
+const showPassword = reactive({
+    mot_de_passe: false,
 });
 
 const handleLogin = async () => {
@@ -142,7 +183,7 @@ const handleLogin = async () => {
             });
         } else if (error.response && error.response.data.message) {
             // Erreur générale d'authentification
-            erreurs.nom_utilisateur = error.response.data.message;
+            erreurs.login = error.response.data.message;
         }
     }
 };
@@ -150,5 +191,8 @@ const handleLogin = async () => {
 // Fonction pour réinitialiser l'erreur d'un champ spécifique
 const resetError = (field) => {
     erreurs[field] = "";
+    if (field === "nom_utilisateur" || field === "mot_de_passe") {
+        erreurs.login = ""; // Réinitialiser l'erreur générale
+    }
 };
 </script>

@@ -1,3 +1,146 @@
+<script setup>
+import Sidebar from "../../../assets/SidebarUser.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+import Table from "../../../assets/Table.vue";
+import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
+
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+const sources = ref([]);
+const totalSources = ref(0);
+const currentPage = ref(1);
+const searchQuery = ref("");
+const perPage = ref(4); // Même valeur que dans votre backend
+const lastPage = ref(1);
+
+// Charger les sources depuis l'API
+const chargerSources = async (page = 1, search = "") => {
+    try {
+        const response = await axios.get("/api/sources", {
+            params: { page, search },
+        });
+        sources.value = response.data.data;
+        totalSources.value = response.data.total;
+        currentPage.value = response.data.current_page;
+        lastPage.value = response.data.last_page;
+        perPage.value = response.data.per_page;
+    } catch (error) {
+        console.error("Erreur lors du chargement des sources :", error);
+    }
+};
+
+// Générer les numéros de page pour la pagination
+const pages = computed(() => {
+    // Limitons à 5 numéros de page maximum pour éviter trop de boutons
+    const totalPages = lastPage.value;
+    const current = currentPage.value;
+    let pageNumbers = [];
+
+    if (totalPages <= 5) {
+        // Si moins de 5 pages, affichons-les toutes
+        for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+        }
+    } else {
+        // Sinon, affichons les 5 pages pertinentes
+        // Toujours inclure la première et la dernière page
+        if (current <= 3) {
+            // Début: 1, 2, 3, 4, ..., n
+            pageNumbers = [1, 2, 3, 4, totalPages];
+        } else if (current >= totalPages - 2) {
+            // Fin: 1, ..., n-3, n-2, n-1, n
+            pageNumbers = [
+                1,
+                totalPages - 3,
+                totalPages - 2,
+                totalPages - 1,
+                totalPages,
+            ];
+        } else {
+            // Milieu: ..., n-2, n-1, n, n+1, ...
+            pageNumbers = [1, current - 1, current, current + 1, totalPages];
+        }
+    }
+
+    return pageNumbers;
+});
+
+// Fonction pour changer de page
+const changerPage = (page) => {
+    if (page >= 1 && page <= lastPage.value) {
+        currentPage.value = page;
+        chargerSources(page, searchQuery.value);
+    }
+};
+
+// Fonction pour gérer la recherche
+const rechercherSources = () => {
+    currentPage.value = 1; // Réinitialiser à la première page lors de la recherche
+    chargerSources(currentPage.value, searchQuery.value);
+};
+
+// Fonction pour supprimer une source
+const supprimerSource = async (id) => {
+    toast.confirm(
+        "Êtes-vous sûr de vouloir supprimer cette source ?",
+        async () => {
+            try {
+                await axios.delete(`/api/sources/${id}`);
+                chargerSources(currentPage.value, searchQuery.value);
+                toast.success("Source supprimée avec succès !");
+            } catch (error) {
+                toast.error(
+                    "Erreur lors de la suppression de la source",
+                    error
+                );
+            }
+        }
+    );
+};
+
+const voirSource = (id) => {
+    router.push(`/user/informations/sources/voir/${id}`);
+};
+
+const editerSource = (id) => {
+    router.push(`/user/informations/sources/editer/${id}`);
+};
+
+// Colonne pour le tableau
+const columns = [
+    { label: "Code", field: "code" },
+    { label: "Libelle", field: "libelle" },
+];
+
+// Actions pour le tableau
+const actions = [
+    {
+        label: "Voir",
+        class: "text-blue-500",
+        handler: (row) => voirSource(row.id),
+    },
+    {
+        label: "Editer",
+        class: "text-green-500",
+        handler: (row) => editerSource(row.id),
+    },
+    {
+        label: "Supprimer",
+        class: "text-red-500",
+        handler: (row) => supprimerSource(row.id),
+    },
+];
+
+// Charger les sources lors du montage du composant
+onMounted(() => {
+    chargerSources();
+});
+</script>
+
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -50,95 +193,19 @@
                             type="text"
                             placeholder="Rechercher...."
                             class="outline-none bg-transparent text-gray-800 placeholder-gray-500"
+                            v-model="searchQuery"
+                            @input="rechercherSources"
                         />
                     </div>
                 </div>
 
                 <!-- Tableau des membres -->
                 <div class="mt-5 ml-4">
-                    <table class="table-fixed w-full h-[11.5rem]">
-                        <thead class="bg-gray-300 text-lg h-[2.5rem]">
-                            <tr>
-                                <th>Code</th>
-                                <th>Libelle</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="font-poppins text-center">
-                            <tr>
-                                <td>AUI</td>
-                                <td class="text-gray-400">Audit Interne</td>
-                                <td class="space-x-2 items-center">
-                                    <button type="button" class="text-blue-500">
-                                        <router-link
-                                            to="/user/informations/sources/voir"
-                                            >Voir</router-link
-                                        >
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="text-green-500"
-                                    >
-                                        <router-link
-                                            to="/user/informations/sources/editer"
-                                            >Editer</router-link
-                                        >
-                                    </button>
-                                    <button type="button" class="text-red-500">
-                                        Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>P24</td>
-                                <td class="text-gray-400">PTA 2024</td>
-                                <td class="space-x-2 items-center">
-                                    <button type="button" class="text-blue-500">
-                                        <router-link
-                                            to="/user/informations/sources/voir"
-                                            >Voir</router-link
-                                        >
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="text-green-500"
-                                    >
-                                        <router-link
-                                            to="/user/informations/sources/editer"
-                                            >Editer</router-link
-                                        >
-                                    </button>
-                                    <button type="button" class="text-red-500">
-                                        Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>P25</td>
-                                <td class="text-gray-400">PTA 2025</td>
-                                <td class="space-x-2 items-center">
-                                    <button type="button" class="text-blue-500">
-                                        <router-link
-                                            to="/user/informations/sources/voir"
-                                            >Voir</router-link
-                                        >
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="text-green-500"
-                                    >
-                                        <router-link
-                                            to="/user/informations/sources/editer"
-                                            >Editer</router-link
-                                        >
-                                    </button>
-                                    <button type="button" class="text-red-500">
-                                        Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <Table
+                        :columns="columns"
+                        :data="sources"
+                        :actions="actions"
+                    />
                 </div>
 
                 <!-- Footer -->
@@ -148,40 +215,48 @@
                         class="flex items-center text-gray-500 justify-start px-4 space-x-2"
                     >
                         <span>Résultat</span>
-                        <strong>1-10</strong>
+                        <strong>{{ (currentPage - 1) * perPage + 1 }}</strong>
+                        <span>à</span>
+                        <strong>
+                            {{ Math.min(currentPage * perPage, totalSources) }}
+                        </strong>
                         <span>sur</span>
-                        <strong>50</strong>
+                        <strong>{{ totalSources }}</strong>
                     </div>
 
                     <!-- Pagination -->
-                    <div class="flex items-center justify-end space-x-4">
-                        <!-- Bouton Précédent -->
+                    <div class="flex items-center justify-end space-x-2">
                         <button
-                            class="flex items-center bg-white text-black px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                            :disabled="currentPage === 1"
+                            @click="changerPage(currentPage - 1)"
                         >
-                            <ChevronLeft class="w-5 h-5" /> Préc.
+                            <ChevronLeft class="w-4 h-4" /> Préc.
                         </button>
 
-                        <!-- Pagination -->
-                        <div class="flex items-center space-x-2">
+                        <!-- Numéros de page -->
+                        <div class="flex space-x-1">
                             <button
-                                class="px-3 py-1 rounded-md bg-gray-200 text-black font-medium"
+                                v-for="page in pages"
+                                :key="page"
+                                class="flex items-center justify-center w-8 h-8 rounded-md border"
+                                :class="
+                                    page === currentPage
+                                        ? 'bg-[#0062ff] text-white'
+                                        : 'bg-white text-black border-gray-300'
+                                "
+                                @click="changerPage(page)"
                             >
-                                1
-                            </button>
-                            <span class="text-gray-500">...</span>
-                            <button
-                                class="px-3 py-1 rounded-md bg-gray-200 text-black font-medium"
-                            >
-                                5
+                                {{ page }}
                             </button>
                         </div>
 
-                        <!-- Bouton Suivant -->
                         <button
-                            class="flex items-center bg-white text-black px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                            :disabled="currentPage >= lastPage"
+                            @click="changerPage(currentPage + 1)"
                         >
-                            Suiv. <ChevronRight class="w-5 h-5" />
+                            Suiv. <ChevronRight class="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -192,10 +267,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/SidebarUser.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
-</script>

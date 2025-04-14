@@ -1,3 +1,54 @@
+<script setup>
+import Sidebar from "../../../assets/SidebarUser.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { ref, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const router = useRouter();
+const source = ref({
+    code: "",
+    libelle: "",
+    sources_pour: "",
+});
+
+const erreurs = ref({
+    code: "",
+    libelle: "",
+    sources_pour: "",
+});
+
+onMounted(async () => {
+    const sourceId = route.params.id;
+    axios
+        .get(`/api/sources/${sourceId}`)
+        .then((response) => {
+            source.value = response.data;
+        })
+        .catch((error) => {
+            toast.error("Erreur lors de la récupération de la source :", error);
+        });
+});
+
+const mettreAJourSource = async () => {
+    const sourceId = route.params.id;
+    try {
+        await axios.put(`/api/sources/${sourceId}`, source.value);
+        router.push("/user/informations/sources");
+        toast.success("Source mise à jour avec succès !");
+    } catch (error) {
+        if (error.response && error.response.status === 422) {
+            erreurs.value = error.response.data.errors;
+        } else {
+            toast.error("Erreur lors de la mise à jour de la source :", error);
+        }
+    }
+};
+</script>
+
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -39,12 +90,17 @@
                         >
                             Code :
                         </label>
-                        <input
-                            type="text"
-                            id="code"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="AUI"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="code"
+                                class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                v-model="source.code"
+                            />
+                            <p v-if="erreurs.code" class="text-red-500">
+                                {{ erreurs.code }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
@@ -53,12 +109,41 @@
                         >
                             Libelle :
                         </label>
-                        <input
-                            type="text"
-                            id="libelle"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="Audit Interne"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="libelle"
+                                class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                v-model="source.libelle"
+                            />
+                            <p v-if="erreurs.libelle" class="text-red-500">
+                                {{ erreurs.libelle }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <label
+                            for="sources_pour"
+                            class="w-[15%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Sources pour :
+                        </label>
+                        <div class="w-[50%]">
+                            <select
+                                type="text"
+                                id="sources_pour"
+                                class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                v-model="source.sources_pour"
+                            >
+                                <option value="auditinterne">
+                                    Audit Interne
+                                </option>
+                                <option value="pta">PTA</option>
+                            </select>
+                            <p v-if="erreurs.sources_pour" class="text-red-500">
+                                {{ erreurs.sources_pour }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
                         <router-link to="/user/informations/sources"
@@ -69,6 +154,7 @@
                             </button></router-link
                         >
                         <button
+                            @click="mettreAJourSource"
                             class="w-[12%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Modifier
@@ -82,9 +168,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/SidebarUser.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

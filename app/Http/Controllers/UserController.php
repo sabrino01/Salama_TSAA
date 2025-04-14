@@ -11,7 +11,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $search = $request->query('search', '');
-        $perPage = $request->query('per_page', 4); // Permettre de définir le nombre d'éléments par page
+        $perPage = $request->query('per_page', 10); // Permettre de définir le nombre d'éléments par page
 
         $users = User::where('nom', 'like', "%$search%")
             ->orWhere('nom_utilisateur', 'like', "%$search%")
