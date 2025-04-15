@@ -149,7 +149,7 @@
                         ]"
                     >
                         <ChartNoAxesCombined />
-                        <span>Constat</span>
+                        <span>Constat / Action</span>
                     </router-link>
                 </div>
             </div>

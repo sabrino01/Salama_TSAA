@@ -1,3 +1,25 @@
+<script setup>
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const responsable = ref({});
+
+onMounted(async () => {
+    const id = route.params.id;
+    try {
+        const response = await axios.get(`/api/responsable/${id}`);
+        responsable.value = response.data;
+    } catch (error) {
+        toast.error("Erreur lors du chargement du Responsable", error);
+    }
+});
+</script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -30,7 +52,7 @@
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Voir le responsable -->
                 <div class="w-full mt-5">
                     <div class="flex w-[60%] items-center">
                         <span
@@ -38,9 +60,9 @@
                         >
                             Code :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >DG</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            responsable.code
+                        }}</span>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
@@ -48,9 +70,9 @@
                         >
                             Libelle :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >Directeur Générale</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            responsable.libelle
+                        }}</span>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
@@ -58,9 +80,9 @@
                         >
                             Description :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >dg.salama@iris.mg</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            responsable.description
+                        }}</span>
                     </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
                         <router-link to="/admin/informations/responsable"
@@ -70,14 +92,16 @@
                                 Retour
                             </button></router-link
                         >
-                        <button
-                            class="w-[12%] bg-green-500 text-white font-semibold rounded-md px-4 py-2"
+                        <router-link
+                            :to="`/admin/informations/responsable/editer/${responsable.id}`"
+                            class="w-[15%]"
                         >
-                            <router-link
-                                to="/admin/informations/responsable/editer"
-                                >Editer</router-link
+                            <button
+                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
                             >
-                        </button>
+                                Editer
+                            </button>
+                        </router-link>
                     </div>
                 </div>
             </div>
@@ -87,9 +111,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/Sidebar.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

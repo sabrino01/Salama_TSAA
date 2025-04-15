@@ -155,12 +155,12 @@ const routes = [
                 component: AjoutResponsable,
             },
             {
-                path: "informations/responsable/voir",
+                path: "informations/responsable/voir/:id",
                 name: "admin.informations.responsable.voir",
                 component: VoirResponsable,
             },
             {
-                path: "informations/responsable/editer",
+                path: "informations/responsable/editer/:id",
                 name: "admin.informations.responsable.editer",
                 component: EditResponsable,
             },
@@ -175,12 +175,12 @@ const routes = [
                 component: AjoutSuivi,
             },
             {
-                path: "informations/suivi/voir",
+                path: "informations/suivi/voir/:id",
                 name: "admin.informations.suivi.voir",
                 component: VoirSuivi,
             },
             {
-                path: "informations/suivi/editer",
+                path: "informations/suivi/editer/:id",
                 name: "admin.informations.suivi.editer",
                 component: EditSuivi,
             },
@@ -195,12 +195,12 @@ const routes = [
                 component: AjoutConstat,
             },
             {
-                path: "informations/constat/voir",
+                path: "informations/constat/voir/:id",
                 name: "admin.informations.constat.voir",
                 component: VoirConstat,
             },
             {
-                path: "informations/constat/editer",
+                path: "informations/constat/editer/:id",
                 name: "admin.informations.constat.editer",
                 component: EditConstat,
             },
@@ -284,12 +284,12 @@ const routes = [
                 component: AjoutConstatUser,
             },
             {
-                path: "informations/constat/editer",
+                path: "informations/constat/editer/:id",
                 name: "user.informations.constat.editer",
                 component: EditConstatUser,
             },
             {
-                path: "informations/constat/voir",
+                path: "informations/constat/voir/:id",
                 name: "user.informations.constat.voir",
                 component: VoirConstatUser,
             },
@@ -304,12 +304,12 @@ const routes = [
                 component: AjoutResponsableUser,
             },
             {
-                path: "informations/responsable/voir",
+                path: "informations/responsable/voir/:id",
                 name: "user.informations.responsable.voir",
                 component: VoirResponsableUser,
             },
             {
-                path: "informations/responsable/editer",
+                path: "informations/responsable/editer/:id",
                 name: "user.informations.responsable.editer",
                 component: EditResponsableUser,
             },
@@ -344,12 +344,12 @@ const routes = [
                 component: AjoutSuiviUser,
             },
             {
-                path: "informations/suivi/voir",
+                path: "informations/suivi/voir/:id",
                 name: "user.informations.suivi.voir",
                 component: VoirSuiviUser,
             },
             {
-                path: "informations/suivi/editer",
+                path: "informations/suivi/editer/:id",
                 name: "user.informations.suivi.editer",
                 component: EditSuiviUser,
             },

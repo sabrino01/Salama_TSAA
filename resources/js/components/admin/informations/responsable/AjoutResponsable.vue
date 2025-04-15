@@ -1,3 +1,64 @@
+<script setup>
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { reactive } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
+
+const router = useRouter();
+
+const responsable = reactive({
+    code: "",
+    libelle: "",
+    description: "", // Valeur par défaut
+});
+const erreurs = reactive({
+    code: "",
+    libelle: "",
+    description: "",
+});
+
+const enregistrerResponsable = async () => {
+    // Réinitialiser les erreurs
+    Object.keys(erreurs).forEach((key) => (erreurs[key] = ""));
+
+    // Validation côté frontend
+    if (!responsable.code)
+        erreurs.code = "Le champ Code pour le Responsable est requis.";
+    if (!responsable.libelle)
+        erreurs.libelle = "Le champ Libelle pour le Responsable est requis.";
+    if (!responsable.description)
+        erreurs.description =
+            "Le champ description pour le Responsable est requis.";
+
+    // Si des erreurs existent, arrêter l'exécution
+    if (Object.values(erreurs).some((err) => err)) return;
+
+    try {
+        const userData = {
+            ...responsable,
+        };
+
+        await axios.post("/api/responsable", userData).then(() => {
+            router.push("/admin/informations/responsable");
+            toast.success("Responsable ajouté avec succès !");
+        });
+    } catch (error) {
+        if (error.response && error.response.data.errors) {
+            Object.keys(error.response.data.errors).forEach((key) => {
+                erreurs[key] = error.response.data.errors[key][0];
+            });
+        }
+    }
+};
+
+// Fonction pour réinitialiser l'erreur d'un champ spécifique
+const resetError = (field) => {
+    erreurs[field] = "";
+};
+</script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -30,7 +91,7 @@
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Formulaire d'ajout du responsable -->
                 <div class="w-full mt-5">
                     <div class="flex w-[60%] items-center">
                         <label
@@ -39,11 +100,25 @@
                         >
                             Code :
                         </label>
-                        <input
-                            type="text"
-                            id="code"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="code"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                :class="{
+                                    'border-gray-400': !erreurs.code,
+                                    'border-red-500': erreurs.code,
+                                }"
+                                v-model="responsable.code"
+                                @input="resetError('code')"
+                            />
+                            <p
+                                v-if="erreurs.code"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.code }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
@@ -52,11 +127,25 @@
                         >
                             Libelle :
                         </label>
-                        <input
-                            type="text"
-                            id="libelle"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="libelle"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                :class="{
+                                    'border-gray-400': !erreurs.libelle,
+                                    'border-red-500': erreurs.libelle,
+                                }"
+                                v-model="responsable.libelle"
+                                @input="resetError('libelle')"
+                            />
+                            <p
+                                v-if="erreurs.libelle"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.libelle }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
@@ -65,11 +154,25 @@
                         >
                             Description :
                         </label>
-                        <input
-                            type="text"
-                            id="description"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="description"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                :class="{
+                                    'border-gray-400': !erreurs.description,
+                                    'border-red-500': erreurs.description,
+                                }"
+                                v-model="responsable.description"
+                                @input="resetError('description')"
+                            />
+                            <p
+                                v-if="erreurs.description"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.description }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[62%] justify-center mt-5">
                         <router-link to="/admin/informations/responsable"
@@ -80,6 +183,7 @@
                             </button></router-link
                         >
                         <button
+                            @click="enregistrerResponsable"
                             class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Enregistrer
@@ -93,9 +197,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/Sidebar.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

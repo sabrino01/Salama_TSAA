@@ -46,7 +46,10 @@ const mettreAJourTypeActions = async () => {
         if (error.response && error.response.status === 422) {
             erreurs.value = error.response.data.errors;
         } else {
-            toast.error("Erreur lors de la mise à jour de la source :", error);
+            toast.error(
+                "Erreur lors de la mise à jour du type d'actions",
+                error
+            );
         }
     }
 };
@@ -84,7 +87,7 @@ const mettreAJourTypeActions = async () => {
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Formulaire d'edition du type d'actions -->
                 <div class="w-full mt-5">
                     <div class="flex w-[60%] items-center">
                         <label
@@ -97,7 +100,7 @@ const mettreAJourTypeActions = async () => {
                             <input
                                 type="text"
                                 id="code"
-                                class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                                 v-model="typeActions.code"
                             />
                             <p v-if="erreurs.code" class="text-red-500">
@@ -116,7 +119,7 @@ const mettreAJourTypeActions = async () => {
                             <input
                                 type="text"
                                 id="libelle"
-                                class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                                 v-model="typeActions.libelle"
                             />
                             <p v-if="erreurs.libelle" class="text-red-500">
@@ -135,7 +138,7 @@ const mettreAJourTypeActions = async () => {
                             <select
                                 type="text"
                                 id="typeactions_pour"
-                                class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                                 v-model="typeActions.typeactions_pour"
                             >
                                 <option value="auditinterne">

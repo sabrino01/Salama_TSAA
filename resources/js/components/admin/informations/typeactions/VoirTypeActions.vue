@@ -53,7 +53,7 @@ onMounted(async () => {
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Voir type d'actions -->
                 <div class="w-full mt-5">
                     <div class="flex w-[60%] items-center">
                         <span

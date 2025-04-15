@@ -1,3 +1,25 @@
+<script setup>
+import Sidebar from "../../../assets/SidebarUser.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const constat = ref({});
+
+onMounted(async () => {
+    const id = route.params.id;
+    try {
+        const response = await axios.get(`/api/constat/${id}`);
+        constat.value = response.data;
+    } catch (error) {
+        toast.error("Erreur lors du chargement du Constat ou Action", error);
+    }
+});
+</script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -38,9 +60,9 @@
                         >
                             Code :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >ENR</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            constat.code
+                        }}</span>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
@@ -48,9 +70,9 @@
                         >
                             Libelle :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >En cours</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            constat.libelle
+                        }}</span>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
@@ -58,9 +80,9 @@
                         >
                             Description :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >Action en cours</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            constat.description
+                        }}</span>
                     </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
                         <router-link to="/user/informations/constat"
@@ -70,13 +92,16 @@
                                 Retour
                             </button></router-link
                         >
-                        <button
-                            class="w-[12%] bg-green-500 text-white font-semibold rounded-md px-4 py-2"
+                        <router-link
+                            :to="`/user/informations/constat/editer/${constat.id}`"
+                            class="w-[15%]"
                         >
-                            <router-link to="/user/informations/constat/editer"
-                                >Editer</router-link
+                            <button
+                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
                             >
-                        </button>
+                                Editer
+                            </button>
+                        </router-link>
                     </div>
                 </div>
             </div>
@@ -86,9 +111,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/SidebarUser.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

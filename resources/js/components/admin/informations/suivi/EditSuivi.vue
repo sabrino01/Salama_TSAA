@@ -1,3 +1,51 @@
+<script setup>
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { ref, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const router = useRouter();
+const suivi = ref({
+    nom: "",
+    description: "",
+});
+
+const erreurs = ref({
+    nom: "",
+    description: "",
+});
+
+onMounted(async () => {
+    const id = route.params.id;
+    axios
+        .get(`/api/suivi/${id}`)
+        .then((response) => {
+            suivi.value = response.data;
+        })
+        .catch((error) => {
+            toast.error("Erreur lors de la récupération du Suivi", error);
+        });
+});
+
+const mettreAJourSuivi = async () => {
+    const id = route.params.id;
+    try {
+        await axios.put(`/api/suivi/${id}`, suivi.value);
+        router.push("/admin/informations/suivi");
+        toast.success("Suivi mise à jour avec succès !");
+    } catch (error) {
+        if (error.response && error.response.status === 422) {
+            erreurs.value = error.response.data.errors;
+        } else {
+            toast.error("Erreur lors de la mise à jour du suivi", error);
+        }
+    }
+};
+</script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -30,7 +78,7 @@
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Formulaire d'édition du suivi -->
                 <div class="w-full mt-5">
                     <div class="flex w-[60%] items-center">
                         <label
@@ -39,12 +87,17 @@
                         >
                             Nom :
                         </label>
-                        <input
-                            type="text"
-                            id="nom"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="Dominique"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="nom"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                v-model="suivi.nom"
+                            />
+                            <p v-if="erreurs.nom" class="text-red-500">
+                                {{ erreurs.nom }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
@@ -53,12 +106,17 @@
                         >
                             Description :
                         </label>
-                        <input
-                            type="text"
-                            id="description"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="dominique@gmail.com"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="description"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                v-model="suivi.description"
+                            />
+                            <p v-if="erreurs.description" class="text-red-500">
+                                {{ erreurs.description }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[63.6%] justify-center mt-5">
                         <router-link to="/admin/informations/suivi"
@@ -69,6 +127,7 @@
                             </button></router-link
                         >
                         <button
+                            @click="mettreAJourSuivi"
                             class="w-[12%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Modifier
@@ -82,9 +141,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/Sidebar.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

@@ -1,3 +1,25 @@
+<script setup>
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const suivi = ref({});
+
+onMounted(async () => {
+    const id = route.params.id;
+    try {
+        const response = await axios.get(`/api/suivi/${id}`);
+        suivi.value = response.data;
+    } catch (error) {
+        toast.error("Erreur lors du chargement du Suivi", error);
+    }
+});
+</script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -38,9 +60,9 @@
                         >
                             Nom :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >Dominique</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            suivi.nom
+                        }}</span>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <span
@@ -48,9 +70,9 @@
                         >
                             Description :
                         </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold"
-                            >dominique@gmail.com</span
-                        >
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            suivi.description
+                        }}</span>
                     </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
                         <router-link to="/admin/informations/suivi"
@@ -60,13 +82,16 @@
                                 Retour
                             </button></router-link
                         >
-                        <button
-                            class="w-[12%] bg-green-500 text-white font-semibold rounded-md px-4 py-2"
+                        <router-link
+                            :to="`/admin/informations/suivi/editer/${suivi.id}`"
+                            class="w-[15%]"
                         >
-                            <router-link to="/admin/informations/suivi/editer"
-                                >Editer</router-link
+                            <button
+                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
                             >
-                        </button>
+                                Editer
+                            </button>
+                        </router-link>
                     </div>
                 </div>
             </div>
@@ -76,9 +101,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/Sidebar.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

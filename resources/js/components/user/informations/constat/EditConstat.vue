@@ -1,3 +1,59 @@
+<script setup>
+import Sidebar from "../../../assets/SidebarUser.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { ref, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const router = useRouter();
+const constat = ref({
+    code: "",
+    libelle: "",
+    description: "",
+});
+
+const erreurs = ref({
+    code: "",
+    libelle: "",
+    description: "",
+});
+
+onMounted(async () => {
+    const id = route.params.id;
+    axios
+        .get(`/api/constat/${id}`)
+        .then((response) => {
+            constat.value = response.data;
+        })
+        .catch((error) => {
+            toast.error(
+                "Erreur lors de la récupération du Constat ou Action",
+                error
+            );
+        });
+});
+
+const mettreAJourConstat = async () => {
+    const id = route.params.id;
+    try {
+        await axios.put(`/api/constat/${id}`, constat.value);
+        router.push("/user/informations/constat");
+        toast.success("Constat ou Action mise à jour avec succès !");
+    } catch (error) {
+        if (error.response && error.response.status === 422) {
+            erreurs.value = error.response.data.errors;
+        } else {
+            toast.error(
+                "Erreur lors de la mise à jour du constat ou action",
+                error
+            );
+        }
+    }
+};
+</script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -39,12 +95,17 @@
                         >
                             Code :
                         </label>
-                        <input
-                            type="text"
-                            id="code"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="ENC"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="code"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                v-model="constat.code"
+                            />
+                            <p v-if="erreurs.code" class="text-red-500">
+                                {{ erreurs.code }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
@@ -53,12 +114,17 @@
                         >
                             Libelle :
                         </label>
-                        <input
-                            type="text"
-                            id="libelle"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="En cours"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="libelle"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                v-model="constat.libelle"
+                            />
+                            <p v-if="erreurs.libelle" class="text-red-500">
+                                {{ erreurs.libelle }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
@@ -67,12 +133,17 @@
                         >
                             Description :
                         </label>
-                        <input
-                            type="text"
-                            id="description"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            value="Action en cours"
-                        />
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="description"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                v-model="constat.description"
+                            />
+                            <p v-if="erreurs.description" class="text-red-500">
+                                {{ erreurs.description }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex w-[63.6%] justify-center mt-5">
                         <router-link to="/user/informations/constat"
@@ -83,6 +154,7 @@
                             </button></router-link
                         >
                         <button
+                            @click="mettreAJourConstat"
                             class="w-[12%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Modifier
@@ -96,9 +168,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/SidebarUser.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

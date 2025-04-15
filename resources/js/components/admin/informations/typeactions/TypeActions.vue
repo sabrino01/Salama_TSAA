@@ -92,7 +92,7 @@ const rechercherTypeActions = () => {
 // Fonction pour gérer la suppression
 const supprimerTypeAction = async (id) => {
     toast.confirm(
-        "Êtes-vous sûr de vouloir supprimer cette source ?",
+        "Êtes-vous sûr de vouloir supprimer ce type d'actions ?",
         async () => {
             try {
                 await axios.delete(`/api/typeactions/${id}`);
@@ -205,7 +205,7 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Tableau des membres -->
+                <!-- Tableau du type d'actions -->
                 <div class="mt-5 ml-4">
                     <Table
                         :columns="columns"
