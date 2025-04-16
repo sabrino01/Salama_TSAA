@@ -7,7 +7,6 @@ use App\Http\Controllers\SourcesController;
 use App\Http\Controllers\SuiviController;
 use App\Http\Controllers\TypeActionsController;
 use App\Http\Controllers\UserController;
-use App\Models\Suivi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 

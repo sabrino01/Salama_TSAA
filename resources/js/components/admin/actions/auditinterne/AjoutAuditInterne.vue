@@ -30,7 +30,7 @@
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Formulaire d'ajout d'audit interne -->
                 <div class="w-full mt-5">
                     <div class="flex w-[60%] items-center">
                         <label
