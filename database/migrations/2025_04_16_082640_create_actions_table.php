@@ -15,12 +15,12 @@ class CreateActionsTable extends Migration
     {
         Schema::create('actions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('sources_id')->constrained('sources')->onDelete('restrict');
-            $table->foreignId('type_actions_id')->constrained('type_actions')->onDelete('restrict');
-            $table->foreignId('responsables_id')->constrained('responsables')->onDelete('restrict');
-            $table->foreignId('suivis_id')->constrained('suivis')->onDelete('restrict');
-            $table->foreignId('constats_id')->constrained('constats')->onDelete('restrict');
-            $table->foreignId('users_id')->constrained('users')->onDelete('restrict');
+            $table->foreignId('sources_id')->constrained('sources');
+            $table->foreignId('type_actions_id')->constrained('type_actions');
+            $table->foreignId('responsables_id')->constrained('responsables');
+            $table->foreignId('suivis_id')->constrained('suivis');
+            $table->foreignId('constats_id')->constrained('constats');
+            $table->foreignId('users_id')->constrained('users');
             $table->string('num_actions')->unique();
             $table->date('date');
             $table->text('frequence');

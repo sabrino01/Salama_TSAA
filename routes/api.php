@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActionsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConstatController;
 use App\Http\Controllers\ResponsableController;
@@ -63,3 +64,6 @@ Route::get('/constat', [ConstatController::class, 'index']);
 Route::get('/constat/{id}', [ConstatController::class, 'show']);
 Route::put('/constat/{id}', [ConstatController::class, 'update']);
 Route::delete('/constat/{id}', [ConstatController::class, 'destroy']);
+//actions audit interne
+Route::get('/actions/createAI', [ActionsController::class, 'createAI']);
+Route::post('/actions', [ActionsController::class, 'store']);

@@ -21,9 +21,10 @@ class Actions extends Model
         'suivis_id',
         'constats_id',
         'users_id',
+        'frequence',
+        'description',
         'observation',
-        'statut',
-        'frequence'
+        'statut'
     ];
 
     protected $casts = [
@@ -42,7 +43,7 @@ class Actions extends Model
 
     public function responsables()
     {
-        return $this->belongsTo(Responsable::class, 'responsables');
+        return $this->belongsTo(Responsable::class, 'responsables_id');
     }
 
     public function suivis()
@@ -57,6 +58,6 @@ class Actions extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'users_id');
+        return $this->belongsTo(User::class, 'users_id');
     }
 }
