@@ -56,7 +56,7 @@ class Actions extends Model
         return $this->belongsTo(Constat::class, 'constats_id');
     }
 
-    public function users()
+    public function user()
     {
         return $this->belongsTo(User::class, 'users_id');
     }

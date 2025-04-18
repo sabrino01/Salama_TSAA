@@ -8,9 +8,11 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 
 const router = useRouter();
+// Récupérer les données de l'utilisateur depuis le localStorage
+const user = JSON.parse(localStorage.getItem("user"));
 
 // Numéro d'action
-const numActions = ref([]);
+const num_actions = ref([]);
 
 // Données pour les champs select
 const sources = ref([]);
@@ -21,7 +23,7 @@ const constats = ref([]);
 
 // Données du formulaire
 const action = ref({
-    numActions: "",
+    num_actions: num_actions,
     sources_id: "",
     type_actions_id: "",
     responsables_id: "",
@@ -30,14 +32,14 @@ const action = ref({
     frequence: "",
     description: "",
     observation: "",
+    users_id: user?.id || null,
 });
 
 // Charger les données nécessaires pour les champs select et le numéro d'actions
 onMounted(async () => {
     try {
         const response = await axios.get("/api/actions/createAI");
-        console.log(response.data.sources); // Vér
-        numActions.value = response.data.numActions; // Récuperer le numéro d'actions
+        num_actions.value = response.data.num_actions;
         sources.value = response.data.sources;
         typeActions.value = response.data.typeActions;
         responsables.value = response.data.responsables;
@@ -49,7 +51,6 @@ onMounted(async () => {
 });
 
 const frequenceOptions = [
-    "",
     "Ponctuel",
     "Annuel",
     "Tout l'année",
@@ -65,8 +66,8 @@ const frequenceOptions = [
 // État pour les données dynamiques du card
 const ponctuelData = ref([
     {
-        start: "",
-        end: "",
+        debut: "",
+        fin: "",
         suivis: [],
     },
 ]); // Contient les données des inputs pour "Ponctuel"
@@ -75,8 +76,8 @@ const isCardVisible = ref(false); // Contrôle la visibilité du card
 // Ajouter un nouvel input "date et heure"
 const addDateTimeInput = () => {
     ponctuelData.value.push({
-        start: "",
-        end: "",
+        debut: "",
+        fin: "",
         suivis: [],
     });
 };
@@ -125,7 +126,8 @@ const formatDateTime = (datetime) => {
 
 const enregistrerAction = async () => {
     try {
-        console.log("Données envoyées :", action.value);
+        action.value.frequence = JSON.stringify(ponctuelData.value);
+        console.log(action.value);
         await axios.post("/api/actions", action.value);
         router.push("/admin/actions/auditinterne");
         toast.success("Action ajoutée avec succès");
@@ -174,7 +176,7 @@ const enregistrerAction = async () => {
                             type="text"
                             id="date"
                             class="w-[14%] border rounded-md px-4 py-2 bg-gray-100"
-                            :value="numActions"
+                            :value="num_actions"
                             readonly
                         />
                     </div>
@@ -203,6 +205,9 @@ const enregistrerAction = async () => {
                             v-model="action.sources_id"
                             class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
                             <option
                                 v-for="source in sources"
                                 :key="source.id"
@@ -224,6 +229,9 @@ const enregistrerAction = async () => {
                             v-model="action.type_actions_id"
                             class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
                             <option
                                 v-for="type in typeActions"
                                 :key="type.id"
@@ -245,6 +253,9 @@ const enregistrerAction = async () => {
                             v-model="action.responsables_id"
                             class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
                             <option
                                 v-for="responsable in responsables"
                                 :key="responsable.id"
@@ -267,6 +278,9 @@ const enregistrerAction = async () => {
                             v-model="action.suivis_id"
                             class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
                             <option
                                 v-for="suivi in suivis"
                                 :key="suivi.id"
@@ -288,6 +302,9 @@ const enregistrerAction = async () => {
                             v-model="action.constats_id"
                             class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                         >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
                             <option
                                 v-for="constat in constats"
                                 :key="constat.id"
@@ -316,6 +333,9 @@ const enregistrerAction = async () => {
                                 "
                                 class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
                             >
+                                <option value="" class="text-center">
+                                    --- Options ---
+                                </option>
                                 <option
                                     v-for="option in frequenceOptions"
                                     :key="option"
@@ -328,7 +348,7 @@ const enregistrerAction = async () => {
                         <div class="border-r border-slate-500"></div>
                         <div
                             v-if="!isCardVisible && ponctuelData.length > 0"
-                            class="flex ml-4"
+                            class="flex-row ml-4"
                         >
                             <div
                                 v-for="(data, index) in ponctuelData"
@@ -338,11 +358,11 @@ const enregistrerAction = async () => {
                                 <span class="font-semibold"
                                     >Date et heure du début :</span
                                 >
-                                <span>{{ formatDateTime(data.start) }}</span>
+                                <span>{{ formatDateTime(data.debut) }}</span>
                                 <span class="font-semibold"
                                     >Date et heure du fin :</span
                                 >
-                                <span>{{ formatDateTime(data.end) }}</span>
+                                <span>{{ formatDateTime(data.fin) }}</span>
                                 <span class="font-semibold">Suivi :</span>
                                 <span
                                     v-for="suivi in data.suivis"
@@ -357,125 +377,140 @@ const enregistrerAction = async () => {
                     <div class="w-full pl-8">
                         <div
                             v-if="isCardVisible"
-                            class="w-[35%] border rounded-md shadow-md p-4 mt-4"
+                            class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50"
                         >
-                            <div class="text-lg text-center font-semibold mb-4">
-                                Ponctuel
-                            </div>
                             <div
-                                v-for="(data, index) in ponctuelData"
-                                :key="index"
-                                class="mb-4"
+                                class="bg-white w-[35%] rounded-md shadow-md p-4"
                             >
-                                <!-- Date et heure début -->
-                                <div class="flex items-center mb-2">
-                                    <span class="mr-2">Date et heure :</span>
-                                    <input
-                                        type="datetime-local"
-                                        v-model="data.start"
-                                        class="border rounded-md px-2 py-1"
-                                    />
-                                    <button
-                                        @click="addDateTimeInput"
-                                        class="ml-2 text-green-500"
-                                    >
-                                        <Plus
-                                            class="w-6 h-6 border rounded-xl"
-                                        />
-                                    </button>
-                                    <button
-                                        v-if="ponctuelData.length > 1"
-                                        @click="removeDateTimeInput(index)"
-                                        class="ml-2 text-red-500"
-                                    >
-                                        <Minus
-                                            class="w-6 h-6 border rounded-sm"
-                                        />
-                                    </button>
-                                </div>
-
-                                <!-- Date et heure fin -->
                                 <div
-                                    v-if="data.start"
-                                    class="flex items-center mb-2"
+                                    class="text-lg text-center font-semibold mb-4"
                                 >
-                                    <span class="mr-2"
-                                        >Date et heure fin :</span
-                                    >
-                                    <input
-                                        type="datetime-local"
-                                        v-model="data.end"
-                                        class="border rounded-md px-2 py-1"
-                                    />
-                                    <button
-                                        @click="data.end = ''"
-                                        class="ml-2 text-red-500"
-                                    >
-                                        <X class="w-6 h-6 border rounded-xl" />
-                                    </button>
+                                    Ponctuel
                                 </div>
-
-                                <!-- Suivis -->
+                                <div class="border border-gray-300"></div>
                                 <div
-                                    v-if="data.end"
-                                    class="flex items-center mb-2"
+                                    v-for="(data, index) in ponctuelData"
+                                    :key="index"
+                                    class="mb-4"
                                 >
-                                    <span class="mr-2">Suivis :</span>
-                                    <div class="flex items-center space-x-2">
-                                        <div
-                                            v-for="(
-                                                suivi, suiviIndex
-                                            ) in data.suivis"
-                                            :key="suiviIndex"
-                                            class="flex items-center"
+                                    <!-- Date et heure début -->
+                                    <div class="flex items-center mt-5 mb-2">
+                                        <span class="mr-2"
+                                            >Date et heure :</span
                                         >
-                                            <input
-                                                type="datetime-local"
-                                                v-model="
-                                                    data.suivis[suiviIndex]
-                                                "
-                                                class="border rounded-md px-2 py-1"
-                                            />
-                                            <button
-                                                @click="
-                                                    removeSuivi(
-                                                        index,
-                                                        suiviIndex
-                                                    )
-                                                "
-                                                class="ml-2 text-red-500"
-                                            >
-                                                <Minus
-                                                    class="w-6 h-6 border rounded-sm"
-                                                />
-                                            </button>
-                                        </div>
+                                        <input
+                                            type="datetime-local"
+                                            v-model="data.debut"
+                                            class="border rounded-md px-2 py-1"
+                                        />
                                         <button
-                                            @click="addSuivi(index)"
-                                            class="text-green-500"
+                                            @click="addDateTimeInput"
+                                            class="ml-2 text-green-500"
                                         >
                                             <Plus
                                                 class="w-6 h-6 border rounded-xl"
                                             />
                                         </button>
+                                        <button
+                                            v-if="ponctuelData.length > 1"
+                                            @click="removeDateTimeInput(index)"
+                                            class="ml-2 text-red-500"
+                                        >
+                                            <Minus
+                                                class="w-6 h-6 border rounded-sm"
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <!-- Date et heure fin -->
+                                    <div
+                                        v-if="data.debut"
+                                        class="flex items-center mb-2"
+                                    >
+                                        <span class="mr-2"
+                                            >Date et heure fin :</span
+                                        >
+                                        <input
+                                            type="datetime-local"
+                                            v-model="data.fin"
+                                            class="border rounded-md px-2 py-1"
+                                        />
+                                        <button
+                                            @click="data.fin = ''"
+                                            class="ml-2 text-red-500"
+                                        >
+                                            <X
+                                                class="w-6 h-6 border rounded-xl"
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <!-- Suivis -->
+                                    <div
+                                        v-if="data.fin"
+                                        class="flex items-center mb-2"
+                                    >
+                                        <span class="mr-2">Suivis :</span>
+                                        <div
+                                            class="relative w-auto items-center space-x-2 space-y-2"
+                                        >
+                                            <div
+                                                v-for="(
+                                                    suivi, suiviIndex
+                                                ) in data.suivis"
+                                                :key="suiviIndex"
+                                                class="flex items-center"
+                                            >
+                                                <input
+                                                    type="datetime-local"
+                                                    v-model="
+                                                        data.suivis[suiviIndex]
+                                                    "
+                                                    class="border rounded-md px-2 py-1"
+                                                />
+                                                <button
+                                                    @click="
+                                                        removeSuivi(
+                                                            index,
+                                                            suiviIndex
+                                                        )
+                                                    "
+                                                    class="ml-2 text-red-500"
+                                                >
+                                                    <Minus
+                                                        class="w-6 h-6 border rounded-sm"
+                                                    />
+                                                </button>
+                                            </div>
+                                            <button
+                                                @click="addSuivi(index)"
+                                                class="text-green-500"
+                                            >
+                                                <Plus
+                                                    class="w-6 h-6 border rounded-xl"
+                                                />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Footer du card -->
-                            <div class="flex justify-end mt-4">
-                                <button
-                                    @click="annulerPonctuel"
-                                    class="bg-gray-300 px-4 py-2 rounded-md mr-2"
-                                >
-                                    Annuler
-                                </button>
-                                <button
-                                    @click="enregistrerPonctuel"
-                                    class="bg-blue-500 text-white px-4 py-2 rounded-md"
-                                >
-                                    Enregistrer
-                                </button>
+                                <div class="border border-gray-300"></div>
+
+                                <!-- Footer du modal -->
+                                <div class="flex justify-end mt-4">
+                                    <button
+                                        @click="annulerPonctuel"
+                                        class="bg-gray-300 px-4 py-2 rounded-md mr-2"
+                                    >
+                                        Annuler
+                                    </button>
+                                    <button
+                                        @click="enregistrerPonctuel"
+                                        class="bg-blue-500 text-white px-4 py-2 rounded-md"
+                                    >
+                                        Enregistrer
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
