@@ -2,12 +2,22 @@
 import Sidebar from "../../../assets/Sidebar.vue";
 import Navbar from "../../../assets/Navbar.vue";
 import Footer from "../../../assets/Footer.vue";
+import FrequencePonctuel from "../../../assets/FrequencePonctuel.vue";
+import FrequenceAnnuel from "../../../assets/FrequenceAnnuel.vue";
+import FrequenceQuotidien from "../../../assets/FrequenceQuotidien.vue";
+import FrequenceHebdomadaire from "../../../assets/FrequenceHebdomadaire.vue";
+import FrequenceMensuel from "../../../assets/FrequenceMensuel.vue";
+import FrequenceBimestriel from "../../../assets/FrequenceBimestriel.vue";
+import FrequenceTrimestriel from "../../../assets/FrequenceTrimestriel.vue";
+import FrequenceQuadrimestriel from "../../../assets/FrequenceQuadrimestriel.vue";
+import FrequenceSemestriel from "../../../assets/FrequenceSemestriel.vue";
 import { ref, onMounted } from "vue";
-import { Plus, Minus, X } from "lucide-vue-next";
 import { useRouter } from "vue-router";
+import { frequenceOptions } from "../../../../utils/frequenceOptions.js";
 import axios from "axios";
 
 const router = useRouter();
+
 // Récupérer les données de l'utilisateur depuis le localStorage
 const user = JSON.parse(localStorage.getItem("user"));
 
@@ -35,6 +45,11 @@ const action = ref({
     users_id: user?.id || null,
 });
 
+// Options pour le champ fréquence
+const options = frequenceOptions;
+const selectedOption = ref(""); // Option sélectionnée
+const showModal = ref(false); // Contrôle de l'affichage du modal
+
 // Charger les données nécessaires pour les champs select et le numéro d'actions
 onMounted(async () => {
     try {
@@ -50,83 +65,34 @@ onMounted(async () => {
     }
 });
 
-const frequenceOptions = [
-    "Ponctuel",
-    "Annuel",
-    "Tout l'année",
-    "Quotidien",
-    "Hebdomadaire",
-    "Mensuel",
-    "Bimestriel",
-    "Trimestriel",
-    "Quadrimestriel",
-    "Semestriel",
-];
-
-// État pour les données dynamiques du card
-const ponctuelData = ref([
-    {
-        debut: "",
-        fin: "",
-        suivis: [],
-    },
-]); // Contient les données des inputs pour "Ponctuel"
-const isCardVisible = ref(false); // Contrôle la visibilité du card
-
-// Ajouter un nouvel input "date et heure"
-const addDateTimeInput = () => {
-    ponctuelData.value.push({
-        debut: "",
-        fin: "",
-        suivis: [],
-    });
-};
-
-// Supprimer un input "date et heure"
-const removeDateTimeInput = (index) => {
-    ponctuelData.value.splice(index, 1);
-};
-
-// Ajouter un suivi
-const addSuivi = (index) => {
-    ponctuelData.value[index].suivis.push("");
-};
-
-// Supprimer un suivi
-const removeSuivi = (index, suiviIndex) => {
-    ponctuelData.value[index].suivis.splice(suiviIndex, 1);
-};
-
-// Enregistrer les données du card
-const enregistrerPonctuel = () => {
-    isCardVisible.value = false; // Masquer le card
-};
-
-// Annuler les modifications
-const annulerPonctuel = () => {
-    ponctuelData.value = []; // Réinitialiser les données
-    isCardVisible.value = false; // Masquer le card
-};
-
-const formatDateTime = (datetime) => {
-    if (!datetime) return "";
-
-    const dateObj = new Date(datetime);
-    const options = {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-    };
-
-    // Formater la date et l'heure
-    return dateObj.toLocaleDateString("fr-FR", options).replace(",", " à");
+const handleOptionChange = () => {
+    if (
+        selectedOption.value === "Ponctuel" ||
+        selectedOption.value === "Annuel" ||
+        selectedOption.value === "Quotidien" ||
+        selectedOption.value === "Hebdomadaire" ||
+        selectedOption.value === "Mensuel" ||
+        selectedOption.value === "Bimestriel" ||
+        selectedOption.value === "Trimestriel" ||
+        selectedOption.value === "Quadrimestriel" ||
+        selectedOption.value === "Semestriel"
+    ) {
+        showModal.value = true; // Ouvre le modal pour les options spécifiques
+    } else {
+        action.value.frequence = selectedOption.value; // Enregistre directement la fréquence pour les autres options
+    }
 };
 
 const enregistrerAction = async () => {
     try {
-        action.value.frequence = JSON.stringify(ponctuelData.value);
+        // Préparation des données de fréquence avant envoi
+        if (
+            typeof action.value.frequence === "object" &&
+            action.value.frequence !== null
+        ) {
+            action.value.frequence = JSON.stringify(action.value.frequence);
+        }
+
         console.log(action.value);
         await axios.post("/api/actions", action.value);
         router.push("/admin/actions/auditinterne");
@@ -315,204 +281,80 @@ const enregistrerAction = async () => {
                         </select>
                     </div>
 
-                    <div class="w-full flex mt-5">
-                        <div class="flex w-auto items-center">
-                            <label
-                                for="frequence"
-                                class="ml-4 text-lg font-semibold text-gray-800"
-                            >
-                                Fréquence :
-                            </label>
-                            <select
-                                name="frequence"
-                                id="frequence"
-                                v-model="action.frequence"
-                                @change="
-                                    isCardVisible =
-                                        action.frequence === 'Ponctuel'
-                                "
-                                class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="" class="text-center">
-                                    --- Options ---
-                                </option>
-                                <option
-                                    v-for="option in frequenceOptions"
-                                    :key="option"
-                                    :value="option"
-                                >
-                                    {{ option }}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="border-r border-slate-500"></div>
-                        <div
-                            v-if="!isCardVisible && ponctuelData.length > 0"
-                            class="flex-row ml-4"
+                    <!-- Ajout du champ Fréquence -->
+                    <div class="flex w-auto items-center mt-5">
+                        <label
+                            for="frequence"
+                            class="ml-4 text-lg font-semibold text-gray-800"
                         >
-                            <div
-                                v-for="(data, index) in ponctuelData"
-                                :key="index"
-                                class="flex items-center space-x-2"
+                            Fréquence :
+                        </label>
+                        <select
+                            v-model="selectedOption"
+                            @change="handleOptionChange"
+                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
+                            <option
+                                v-for="option in options"
+                                :key="option"
+                                :value="option"
                             >
-                                <span class="font-semibold"
-                                    >Date et heure du début :</span
-                                >
-                                <span>{{ formatDateTime(data.debut) }}</span>
-                                <span class="font-semibold"
-                                    >Date et heure du fin :</span
-                                >
-                                <span>{{ formatDateTime(data.fin) }}</span>
-                                <span class="font-semibold">Suivi :</span>
-                                <span
-                                    v-for="suivi in data.suivis"
-                                    :key="suivi"
-                                    >{{ formatDateTime(suivi) }}</span
-                                >
-                            </div>
-                        </div>
+                                {{ option }}
+                            </option>
+                        </select>
                     </div>
 
-                    <!-- Card dynamique pour "Ponctuel" -->
-                    <div class="w-full pl-8">
-                        <div
-                            v-if="isCardVisible"
-                            class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50"
-                        >
-                            <div
-                                class="bg-white w-[35%] rounded-md shadow-md p-4"
-                            >
-                                <div
-                                    class="text-lg text-center font-semibold mb-4"
-                                >
-                                    Ponctuel
-                                </div>
-                                <div class="border border-gray-300"></div>
-                                <div
-                                    v-for="(data, index) in ponctuelData"
-                                    :key="index"
-                                    class="mb-4"
-                                >
-                                    <!-- Date et heure début -->
-                                    <div class="flex items-center mt-5 mb-2">
-                                        <span class="mr-2"
-                                            >Date et heure :</span
-                                        >
-                                        <input
-                                            type="datetime-local"
-                                            v-model="data.debut"
-                                            class="border rounded-md px-2 py-1"
-                                        />
-                                        <button
-                                            @click="addDateTimeInput"
-                                            class="ml-2 text-green-500"
-                                        >
-                                            <Plus
-                                                class="w-6 h-6 border rounded-xl"
-                                            />
-                                        </button>
-                                        <button
-                                            v-if="ponctuelData.length > 1"
-                                            @click="removeDateTimeInput(index)"
-                                            class="ml-2 text-red-500"
-                                        >
-                                            <Minus
-                                                class="w-6 h-6 border rounded-sm"
-                                            />
-                                        </button>
-                                    </div>
-
-                                    <!-- Date et heure fin -->
-                                    <div
-                                        v-if="data.debut"
-                                        class="flex items-center mb-2"
-                                    >
-                                        <span class="mr-2"
-                                            >Date et heure fin :</span
-                                        >
-                                        <input
-                                            type="datetime-local"
-                                            v-model="data.fin"
-                                            class="border rounded-md px-2 py-1"
-                                        />
-                                        <button
-                                            @click="data.fin = ''"
-                                            class="ml-2 text-red-500"
-                                        >
-                                            <X
-                                                class="w-6 h-6 border rounded-xl"
-                                            />
-                                        </button>
-                                    </div>
-
-                                    <!-- Suivis -->
-                                    <div
-                                        v-if="data.fin"
-                                        class="flex items-center mb-2"
-                                    >
-                                        <span class="mr-2">Suivis :</span>
-                                        <div
-                                            class="relative w-auto items-center space-x-2 space-y-2"
-                                        >
-                                            <div
-                                                v-for="(
-                                                    suivi, suiviIndex
-                                                ) in data.suivis"
-                                                :key="suiviIndex"
-                                                class="flex items-center"
-                                            >
-                                                <input
-                                                    type="datetime-local"
-                                                    v-model="
-                                                        data.suivis[suiviIndex]
-                                                    "
-                                                    class="border rounded-md px-2 py-1"
-                                                />
-                                                <button
-                                                    @click="
-                                                        removeSuivi(
-                                                            index,
-                                                            suiviIndex
-                                                        )
-                                                    "
-                                                    class="ml-2 text-red-500"
-                                                >
-                                                    <Minus
-                                                        class="w-6 h-6 border rounded-sm"
-                                                    />
-                                                </button>
-                                            </div>
-                                            <button
-                                                @click="addSuivi(index)"
-                                                class="text-green-500"
-                                            >
-                                                <Plus
-                                                    class="w-6 h-6 border rounded-xl"
-                                                />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="border border-gray-300"></div>
-
-                                <!-- Footer du modal -->
-                                <div class="flex justify-end mt-4">
-                                    <button
-                                        @click="annulerPonctuel"
-                                        class="bg-gray-300 px-4 py-2 rounded-md mr-2"
-                                    >
-                                        Annuler
-                                    </button>
-                                    <button
-                                        @click="enregistrerPonctuel"
-                                        class="bg-blue-500 text-white px-4 py-2 rounded-md"
-                                    >
-                                        Enregistrer
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Composants dynamiques -->
+                    <div class="mt-5">
+                        <FrequencePonctuel
+                            v-if="selectedOption === 'Ponctuel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceAnnuel
+                            v-if="selectedOption === 'Annuel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceQuotidien
+                            v-if="selectedOption === 'Quotidien'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceHebdomadaire
+                            v-if="selectedOption === 'Hebdomadaire'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceMensuel
+                            v-if="selectedOption === 'Mensuel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceBimestriel
+                            v-if="selectedOption === 'Bimestriel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceTrimestriel
+                            v-if="selectedOption === 'Trimestriel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceQuadrimestriel
+                            v-if="selectedOption === 'Quadrimestriel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceSemestriel
+                            v-if="selectedOption === 'Semestriel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <!-- Vous pouvez ajouter d'autres composants ici si nécessaire -->
                     </div>
 
                     <div class="flex w-[60%] items-center mt-5">
