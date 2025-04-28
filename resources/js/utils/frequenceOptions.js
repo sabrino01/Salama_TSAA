@@ -1,7 +1,7 @@
 export const frequenceOptions = [
     "Ponctuel",
     "Annuel",
-    "Tout l'annee",
+    "Tout l'année",
     "Quotidien",
     "Hebdomadaire",
     "Mensuel",

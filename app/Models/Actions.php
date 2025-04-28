@@ -24,6 +24,7 @@ class Actions extends Model
         'frequence',
         'description',
         'observation',
+        'mesure',
         'statut'
     ];
 

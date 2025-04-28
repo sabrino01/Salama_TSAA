@@ -1,3 +1,209 @@
+<script>
+export const auditInterneData = ref([
+    {
+        sources: "Audit Interne",
+        action: "Demande le statut",
+        datesuivi: "14/04/2025",
+    },
+    {
+        sources: "Audit Interne",
+        action: "Exploiter les informations",
+        datesuivi: "13/10/2025",
+    },
+    {
+        sources: "Audit Interne",
+        action: "Renforcer la coordination",
+        datesuivi: "10/10/2024",
+    },
+]);
+</script>
+
+<script setup>
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+import Table from "../../../assets/Table.vue";
+import {
+    Info,
+    Plus,
+    Search,
+    ChevronLeft,
+    ChevronRight,
+    X,
+    Check,
+    Ban,
+} from "lucide-vue-next";
+
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+const actionsAI = ref([]);
+const totalActions = ref(0);
+const currentPage = ref(1);
+const searchQuery = ref("");
+const perPage = ref(10); // Même valeur que dans votre backend
+const lastPage = ref(1);
+
+// Charger les types d'actions depuis l'API
+const chargerActions = async (page = 1, search = "") => {
+    try {
+        const response = await axios.get("/api/actions/auditinterne", {
+            params: { page, search },
+        });
+        actionsAI.value = response.data.data;
+        totalActions.value = response.data.total;
+        currentPage.value = response.data.current_page;
+        lastPage.value = response.data.last_page;
+        perPage.value = response.data.per_page;
+    } catch (error) {
+        toast.error(
+            "Erreur lors du chargement de l'audit interne ou de l'action",
+            error
+        );
+    }
+};
+
+// Générer les numéros de page pour la pagination
+const pages = computed(() => {
+    // Limitons à 5 numéros de page maximum pour éviter trop de boutons
+    const totalPages = lastPage.value;
+    const current = currentPage.value;
+    let pageNumbers = [];
+
+    if (totalPages <= 5) {
+        // Si moins de 5 pages, affichons-les toutes
+        for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+        }
+    } else {
+        // Sinon, affichons les 5 pages pertinentes
+        // Toujours inclure la première et la dernière page
+        if (current <= 3) {
+            // Début: 1, 2, 3, 4, ..., n
+            pageNumbers = [1, 2, 3, 4, totalPages];
+        } else if (current >= totalPages - 2) {
+            // Fin: 1, ..., n-3, n-2, n-1, n
+            pageNumbers = [
+                1,
+                totalPages - 4,
+                totalPages - 3,
+                totalPages - 2,
+                totalPages,
+            ];
+        } else {
+            // Milieu: n-2, n-1, n, n+1, n+2
+            pageNumbers = [
+                current - 2,
+                current - 1,
+                current,
+                current + 1,
+                current + 2,
+            ];
+        }
+    }
+
+    return pageNumbers;
+});
+
+// Fonction pour changer de page
+const changerPage = (page) => {
+    if (page >= 1 && page <= lastPage.value) {
+        currentPage.value = page;
+        chargerActions(page, searchQuery.value);
+    }
+};
+
+// Fonction pour gérer la recherche
+const rechercherActions = () => {
+    currentPage.value = 1; // Réinitialiser à la première page lors de la recherche
+    chargerActions(currentPage.value, searchQuery.value);
+};
+
+// Fonction pour supprimer une action
+const supprimerAction = async (id) => {
+    toast.confirm(
+        "Êtes-vous sûr de vouloir supprimer cette action pour Audit Interne ?",
+        async () => {
+            try {
+                await axios.delete(`/api/actions/${id}`);
+                toast.success("Action Audit Interne supprimée avec succès");
+                chargerActions(currentPage.value, searchQuery.value);
+            } catch (error) {
+                toast.error(
+                    "Erreur lors de la suppression de l'action de l'Audit Interne",
+                    error
+                );
+            }
+        }
+    );
+};
+
+const voirAuditInterne = (id) => {
+    router.push(`/admin/actions/auditinterne/voir/${id}`);
+};
+
+const editerAuditInterne = (id) => {
+    router.push(`/admin/actions/auditinterne/editer/${id}`);
+};
+// Colonne pour la table
+const columns = [
+    { label: "N°", field: "num_actions" },
+    { label: "Date", field: "date" },
+    { label: "Action", field: "description" },
+    { label: "Constat", field: "constat_libelle" },
+    { label: "Frequence", field: "frequence" },
+    { label: "Statut", field: "statut" },
+    { label: "Ajouter par", field: "nom_utilisateur" },
+];
+
+// Actions pour la table
+const actions = [
+    {
+        label: "Voir",
+        class: "text-blue-500",
+        handler: (row) => voirAuditInterne(row.id),
+    },
+    {
+        label: "Editer",
+        class: "text-green-500",
+        handler: (row) => editerAuditInterne(row.id),
+    },
+    {
+        label: "Supprimer",
+        class: "text-red-500",
+        handler: (row) => supprimerAction(row.id),
+    },
+];
+
+const showExportMenu = ref(false); // État pour afficher ou masquer le menu exporter
+
+// Fonction pour basculer l'affichage du menu
+const toggleExportMenu = () => {
+    showExportMenu.value = !showExportMenu.value;
+};
+
+// Fonction pour exporter en Excel
+const exportToExcel = () => {
+    console.log("Exportation en Excel...");
+    // Ajoutez ici la logique pour exporter en Excel
+    showExportMenu.value = false; // Masquer le menu après l'action
+};
+
+// Fonction pour exporter en PDF
+const exportToPdf = () => {
+    console.log("Exportation en PDF...");
+    // Ajoutez ici la logique pour exporter en PDF
+    showExportMenu.value = false; // Masquer le menu après l'action
+};
+
+// Fonction pour charger les actions au démarrage
+onMounted(() => {
+    chargerActions(currentPage.value, searchQuery.value);
+});
+</script>
+
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -80,6 +286,8 @@
                             type="text"
                             placeholder="Rechercher...."
                             class="outline-none bg-transparent text-gray-800 placeholder-gray-500"
+                            v-model="searchQuery"
+                            @input="rechercherActions"
                         />
                     </div>
                     <button
@@ -88,7 +296,6 @@
                         Importer
                     </button>
                     <div class="relative">
-                        <!-- Bouton Exporter -->
                         <button
                             @click="toggleExportMenu"
                             class="flex items-center justify-center border border-gray-400 ml-4 text-black px-4 py-2 rounded-md w-38"
@@ -96,7 +303,6 @@
                             Exporter
                         </button>
 
-                        <!-- Menu déroulant pour les options d'exportation -->
                         <div
                             v-if="showExportMenu"
                             class="absolute mt-2 right-0 bg-white border border-gray-300 rounded-md shadow-lg w-40"
@@ -117,149 +323,13 @@
                     </div>
                 </div>
 
-                <!-- Tableau Audit Interne -->
+                <!-- Tableau des membres -->
                 <div class="mt-5 ml-4">
-                    <!-- Conteneur pour le défilement horizontal -->
-                    <div class="overflow-x-auto">
-                        <table
-                            class="table-fixed w-full h-[11.5rem] border-separate border-spacing-y-2"
-                        >
-                            <thead class="bg-gray-200 text-lg h-[2.5rem]">
-                                <tr>
-                                    <!-- Checkbox pour sélectionner tous les éléments -->
-                                    <th class="w-10">
-                                        <input
-                                            type="checkbox"
-                                            @change="toggleSelectAll"
-                                            v-model="selectAll"
-                                            class="form-checkbox h-5 w-5 text-blue-500"
-                                        />
-                                    </th>
-                                    <th class="w-3">N°</th>
-                                    <th>Date</th>
-                                    <th>Sources</th>
-                                    <th>Type Actions</th>
-                                    <th>Fréquence</th>
-                                    <th>Suivi</th>
-                                    <th class="w-40">Constat</th>
-                                    <th>Action</th>
-                                    <th>Mesure</th>
-                                    <th>Date suivi</th>
-                                    <th class="w-40">Obsérvation</th>
-                                    <th>Statut</th>
-                                    <th class="w-56">-</th>
-                                </tr>
-                            </thead>
-                            <tbody class="font-poppins text-center">
-                                <tr
-                                    v-for="(item, index) in tableData"
-                                    :key="index"
-                                    :class="{
-                                        'bg-green-300 text-black':
-                                            item.statut === 'En cours',
-                                        'bg-red-300 text-black':
-                                            item.statut === 'En retard',
-                                        'bg-gray-300 text-black':
-                                            item.statut === 'Clôturé',
-                                        'bg-purple-300 text-black':
-                                            item.statut === 'Abandonné',
-                                    }"
-                                    class="shadow-md rounded-md"
-                                >
-                                    <!-- Checkbox pour chaque ligne -->
-                                    <td>
-                                        <input
-                                            type="checkbox"
-                                            v-model="selectedItems"
-                                            :value="item.numero"
-                                            class="form-checkbox h-5 w-5 text-blue-500"
-                                        />
-                                    </td>
-                                    <td>{{ item.numero }}</td>
-                                    <td>{{ item.date }}</td>
-                                    <td>{{ item.sources }}</td>
-                                    <td>{{ item.typeactions }}</td>
-                                    <td>{{ item.frequence }}</td>
-                                    <td>{{ item.suivi }}</td>
-                                    <td
-                                        class="flex p-4 items-center space-x-2 underline"
-                                    >
-                                        <span
-                                            :class="{
-                                                'text-red-500':
-                                                    item.constat ===
-                                                    'Non réalisé',
-                                                'text-green-500':
-                                                    item.constat === 'Réalisé',
-                                                'text-purple-500':
-                                                    item.constat ===
-                                                    'Abandonné',
-                                            }"
-                                        >
-                                            <template
-                                                v-if="
-                                                    item.constat ===
-                                                    'Non réalisé'
-                                                "
-                                            >
-                                                <X />
-                                            </template>
-                                            <template
-                                                v-else-if="
-                                                    item.constat === 'Réalisé'
-                                                "
-                                            >
-                                                <Check />
-                                            </template>
-                                            <template
-                                                v-else-if="
-                                                    item.constat === 'Abandonné'
-                                                "
-                                            >
-                                                <Ban />
-                                            </template>
-                                        </span>
-                                        <span>{{ item.constat }}</span>
-                                    </td>
-                                    <td class="truncate">
-                                        {{ item.action }}
-                                    </td>
-                                    <td>{{ item.mesure }}</td>
-                                    <td>{{ item.datesuivi }}</td>
-                                    <td class="truncate">
-                                        {{ item.observation }}
-                                    </td>
-                                    <td>
-                                        {{ item.statut }}
-                                    </td>
-                                    <td class="space-x-2 items-center">
-                                        <button
-                                            type="button"
-                                            class="text-blue-600"
-                                        >
-                                            <router-link :to="item.viewLink"
-                                                >Voir</router-link
-                                            >
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="text-green-600"
-                                        >
-                                            <router-link :to="item.editLink"
-                                                >Editer</router-link
-                                            >
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="text-red-600"
-                                        >
-                                            Supprimer
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <Table
+                        :columns="columns"
+                        :data="actionsAI"
+                        :actions="actions"
+                    />
                 </div>
 
                 <!-- Footer -->
@@ -269,40 +339,48 @@
                         class="flex items-center text-gray-500 justify-start px-4 space-x-2"
                     >
                         <span>Résultat</span>
-                        <strong>1-10</strong>
+                        <strong>{{ (currentPage - 1) * perPage + 1 }}</strong>
+                        <span>à</span>
+                        <strong>
+                            {{ Math.min(currentPage * perPage, totalActions) }}
+                        </strong>
                         <span>sur</span>
-                        <strong>50</strong>
+                        <strong>{{ totalActions }}</strong>
                     </div>
 
                     <!-- Pagination -->
-                    <div class="flex items-center justify-end space-x-4">
-                        <!-- Bouton Précédent -->
+                    <div class="flex items-center justify-end space-x-2">
                         <button
-                            class="flex items-center bg-white text-black px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                            :disabled="currentPage === 1"
+                            @click="changerPage(currentPage - 1)"
                         >
-                            <ChevronLeft class="w-5 h-5" /> Préc.
+                            <ChevronLeft class="w-4 h-4" /> Préc.
                         </button>
 
-                        <!-- Pagination -->
-                        <div class="flex items-center space-x-2">
+                        <!-- Numéros de page -->
+                        <div class="flex space-x-1">
                             <button
-                                class="px-3 py-1 rounded-md bg-gray-200 text-black font-medium"
+                                v-for="page in pages"
+                                :key="page"
+                                class="flex items-center justify-center w-8 h-8 rounded-md border"
+                                :class="
+                                    page === currentPage
+                                        ? 'bg-[#0062ff] text-white'
+                                        : 'bg-white text-black border-gray-300'
+                                "
+                                @click="changerPage(page)"
                             >
-                                1
-                            </button>
-                            <span class="text-gray-500">...</span>
-                            <button
-                                class="px-3 py-1 rounded-md bg-gray-200 text-black font-medium"
-                            >
-                                5
+                                {{ page }}
                             </button>
                         </div>
 
-                        <!-- Bouton Suivant -->
                         <button
-                            class="flex items-center bg-white text-black px-4 py-2 rounded-md border border-gray-300 shadow-sm"
+                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                            :disabled="currentPage >= lastPage"
+                            @click="changerPage(currentPage + 1)"
                         >
-                            Suiv. <ChevronRight class="w-5 h-5" />
+                            Suiv. <ChevronRight class="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -313,125 +391,3 @@
         </div>
     </div>
 </template>
-
-<script>
-export const auditInterneData = ref([
-    {
-        sources: "Audit Interne",
-        action: "Demande le statut",
-        datesuivi: "14/04/2025",
-    },
-    {
-        sources: "Audit Interne",
-        action: "Exploiter les informations",
-        datesuivi: "13/10/2025",
-    },
-    {
-        sources: "Audit Interne",
-        action: "Renforcer la coordination",
-        datesuivi: "10/10/2024",
-    },
-]);
-</script>
-
-<script setup>
-import Sidebar from "../../../assets/Sidebar.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-import {
-    Info,
-    Plus,
-    Search,
-    ChevronLeft,
-    ChevronRight,
-    X,
-    Check,
-    Ban,
-} from "lucide-vue-next";
-
-import { ref } from "vue";
-
-const tableData = ref([
-    {
-        numero: "1",
-        date: "12/10/2024",
-        sources: "Audit Interne",
-        typeactions: "Action Corrective",
-        frequence: "Mensuel",
-        suivi: "Dominique",
-        constat: "Non réalisé",
-        action: "Demande le statut",
-        mesure: "Alerte",
-        datesuivi: "14/10/2025",
-        observation: "C'est un problème grave",
-        statut: "En cours",
-        viewLink: "/admin/actions/auditinterne/voir",
-        editLink: "/admin/actions/auditinterne/editer",
-    },
-    {
-        numero: "2",
-        date: "10/10/2024",
-        sources: "Audit Interne",
-        typeactions: "Action Corrective",
-        frequence: "Mensuel",
-        suivi: "Nasandratra",
-        constat: "Réalisé",
-        action: "Exploiter les informations",
-        mesure: "Alerte",
-        datesuivi: "13/10/2025",
-        observation: "C'est un problème pas trop grave",
-        statut: "Clôturé",
-        viewLink: "/admin/actions/auditinterne/voir",
-        editLink: "/admin/actions/auditinterne/editer",
-    },
-    {
-        numero: "3",
-        date: "08/10/2024",
-        sources: "Audit Interne",
-        typeactions: "Action Préventive",
-        frequence: "Mensuel",
-        suivi: "Malala",
-        constat: "Abandonné",
-        action: "Renforcer la coordination",
-        mesure: "Alerte",
-        datesuivi: "10/10/2024",
-        observation: "C'est un problème assez grave",
-        statut: "Abandonné",
-        viewLink: "/admin/actions/auditinterne/voir",
-        editLink: "/admin/actions/auditinterne/editer",
-    },
-]);
-
-const selectedItems = ref([]); // Liste des éléments sélectionnés
-const selectAll = ref(false); // État de la case "Tout sélectionner"
-
-// Fonction pour sélectionner ou désélectionner tous les éléments
-const toggleSelectAll = () => {
-    if (selectAll.value) {
-        selectedItems.value = tableData.value.map((item) => item.numero);
-    } else {
-        selectedItems.value = [];
-    }
-};
-
-const showExportMenu = ref(false); // État pour afficher ou masquer le menu exporter
-
-// Fonction pour basculer l'affichage du menu
-const toggleExportMenu = () => {
-    showExportMenu.value = !showExportMenu.value;
-};
-
-// Fonction pour exporter en Excel
-const exportToExcel = () => {
-    console.log("Exportation en Excel...");
-    // Ajoutez ici la logique pour exporter en Excel
-    showExportMenu.value = false; // Masquer le menu après l'action
-};
-
-// Fonction pour exporter en PDF
-const exportToPdf = () => {
-    console.log("Exportation en PDF...");
-    // Ajoutez ici la logique pour exporter en PDF
-    showExportMenu.value = false; // Masquer le menu après l'action
-};
-</script>

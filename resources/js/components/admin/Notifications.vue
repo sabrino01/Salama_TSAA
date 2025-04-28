@@ -1,3 +1,178 @@
+<script setup>
+import Sidebar from "../assets/Sidebar.vue";
+import Navbar from "../assets/Navbar.vue";
+import Footer from "../assets/Footer.vue";
+import { Info, ChevronLeft, ChevronRight } from "lucide-vue-next";
+
+import { ref, watch } from "vue";
+
+import { ptaData } from "./actions/pta/Pta.vue"; // Import des données depuis Pta.vue
+import { auditInterneData } from "./actions/auditinterne/AuditInterne.vue"; // Import des données depuis AuditInterne.vue
+
+const tableData = ref([
+    {
+        sources: "Audit Interne",
+        action: "Demande le statut",
+        datesuivi: "14/04/2025",
+    },
+    {
+        sources: "Audit Interne",
+        action: "Exploiter les informations",
+        datesuivi: "13/10/2025",
+    },
+    {
+        sources: "PTA",
+        dns: "Planifier les réunions",
+        datesuivi: "15/11/2024",
+    },
+]);
+
+// Fonction pour convertir une date au format JJ/MM/YYYY en un objet Date
+const parseDate = (dateString) => {
+    const [day, month, year] = dateString.split("/").map(Number); // Sépare JJ/MM/YYYY
+    return new Date(year, month - 1, day); // Crée un objet Date (mois commence à 0)
+};
+
+// Fonction pour vérifier si une date est dans le futur
+const isFutureDate = (dateString) => {
+    const date = parseDate(dateString); // Convertit la date
+    return date > new Date(); // Compare avec la date actuelle
+};
+
+// Fonction pour calculer la différence en jours entre la date de suivi et aujourd'hui
+const getDaysDifference = (dateString) => {
+    const today = new Date();
+    // Réinitialiser l'heure pour une comparaison précise des jours
+    today.setHours(0, 0, 0, 0);
+
+    const targetDate = parseDate(dateString);
+
+    // Calcul de la différence en millisecondes
+    const differenceMs = targetDate - today;
+    // Conversion en jours (1000ms * 60s * 60min * 24h)
+    const differenceDays = Math.round(differenceMs / (1000 * 60 * 60 * 24));
+
+    if (differenceDays > 0) {
+        return `+${differenceDays} jour${differenceDays > 1 ? "s" : ""}`;
+    } else if (differenceDays < 0) {
+        return `${differenceDays} jour${differenceDays < -1 ? "s" : ""}`;
+    } else {
+        return "Aujourd'hui";
+    }
+};
+
+// Fonction pour définir la classe CSS en fonction de la différence de jours
+const getDaysDifferenceClass = (dateString) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const targetDate = parseDate(dateString);
+    const differenceMs = targetDate - today;
+    const differenceDays = Math.round(differenceMs / (1000 * 60 * 60 * 24));
+
+    // Classes pour différents états
+    if (differenceDays > 7) {
+        return "bg-green-100 text-green-800"; // Plus d'une semaine - vert
+    } else if (differenceDays > 0) {
+        return "bg-yellow-100 text-yellow-800"; // Entre 1-7 jours - jaune
+    } else if (differenceDays === 0) {
+        return "bg-blue-100 text-blue-800"; // Aujourd'hui - bleu
+    } else if (differenceDays > -7) {
+        return "bg-orange-100 text-orange-800"; // Retard de moins d'une semaine - orange
+    } else {
+        return "bg-red-100 text-red-800"; // Retard important - rouge
+    }
+};
+
+// Fonction pour vérifier si les données existent et générer le lien
+const getSourceLink = (sources, actionOrDns, datesuivi) => {
+    // Vérifie dans audit interne
+    const existsInAuditInterne = auditInterneData.value.some(
+        (auditItem) =>
+            auditItem.sources === sources &&
+            auditItem.action === actionOrDns &&
+            auditItem.datesuivi === datesuivi
+    );
+
+    if (existsInAuditInterne) {
+        return "/admin/actions/auditinterne";
+    }
+
+    // Vérifie dans PTA
+    const existsInPta = ptaData.value.some(
+        (ptaItem) =>
+            ptaItem.sources === sources &&
+            ptaItem.dns === actionOrDns &&
+            ptaItem.datesuivi === datesuivi
+    );
+
+    if (existsInPta) {
+        return "/admin/actions/pta";
+    }
+
+    // Redirection par défaut si aucune correspondance
+    return "/";
+};
+
+// Variables pour les états des notifications
+const emailNotification = ref(false); // État pour l'envoi d'email
+const appAlert = ref(false); // État pour l'alerte dans l'application
+
+// Watchers pour surveiller les changements d'état
+watch(emailNotification, (newValue) => {
+    if (newValue) {
+        console.log("Notification Email activée");
+        // Ajoutez ici la logique pour activer l'envoi d'email
+    } else {
+        console.log("Notification Email désactivée");
+        // Ajoutez ici la logique pour désactiver l'envoi d'email
+    }
+});
+
+watch(appAlert, (newValue) => {
+    if (newValue) {
+        console.log("Alerte Application activée");
+        // Ajoutez ici la logique pour activer l'alerte dans l'application
+    } else {
+        console.log("Alerte Application désactivée");
+        // Ajoutez ici la logique pour désactiver l'alerte dans l'application
+    }
+});
+</script>
+
+<style scoped>
+.form-toggle {
+    appearance: none;
+    width: 2.5rem;
+    height: 1.25rem;
+    background-color: #d1d5db; /* Couleur grise par défaut */
+    border-radius: 9999px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.form-toggle:checked {
+    background-color: #3b82f6; /* Couleur bleue quand activé */
+}
+
+.form-toggle::before {
+    content: "";
+    position: absolute;
+    top: 0.125rem;
+    left: 0.125rem;
+    width: 1rem;
+    height: 1rem;
+    background-color: white;
+    border-radius: 9999px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.form-toggle:checked::before {
+    transform: translateX(1.25rem); /* Déplace le cercle à droite */
+}
+</style>
+
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -182,178 +357,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../assets/Sidebar.vue";
-import Navbar from "../assets/Navbar.vue";
-import Footer from "../assets/Footer.vue";
-import { Info, ChevronLeft, ChevronRight } from "lucide-vue-next";
-
-import { ref, watch } from "vue";
-
-import { ptaData } from "./actions/pta/Pta.vue"; // Import des données depuis Pta.vue
-import { auditInterneData } from "./actions/auditinterne/AuditInterne.vue"; // Import des données depuis AuditInterne.vue
-
-const tableData = ref([
-    {
-        sources: "Audit Interne",
-        action: "Demande le statut",
-        datesuivi: "14/04/2025",
-    },
-    {
-        sources: "Audit Interne",
-        action: "Exploiter les informations",
-        datesuivi: "13/10/2025",
-    },
-    {
-        sources: "PTA",
-        dns: "Planifier les réunions",
-        datesuivi: "15/11/2024",
-    },
-]);
-
-// Fonction pour convertir une date au format JJ/MM/YYYY en un objet Date
-const parseDate = (dateString) => {
-    const [day, month, year] = dateString.split("/").map(Number); // Sépare JJ/MM/YYYY
-    return new Date(year, month - 1, day); // Crée un objet Date (mois commence à 0)
-};
-
-// Fonction pour vérifier si une date est dans le futur
-const isFutureDate = (dateString) => {
-    const date = parseDate(dateString); // Convertit la date
-    return date > new Date(); // Compare avec la date actuelle
-};
-
-// Fonction pour calculer la différence en jours entre la date de suivi et aujourd'hui
-const getDaysDifference = (dateString) => {
-    const today = new Date();
-    // Réinitialiser l'heure pour une comparaison précise des jours
-    today.setHours(0, 0, 0, 0);
-
-    const targetDate = parseDate(dateString);
-
-    // Calcul de la différence en millisecondes
-    const differenceMs = targetDate - today;
-    // Conversion en jours (1000ms * 60s * 60min * 24h)
-    const differenceDays = Math.round(differenceMs / (1000 * 60 * 60 * 24));
-
-    if (differenceDays > 0) {
-        return `+${differenceDays} jour${differenceDays > 1 ? "s" : ""}`;
-    } else if (differenceDays < 0) {
-        return `${differenceDays} jour${differenceDays < -1 ? "s" : ""}`;
-    } else {
-        return "Aujourd'hui";
-    }
-};
-
-// Fonction pour définir la classe CSS en fonction de la différence de jours
-const getDaysDifferenceClass = (dateString) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const targetDate = parseDate(dateString);
-    const differenceMs = targetDate - today;
-    const differenceDays = Math.round(differenceMs / (1000 * 60 * 60 * 24));
-
-    // Classes pour différents états
-    if (differenceDays > 7) {
-        return "bg-green-100 text-green-800"; // Plus d'une semaine - vert
-    } else if (differenceDays > 0) {
-        return "bg-yellow-100 text-yellow-800"; // Entre 1-7 jours - jaune
-    } else if (differenceDays === 0) {
-        return "bg-blue-100 text-blue-800"; // Aujourd'hui - bleu
-    } else if (differenceDays > -7) {
-        return "bg-orange-100 text-orange-800"; // Retard de moins d'une semaine - orange
-    } else {
-        return "bg-red-100 text-red-800"; // Retard important - rouge
-    }
-};
-
-// Fonction pour vérifier si les données existent et générer le lien
-const getSourceLink = (sources, actionOrDns, datesuivi) => {
-    // Vérifie dans audit interne
-    const existsInAuditInterne = auditInterneData.value.some(
-        (auditItem) =>
-            auditItem.sources === sources &&
-            auditItem.action === actionOrDns &&
-            auditItem.datesuivi === datesuivi
-    );
-
-    if (existsInAuditInterne) {
-        return "/admin/actions/auditinterne";
-    }
-
-    // Vérifie dans PTA
-    const existsInPta = ptaData.value.some(
-        (ptaItem) =>
-            ptaItem.sources === sources &&
-            ptaItem.dns === actionOrDns &&
-            ptaItem.datesuivi === datesuivi
-    );
-
-    if (existsInPta) {
-        return "/admin/actions/pta";
-    }
-
-    // Redirection par défaut si aucune correspondance
-    return "/";
-};
-
-// Variables pour les états des notifications
-const emailNotification = ref(false); // État pour l'envoi d'email
-const appAlert = ref(false); // État pour l'alerte dans l'application
-
-// Watchers pour surveiller les changements d'état
-watch(emailNotification, (newValue) => {
-    if (newValue) {
-        console.log("Notification Email activée");
-        // Ajoutez ici la logique pour activer l'envoi d'email
-    } else {
-        console.log("Notification Email désactivée");
-        // Ajoutez ici la logique pour désactiver l'envoi d'email
-    }
-});
-
-watch(appAlert, (newValue) => {
-    if (newValue) {
-        console.log("Alerte Application activée");
-        // Ajoutez ici la logique pour activer l'alerte dans l'application
-    } else {
-        console.log("Alerte Application désactivée");
-        // Ajoutez ici la logique pour désactiver l'alerte dans l'application
-    }
-});
-</script>
-
-<style scoped>
-.form-toggle {
-    appearance: none;
-    width: 2.5rem;
-    height: 1.25rem;
-    background-color: #d1d5db; /* Couleur grise par défaut */
-    border-radius: 9999px;
-    position: relative;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.form-toggle:checked {
-    background-color: #3b82f6; /* Couleur bleue quand activé */
-}
-
-.form-toggle::before {
-    content: "";
-    position: absolute;
-    top: 0.125rem;
-    left: 0.125rem;
-    width: 1rem;
-    height: 1rem;
-    background-color: white;
-    border-radius: 9999px;
-    transition: transform 0.2s ease-in-out;
-}
-
-.form-toggle:checked::before {
-    transform: translateX(1.25rem); /* Déplace le cercle à droite */
-}
-</style>

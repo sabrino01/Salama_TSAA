@@ -11,6 +11,7 @@ import FrequenceBimestriel from "../../../assets/FrequenceBimestriel.vue";
 import FrequenceTrimestriel from "../../../assets/FrequenceTrimestriel.vue";
 import FrequenceQuadrimestriel from "../../../assets/FrequenceQuadrimestriel.vue";
 import FrequenceSemestriel from "../../../assets/FrequenceSemestriel.vue";
+import FrequenceToutAnnee from "../../../assets/FrequenceToutAnnee.vue";
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { frequenceOptions } from "../../../../utils/frequenceOptions.js";
@@ -41,6 +42,7 @@ const action = ref({
     constats_id: "",
     frequence: "",
     description: "",
+    mesure: "",
     observation: "",
     users_id: user?.id || null,
 });
@@ -66,7 +68,10 @@ onMounted(async () => {
 });
 
 const handleOptionChange = () => {
-    if (
+    if (selectedOption.value === "Tout l'année") {
+        // Enregistrer directement la fréquence pour "Tout l'année"
+        action.value.frequence = JSON.stringify({ type: "Tout l'année" });
+    } else if (
         selectedOption.value === "Ponctuel" ||
         selectedOption.value === "Annuel" ||
         selectedOption.value === "Quotidien" ||
@@ -324,6 +329,10 @@ const enregistrerAction = async () => {
                             v-model:showModal="showModal"
                             v-model="action.frequence"
                         />
+                        <FrequenceToutAnnee
+                            v-if="selectedOption === 'Tout l\'année'"
+                            v-model="action.frequence"
+                        />
                         <FrequenceHebdomadaire
                             v-if="selectedOption === 'Hebdomadaire'"
                             v-model:showModal="showModal"
@@ -355,6 +364,21 @@ const enregistrerAction = async () => {
                             v-model="action.frequence"
                         />
                         <!-- Vous pouvez ajouter d'autres composants ici si nécessaire -->
+                    </div>
+
+                    <div class="flex w-[60%] items-center mt-5">
+                        <label
+                            for="mesure"
+                            class="w-[16.5%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Mesure (Obsverif):
+                        </label>
+                        <input
+                            type="text"
+                            id="mesure"
+                            class="w-[40%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            v-model="action.mesure"
+                        />
                     </div>
 
                     <div class="flex w-[60%] items-center mt-5">
