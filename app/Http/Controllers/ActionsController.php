@@ -10,41 +10,33 @@ use App\Models\Suivi;
 use App\Models\TypeActions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class ActionsController extends Controller
 {
     public function indexAI(Request $request)
     {
         $search = $request->query('search', '');
-        $perPage = $request->query('per_page', 10); // affichage 10 résultats par page
+        $perPage = $request->query('per_page', 6); // affichage 10 résultats par page
 
         $actionsAI = Actions::join('users', 'actions.users_id', '=', 'users.id')
             ->join('constats', 'actions.constats_id', '=', 'constats.id')
-            ->where('actions.num_actions', 'like', "%$search%")
-            ->orWhere('actions.date', 'like', "%$search%")
-            ->orWhere('actions.description', 'like', "%$search%")
-            ->orWhere('actions.statut', 'like', "%$search%")
-            ->orWhere('actions.frequence', 'like', "%$search%")
-            ->orWhere('users.nom_utilisateur', 'like', "%$search%")
-            ->orWhere('constats.libelle', 'like', "%$search%")
+            ->where('actions.num_actions', 'like', 'AI-%') // Filtrer uniquement les num_actions commençant par AI-
+            ->where(function ($query) use ($search) {
+                $query->where('actions.num_actions', 'like', "%$search%")
+                      ->orWhere('actions.date', 'like', "%$search%")
+                      ->orWhere('actions.description', 'like', "%$search%")
+                      ->orWhere('actions.statut', 'like', "%$search%")
+                      ->orWhere('actions.frequence', 'like', "%$search%")
+                      ->orWhere('users.nom_utilisateur', 'like', "%$search%")
+                      ->orWhere('constats.libelle', 'like', "%$search%");
+            })
             ->select(
                 'actions.*',
                 'users.nom_utilisateur as nom_utilisateur',
                 'constats.libelle as constat_libelle'
             )
+            ->orderBy('actions.id', 'desc') // Trier par ordre décroissant
             ->paginate($perPage);
-
-            // Traiter les données JSON après les avoir récupérées
-        foreach ($actionsAI as $action) {
-            if ($action->frequence) {
-                $frequenceData = json_decode($action->frequence, true);
-                $action->frequence_type = $frequenceData['type'] ?? null;
-                $action->frequence_debut = $frequenceData['debut'] ?? null;
-                $action->frequence_fin = $frequenceData['fin'] ?? null;
-            }
-        }
 
         return response()->json($actionsAI);
     }

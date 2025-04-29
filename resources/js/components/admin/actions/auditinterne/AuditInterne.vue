@@ -22,16 +22,20 @@ export const auditInterneData = ref([
 import Sidebar from "../../../assets/Sidebar.vue";
 import Navbar from "../../../assets/Navbar.vue";
 import Footer from "../../../assets/Footer.vue";
-import Table from "../../../assets/Table.vue";
+import Table from "../../../assets/TableActions.vue";
 import {
     Info,
     Plus,
     Search,
     ChevronLeft,
     ChevronRight,
-    X,
+    Circle,
     Check,
+    X,
+    CheckCircle,
+    AlertTriangle,
     Ban,
+    Clock,
 } from "lucide-vue-next";
 
 import { ref, onMounted, computed } from "vue";
@@ -43,7 +47,7 @@ const actionsAI = ref([]);
 const totalActions = ref(0);
 const currentPage = ref(1);
 const searchQuery = ref("");
-const perPage = ref(10); // Même valeur que dans votre backend
+const perPage = ref(6); // Même valeur que dans votre backend
 const lastPage = ref(1);
 
 // Charger les types d'actions depuis l'API
@@ -140,6 +144,77 @@ const supprimerAction = async (id) => {
     );
 };
 
+// Données formatées pour afficher correctement la fréquence
+const formattedActions = computed(() => {
+    return actionsAI.value.map((action) => {
+        // Créer une copie pour éviter de modifier les données originales
+        const newAction = { ...action };
+
+        // Reformater la date si elle existe
+        if (newAction.date) {
+            const [year, month, day] = newAction.date.split("-");
+            newAction.date = `${day}/${month}/${year}`; // Reformater en jj-mm-yyyy
+        }
+
+        // Essayer de parser la fréquence JSON et extraire le type
+        try {
+            if (newAction.frequence) {
+                const frequenceData =
+                    typeof newAction.frequence === "string"
+                        ? JSON.parse(newAction.frequence)
+                        : newAction.frequence;
+
+                // Conserver les données complètes pour le tooltip
+                newAction.frequenceComplete = frequenceData;
+
+                // Afficher uniquement le type s'il existe
+                newAction.frequence = frequenceData.type || "Non défini";
+            }
+        } catch (e) {
+            // En cas d'erreur, garder la valeur originale
+            console.error("Erreur lors du chargement de la fréquence:", e);
+        }
+
+        return newAction;
+    });
+});
+
+// Fonction générique pour formater les données JSON en texte lisible
+const formatJsonForTooltip = (jsonData) => {
+    if (!jsonData || typeof jsonData !== "object") return "";
+
+    // Exclure le type car il est déjà affiché
+    const { type, ...rest } = jsonData;
+
+    // Si pas de données supplémentaires, pas de tooltip
+    if (Object.keys(rest).length === 0) return "";
+
+    // Convertir l'objet en chaîne JSON formatée
+    const jsonString = JSON.stringify(rest, null, 2);
+
+    // Formatter la chaîne pour l'affichage:
+    // 1. Remplacer les virgules par des sauts de ligne
+    // 2. Supprimer les guillemets autour des clés et valeurs
+    // 3. Éliminer les backslashs d'échappement
+    return jsonString
+        .replace(/",/g, '"') // Supprimer les virgules après les guillemets
+        .replace(/,/g, "\n") // Remplacer virgules par sauts de ligne
+        .replace(/"/g, "") // Supprimer tous les guillemets
+        .replace(/\\/g, "") // Supprimer les backslashs
+        .replace(/\{/g, "") // Supprimer les accolades ouvrantes
+        .replace(/\}/g, "") // Supprimer les accolades fermantes
+        .replace(/\[/g, "") // Supprimer les crochets ouvrants
+        .replace(/\]/g, "") // Supprimer les crochets fermants
+        .replace(/\n\s*\n/g, "\n") // Supprimer les lignes vides
+        .replace(/^\s+/gm, "") // Supprimer les espaces au début de chaque ligne
+        .replace(
+            /\b(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})\b/g, // Détecter le format datetime
+            (_, year, month, day, hour, minute) =>
+                `${day}/${month}/${year} à ${hour}:${minute}` // Reformater la date
+        )
+        .trim(); // Supprimer les espaces inutiles au début et à la fin
+};
+
 const voirAuditInterne = (id) => {
     router.push(`/admin/actions/auditinterne/voir/${id}`);
 };
@@ -153,7 +228,27 @@ const columns = [
     { label: "Date", field: "date" },
     { label: "Action", field: "description" },
     { label: "Constat", field: "constat_libelle" },
-    { label: "Frequence", field: "frequence" },
+    {
+        label: "Frequence",
+        field: "frequence",
+        // Ajouter une fonction de rendu personnalisée pour cette colonne
+        render: (row) => {
+            if (!row.frequenceComplete) return row.frequence;
+
+            // Formatage générique du tooltip
+            const tooltipContent = formatJsonForTooltip(row.frequenceComplete);
+
+            // Si pas de contenu supplémentaire, pas de tooltip
+            if (!tooltipContent) return row.frequence;
+
+            // Retourner un objet qui indique qu'il faut un rendu personnalisé
+            return {
+                customRender: true,
+                value: row.frequence,
+                tooltipContent,
+            };
+        },
+    },
     { label: "Statut", field: "statut" },
     { label: "Ajouter par", field: "nom_utilisateur" },
 ];
@@ -323,11 +418,11 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Tableau des membres -->
+                <!-- Tableau pour afficher les données d'audit interne -->
                 <div class="mt-5 ml-4">
                     <Table
                         :columns="columns"
-                        :data="actionsAI"
+                        :data="formattedActions"
                         :actions="actions"
                     />
                 </div>
