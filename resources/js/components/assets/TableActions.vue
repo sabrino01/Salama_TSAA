@@ -68,7 +68,31 @@
                         v-for="(column, colIndex) in columns"
                         :key="colIndex"
                         class="px-4 py-2"
+                        :class="column.classes"
                     >
+                        <!-- Icônes pour la colonne "constat_libelle" -->
+                        <template v-if="column.field === 'constat_libelle'">
+                            <div
+                                class="flex justify-center underline space-x-2"
+                            >
+                                <component
+                                    :is="getConstatIcon(row[column.field])"
+                                    class="w-5 h-5"
+                                    :class="getConstatColor(row[column.field])"
+                                />
+                                <span>{{ row[column.field] }}</span>
+                            </div>
+                        </template>
+                        <!-- Vérifiez si la colonne est extensible -->
+                        <div v-if="column.isExpandable" class="relative">
+                            <button
+                                type="button"
+                                class="text-black ml-2"
+                                @click="openModal(column.render(row))"
+                            >
+                                {{ column.render(row) }}
+                            </button>
+                        </div>
                         <!-- Rendu personnalisé pour les colonnes avec tooltip -->
                         <div
                             v-if="hasCustomRender(column, row)"
@@ -105,8 +129,14 @@
                             </div>
                         </div>
                         <!-- Rendu standard pour les autres colonnes -->
-                        <template v-else>
-                            {{ row[column.field] }}
+                        <template
+                            v-if="
+                                column.field !== 'constat_libelle' &&
+                                !column.isExpandable &&
+                                !hasCustomRender(column, row)
+                            "
+                        >
+                            {{ getColumnValue(column, row) }}
                         </template>
                     </td>
                     <td v-if="actions.length > 0" class="py-3 space-x-2">
@@ -125,10 +155,38 @@
             </tbody>
         </table>
     </div>
+    <div
+        v-if="modalVisible"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+    >
+        <div class="bg-white p-6 rounded shadow-lg max-w-lg w-full">
+            <h2 class="text-lg font-bold mb-4">Détails</h2>
+            <p class="text-gray-700 whitespace-pre-wrap">{{ modalContent }}</p>
+            <div class="flex w-full justify-end">
+                <button
+                    class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    @click="closeModal"
+                >
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import {
+    RefreshCcw,
+    FileCheck,
+    Check,
+    X,
+    CheckCircle,
+    Search,
+    AlertTriangle,
+    Ban,
+    Clock,
+} from "lucide-vue-next";
 const props = defineProps({
     columns: {
         type: Array,
@@ -160,12 +218,12 @@ const activeTooltip = ref({
 });
 
 // Gestion des données triées
-const sortOrder = ref("asc"); // Ordre de tri par défaut
+const sortOrder = ref("desc"); // Ordre de tri par défaut (desc)
 const sortedData = computed(() => {
     return [...props.data].sort((a, b) => {
         const numA = parseInt(a.num_actions.split("-")[1]);
         const numB = parseInt(b.num_actions.split("-")[1]);
-        return sortOrder.value === "asc" ? numA - numB : numB - numA;
+        return sortOrder.value === "desc" ? numB - numA : numA - numB; // Inverser la logique
     });
 });
 
@@ -177,6 +235,38 @@ const sortData = (order) => {
 // Fonction pour filtrer les actions
 const getFilteredActions = (row) => {
     return props.filterActions(row, props.actions);
+};
+
+// Fonction pour obtenir l'icône en fonction de la valeur de "constat_libelle"
+const getConstatIcon = (value) => {
+    const icons = {
+        "En Cours": RefreshCcw,
+        Réalisé: Check,
+        "Non Réalisé": X,
+        "Ecart Réglé": CheckCircle,
+        "Ecart Réglé à Suivre": Search,
+        "Ecart non réglé": AlertTriangle,
+        "Réalisé partiel": FileCheck,
+        "Actions abandonnées": Ban,
+        Retard: Clock,
+    };
+    return icons[value] || null;
+};
+
+// Fonction pour obtenir la couleur en fonction de la valeur de "constat_libelle"
+const getConstatColor = (value) => {
+    const colors = {
+        "En Cours": "text-blue-500",
+        Réalisé: "text-green-500",
+        "Non Réalisé": "text-red-500",
+        "Ecart Réglé": "text-blue-800",
+        "Ecart Réglé à Suivre": "text-gray-500",
+        "Ecart non réglé": "text-yellow-500",
+        "Réalisé partiel": "text-green-600",
+        "Actions abandonnées": "text-purple-500",
+        Retard: "text-red-500",
+    };
+    return colors[value] || "";
 };
 
 // Fonction pour gérer la sélection/désélection de toutes les lignes
@@ -253,11 +343,29 @@ const hideTooltip = () => {
     activeTooltip.value = { rowIndex: null, colIndex: null };
 };
 
+const modalVisible = ref(false); // État pour afficher ou masquer la modale
+const modalContent = ref(""); // Contenu à afficher dans la modale
+
+// Fonction pour ouvrir la modale
+const openModal = (content) => {
+    modalContent.value = content;
+    modalVisible.value = true;
+};
+
+// Fonction pour fermer la modale
+const closeModal = () => {
+    modalVisible.value = false;
+    modalContent.value = "";
+};
+
 // Mettre à jour `selectAll` si toutes les lignes sont sélectionnées ou non
 watch(selectedRows, (newSelectedRows) => {
     selectAll.value =
         newSelectedRows.length === props.data.length && props.data.length > 0;
 });
+
+// expose pour que le parent puisse accéder à selectedRows, importer les données dans AuditInterne.vue
+defineExpose({ selectedRows });
 </script>
 
 <style scoped>
@@ -268,12 +376,5 @@ tbody tr td {
 
 table {
     border: none;
-}
-
-/* Style pour le tooltip */
-.cursor-help {
-    text-decoration-style: dotted;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 2px;
 }
 </style>

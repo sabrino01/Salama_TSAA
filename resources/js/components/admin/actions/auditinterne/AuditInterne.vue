@@ -23,20 +23,8 @@ import Sidebar from "../../../assets/Sidebar.vue";
 import Navbar from "../../../assets/Navbar.vue";
 import Footer from "../../../assets/Footer.vue";
 import Table from "../../../assets/TableActions.vue";
-import {
-    Info,
-    Plus,
-    Search,
-    ChevronLeft,
-    ChevronRight,
-    Circle,
-    Check,
-    X,
-    CheckCircle,
-    AlertTriangle,
-    Ban,
-    Clock,
-} from "lucide-vue-next";
+import * as XLSX from "xlsx";
+import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
 
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
@@ -44,11 +32,18 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 const actionsAI = ref([]);
+const sourcesAI = ref([]);
+const typeActionsAI = ref([]);
+const responsables = ref([]);
+const suivis = ref([]);
+const constats = ref([]);
+const users = ref([]);
 const totalActions = ref(0);
 const currentPage = ref(1);
 const searchQuery = ref("");
 const perPage = ref(6); // Même valeur que dans votre backend
 const lastPage = ref(1);
+const tableRef = ref(null); // Référence vers le composant TableActions.vue
 
 // Charger les types d'actions depuis l'API
 const chargerActions = async (page = 1, search = "") => {
@@ -66,6 +61,63 @@ const chargerActions = async (page = 1, search = "") => {
             "Erreur lors du chargement de l'audit interne ou de l'action",
             error
         );
+    }
+};
+
+const chargerSourcesAI = async () => {
+    try {
+        const response = await axios.get("/api/sourcesAI");
+        sourcesAI.value = response.data;
+    } catch (error) {
+        console.error("Erreur lors du chargement des sources AI:", error);
+    }
+};
+
+const chargerTypeActionsAI = async () => {
+    try {
+        const response = await axios.get("/api/typeactionsAI");
+        typeActionsAI.value = response.data;
+    } catch (error) {
+        console.error(
+            "Erreur lors du chargement des types d'actions AI:",
+            error
+        );
+    }
+};
+
+const chargerResponsables = async () => {
+    try {
+        const response = await axios.get("/api/responsables");
+        responsables.value = response.data;
+    } catch (error) {
+        console.error("Erreur lors du chargement des responsables:", error);
+    }
+};
+
+const chargerSuivis = async () => {
+    try {
+        const response = await axios.get("/api/suivis");
+        suivis.value = response.data;
+    } catch (error) {
+        console.error("Erreur lors du chargement des suivis:", error);
+    }
+};
+
+const chargerConstats = async () => {
+    try {
+        const response = await axios.get("/api/constats");
+        constats.value = response.data;
+    } catch (error) {
+        console.error("Erreur lors du chargement des constats:", error);
+    }
+};
+
+const chargerUsers = async () => {
+    try {
+        const response = await axios.get("/api/users");
+        users.value = response.data;
+    } catch (error) {
+        console.error("Erreur lors du chargement des utilisateurs:", error);
     }
 };
 
@@ -168,11 +220,20 @@ const formattedActions = computed(() => {
                 newAction.frequenceComplete = frequenceData;
 
                 // Afficher uniquement le type s'il existe
-                newAction.frequence = frequenceData.type || "Non défini";
+                const type = frequenceData.type || "Non défini";
+                const tooltip = formatJsonForTooltip(frequenceData);
+
+                newAction.frequence = type;
+
+                // Ajoute un champ combiné pour Excel
+                newAction.frequenceWithDetails = tooltip
+                    ? `${type}\n${tooltip}`
+                    : type;
             }
         } catch (e) {
             // En cas d'erreur, garder la valeur originale
             console.error("Erreur lors du chargement de la fréquence:", e);
+            newAction.frequenceWithDetails = newAction.frequence;
         }
 
         return newAction;
@@ -226,7 +287,13 @@ const editerAuditInterne = (id) => {
 const columns = [
     { label: "N°", field: "num_actions" },
     { label: "Date", field: "date" },
-    { label: "Action", field: "description" },
+    {
+        label: "Action",
+        field: "description",
+        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
+        isExpandable: true, // Indique que cette colonne a un contenu extensible
+        render: (row) => row.description, // Retourne directement la valeur
+    },
     { label: "Constat", field: "constat_libelle" },
     {
         label: "Frequence",
@@ -280,10 +347,49 @@ const toggleExportMenu = () => {
 };
 
 // Fonction pour exporter en Excel
-const exportToExcel = () => {
-    console.log("Exportation en Excel...");
-    // Ajoutez ici la logique pour exporter en Excel
-    showExportMenu.value = false; // Masquer le menu après l'action
+const exportToExcel = async () => {
+    const selectedIds = tableRef.value?.selectedRows || [];
+
+    // Filtrer les actions à exporter
+    const selectedData = formattedActions.value.filter((action) =>
+        selectedIds.includes(action.num_actions)
+    );
+
+    if (selectedData.length === 0) {
+        toast.error("Veuillez sélectionner au moins une ligne.");
+        return;
+    }
+
+    try {
+        // Charger les données nécessaires depuis les API
+        await Promise.all([
+            chargerSourcesAI(),
+            chargerTypeActionsAI(),
+            chargerResponsables(),
+            chargerSuivis(),
+            chargerConstats(),
+            chargerUsers(),
+        ]);
+
+        // Générer un fichier Excel avec les données chargées
+        generateExcelFile(
+            selectedData,
+            sourcesAI.value,
+            typeActionsAI.value,
+            responsables.value,
+            suivis.value,
+            constats.value,
+            users.value
+        );
+
+        showExportMenu.value = false;
+    } catch (error) {
+        console.error(
+            "Erreur lors du chargement des données pour l'export:",
+            error
+        );
+        toast.error("Une erreur s'est produite lors de l'exportation.");
+    }
 };
 
 // Fonction pour exporter en PDF
@@ -291,6 +397,124 @@ const exportToPdf = () => {
     console.log("Exportation en PDF...");
     // Ajoutez ici la logique pour exporter en PDF
     showExportMenu.value = false; // Masquer le menu après l'action
+};
+
+// Fonction pour générer un fichier Excel à partir des données sélectionnées
+const generateExcelFile = (
+    rows,
+    sourcesList = [],
+    typeActionsList = [],
+    responsablesList = [],
+    suivisList = [],
+    constatsList = [],
+    usersList = []
+) => {
+    // Convertir en format compatible Excel
+    const headers = [
+        "N°",
+        "Date",
+        "Sources",
+        "Type d'action",
+        "Responsable",
+        "Suivi",
+        "Action",
+        "Constat",
+        "Frequence",
+        "Statut",
+        "Ajouté par",
+    ];
+    const data = rows.map((row) => [
+        row.num_actions,
+        row.date,
+        row.source_libelle,
+        row.type_action_libelle,
+        row.responsable_libelle,
+        row.suivi_nom,
+        row.description,
+        row.constat_libelle,
+        row.frequenceWithDetails,
+        row.statut,
+        row.nom_utilisateur,
+    ]);
+
+    const worksheetData = [headers, ...data];
+
+    const workbook = XLSX.utils.book_new();
+
+    // Feuille principale
+    const mainSheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    XLSX.utils.book_append_sheet(workbook, mainSheet, "Audit Interne");
+
+    // Feuille "Sources"
+    if (sourcesList.length) {
+        const sourcesData = [["ID", "Libellé"]];
+        sourcesList.forEach((src) => {
+            sourcesData.push([src.id, src.libelle]);
+        });
+        const sourcesSheet = XLSX.utils.aoa_to_sheet(sourcesData);
+        XLSX.utils.book_append_sheet(workbook, sourcesSheet, "Sources");
+    }
+
+    // Feuille "Types d'Actions"
+    if (typeActionsList.length) {
+        const typeActionsData = [["ID", "Libellé"]];
+        typeActionsList.forEach((type) => {
+            typeActionsData.push([type.id, type.libelle]);
+        });
+        const typeActionsSheet = XLSX.utils.aoa_to_sheet(typeActionsData);
+        XLSX.utils.book_append_sheet(
+            workbook,
+            typeActionsSheet,
+            "Types d'Actions"
+        );
+    }
+
+    // Feuille "Responsables"
+    if (responsablesList.length) {
+        const responsablesData = [["ID", "Libellé"]];
+        responsablesList.forEach((resp) => {
+            responsablesData.push([resp.id, resp.libelle]);
+        });
+        const responsablesSheet = XLSX.utils.aoa_to_sheet(responsablesData);
+        XLSX.utils.book_append_sheet(
+            workbook,
+            responsablesSheet,
+            "Responsables"
+        );
+    }
+
+    // Feuille "Suivis"
+    if (suivisList.length) {
+        const suivisData = [["ID", "Nom"]];
+        suivisList.forEach((suivi) => {
+            suivisData.push([suivi.id, suivi.nom]);
+        });
+        const suivisSheet = XLSX.utils.aoa_to_sheet(suivisData);
+        XLSX.utils.book_append_sheet(workbook, suivisSheet, "Suivis");
+    }
+
+    // Feuille "Constats"
+    if (constatsList.length) {
+        const constatsData = [["ID", "Libellé"]];
+        constatsList.forEach((constat) => {
+            constatsData.push([constat.id, constat.libelle]);
+        });
+        const constatsSheet = XLSX.utils.aoa_to_sheet(constatsData);
+        XLSX.utils.book_append_sheet(workbook, constatsSheet, "Constats");
+    }
+
+    // Feuille "Utilisateurs"
+    if (usersList.length) {
+        const usersData = [["ID", "Nom"]];
+        usersList.forEach((user) => {
+            usersData.push([user.id, user.nom_utilisateur]);
+        });
+        const usersSheet = XLSX.utils.aoa_to_sheet(usersData);
+        XLSX.utils.book_append_sheet(workbook, usersSheet, "Utilisateurs");
+    }
+
+    // Générer le fichier Excel
+    XLSX.writeFile(workbook, "Audit_Interne.xlsx");
 };
 
 // Fonction pour charger les actions au démarrage
@@ -421,6 +645,7 @@ onMounted(() => {
                 <!-- Tableau pour afficher les données d'audit interne -->
                 <div class="mt-5 ml-4">
                     <Table
+                        ref="tableRef"
                         :columns="columns"
                         :data="formattedActions"
                         :actions="actions"

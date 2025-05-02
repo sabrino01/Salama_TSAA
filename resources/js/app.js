@@ -4,6 +4,9 @@ import "./bootstrap";
 import "../css/app.css";
 import router from "./router";
 import Swal from "sweetalert2";
+import { Buffer } from "buffer";
+
+window.Buffer = Buffer;
 
 window.Swal = Swal;
 const toast = {

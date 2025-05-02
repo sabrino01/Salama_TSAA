@@ -64,6 +64,13 @@ Route::get('/constat', [ConstatController::class, 'index']);
 Route::get('/constat/{id}', [ConstatController::class, 'show']);
 Route::put('/constat/{id}', [ConstatController::class, 'update']);
 Route::delete('/constat/{id}', [ConstatController::class, 'destroy']);
+//appel les informations
+Route::get('/sourcesAI', [ActionsController::class, 'sourcesAI']);
+Route::get('/typeactionsAI', [ActionsController::class, 'typeActionsAI']);
+Route::get('/responsables', [ActionsController::class, 'responsables']);
+Route::get('/suivis', [ActionsController::class, 'suivis']);
+Route::get('/constats', [ActionsController::class, 'constats']);
+Route::get('/users', [ActionsController::class, 'users']);
 //actions audit interne
 Route::get('/actions/createAI', [ActionsController::class, 'createAI']);
 Route::post('/actions', [ActionsController::class, 'store']);
