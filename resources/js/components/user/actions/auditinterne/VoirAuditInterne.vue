@@ -1,3 +1,88 @@
+<script setup>
+import Sidebar from "../../../assets/SidebarUser.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const action = ref({});
+const frequenceDetails = ref("");
+
+// Fonction pour formater la date
+const formatDate = (date) => {
+    if (!date) return ""; // Si la date est vide, retourner une chaîne vide
+    if (date.includes("/")) return date; // Si la date est déjà formatée, la retourner telle quelle
+    const [year, month, day] = date.split("-");
+    return `${day}/${month}/${year}`; // Reformater en dd/mm/yyyy
+};
+
+// Fonction générique pour formater les données JSON en texte lisible
+const formatJsonForTooltip = (jsonData) => {
+    if (!jsonData || typeof jsonData !== "object") return "";
+
+    // Exclure le type car il est déjà affiché
+    const { type, ...rest } = jsonData;
+
+    // Si pas de données supplémentaires, pas de tooltip
+    if (Object.keys(rest).length === 0) return "";
+
+    // Convertir l'objet en chaîne JSON formatée
+    const jsonString = JSON.stringify(rest, null, 2);
+
+    // Formatter la chaîne pour l'affichage
+    return jsonString
+        .replace(/",/g, '"') // Supprimer les virgules après les guillemets
+        .replace(/,/g, "\n") // Remplacer virgules par sauts de ligne
+        .replace(/"/g, "") // Supprimer tous les guillemets
+        .replace(/\\/g, "") // Supprimer les backslashs
+        .replace(/\{/g, "") // Supprimer les accolades ouvrantes
+        .replace(/\}/g, "") // Supprimer les accolades fermantes
+        .replace(/\[/g, "") // Supprimer les crochets ouvrants
+        .replace(/\]/g, "") // Supprimer les crochets fermants
+        .replace(/\n\s*\n/g, "\n") // Supprimer les lignes vides
+        .replace(/^\s+/gm, "") // Supprimer les espaces au début de chaque ligne
+        .replace(
+            /\b(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})\b/g, // Détecter le format datetime
+            (_, year, month, day, hour, minute) =>
+                `${day}/${month}/${year} à ${hour}:${minute}` // Reformater la date
+        )
+        .trim(); // Supprimer les espaces inutiles au début et à la fin
+};
+
+// Charger les données de l'action
+onMounted(async () => {
+    const id = route.params.id;
+    try {
+        const response = await axios.get(`/api/actions/auditinterne/${id}`);
+        const fetchedAction = response.data;
+
+        // Reformater la date
+        fetchedAction.date = formatDate(fetchedAction.date);
+
+        // Gérer la fréquence
+        if (fetchedAction.frequence) {
+            const frequenceData =
+                typeof fetchedAction.frequence === "string" &&
+                fetchedAction.frequence.trim().startsWith("{")
+                    ? JSON.parse(fetchedAction.frequence)
+                    : null;
+
+            if (frequenceData) {
+                fetchedAction.frequence = frequenceData.type || "Non défini";
+                frequenceDetails.value = formatJsonForTooltip(frequenceData);
+            }
+        }
+
+        action.value = fetchedAction;
+    } catch (error) {
+        toast.error("Erreur lors du chargement des données", error);
+    }
+});
+</script>
+
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -32,135 +117,103 @@
 
                 <!-- Formulaire d'ajout de membre -->
                 <div class="w-full mt-5">
-                    <div class="flex w-[60%] items-center">
-                        <span
-                            class="w-[6%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Date :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >14/10/2024</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            formatDate(action.date)
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
+                    <div class="flex w-full mt-5">
                         <span
-                            class="w-[8%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[5%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Action :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >Demande de statut</span
-                        >
+                        <span class="w-[95%] text-lg font-semibold">{{
+                            action.description
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[8%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Source :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >Audit Interne</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.source_libelle
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[14%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Type d'actions :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >Action Corrective</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.type_action_libelle
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[13%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Responsable :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >Directeur Générale</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.responsable_libelle
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[6%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Suivi :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >Dominique</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.suivi_nom
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[11%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Fréquence :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >Mensuel</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.frequence
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[9%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div
+                        v-if="frequenceDetails"
+                        class="flex w-full items-start mt-2 ml-8 text-gray-600 whitespace-pre-wrap"
+                    >
+                        <span class="text-lg text-black">{{
+                            frequenceDetails
+                        }}</span>
+                    </div>
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Constat :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >Non réalisé</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.constat_libelle
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[8%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Mesure :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >Aucune mesure à prendre</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.mesure
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[6%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Mois :
-                        </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >13/10/2024</span
-                        >
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Obsérvation :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >C'est pas trop grave comme problème</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.observation
+                        }}</span>
                     </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Date Suivi :
-                        </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >14/12/2024</span
-                        >
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[7%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Statut :
                         </span>
-                        <span class="w-[50%] text-lg font-semibold"
-                            >En cours</span
-                        >
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.statut
+                        }}</span>
                     </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
                         <router-link to="/user/actions/auditinterne"
@@ -170,13 +223,16 @@
                                 Retour
                             </button></router-link
                         >
-                        <button
-                            class="w-[12%] bg-green-500 text-white font-semibold rounded-md px-4 py-2"
+                        <router-link
+                            :to="`/user/actions/auditinterne/editer/${action.id}`"
+                            class="w-[15%]"
                         >
-                            <router-link to="/user/actions/auditinterne/editer"
-                                >Editer</router-link
+                            <button
+                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
                             >
-                        </button>
+                                Editer
+                            </button>
+                        </router-link>
                     </div>
                 </div>
             </div>
@@ -186,9 +242,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/SidebarUser.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-</script>

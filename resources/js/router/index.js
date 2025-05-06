@@ -401,7 +401,7 @@ const routes = [
                 component: VoirOtherAuditInterneUser,
             },
             {
-                path: "actions/auditinterne/editer",
+                path: "actions/auditinterne/editer/:id",
                 name: "user.actions.auditinterne.editer",
                 component: EditAuditInterneUser,
             },

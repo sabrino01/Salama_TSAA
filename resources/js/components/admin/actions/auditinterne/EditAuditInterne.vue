@@ -36,6 +36,11 @@ const action = ref({
     statut: "",
 });
 
+// Variable pour stocker la fréquence originale
+const originalFrequence = ref("");
+// Variable pour indiquer si la fréquence a été modifiée
+const frequenceModified = ref(false);
+
 // Options pour les champs select
 const sources = ref([]);
 const typeActions = ref([]);
@@ -47,6 +52,54 @@ const constats = ref([]);
 const options = frequenceOptions;
 const selectedOption = ref(""); // Option sélectionnée
 const showModal = ref(false); // Contrôle de l'affichage du modal
+
+// Fonction pour normaliser la fréquence (gérer les chaînes JSON imbriquées)
+const normalizeFrequence = (frequenceValue) => {
+    if (!frequenceValue) return "";
+
+    // Essayer de détecter et normaliser les JSON imbriqués
+    let normalizedValue = frequenceValue;
+    let isNormalized = false;
+
+    // Boucle pour gérer les multiples niveaux d'encodage
+    while (!isNormalized) {
+        try {
+            // Vérifier si c'est une chaîne JSON valide
+            if (
+                typeof normalizedValue === "string" &&
+                (normalizedValue.startsWith('"') ||
+                    normalizedValue.startsWith("{"))
+            ) {
+                const parsed = JSON.parse(normalizedValue);
+
+                // Si le résultat est encore une chaîne qui ressemble à du JSON, continuer
+                if (
+                    typeof parsed === "string" &&
+                    (parsed.startsWith('"') || parsed.startsWith("{"))
+                ) {
+                    normalizedValue = parsed;
+                } else {
+                    // Si c'est un objet ou une chaîne non-JSON, on a fini
+                    normalizedValue = parsed;
+                    isNormalized = true;
+                }
+            } else {
+                // Si ce n'est pas une chaîne JSON, on a terminé
+                isNormalized = true;
+            }
+        } catch (e) {
+            // Si on ne peut pas parser, c'est probablement déjà normalisé
+            isNormalized = true;
+        }
+    }
+
+    // Convertir en chaîne JSON si c'est un objet
+    if (typeof normalizedValue === "object" && normalizedValue !== null) {
+        return JSON.stringify(normalizedValue);
+    }
+
+    return normalizedValue;
+};
 
 // Charger les données de l'action sélectionnée et les options
 onMounted(async () => {
@@ -64,6 +117,10 @@ onMounted(async () => {
             `/api/actions/auditinterne/${actionId}`
         );
         Object.assign(action.value, actionResponse.data);
+
+        // Normaliser et stocker la valeur originale de la fréquence
+        action.value.frequence = normalizeFrequence(action.value.frequence);
+        originalFrequence.value = action.value.frequence;
 
         // Définir l'option sélectionnée en fonction de la fréquence existante
         if (action.value.frequence) {
@@ -83,10 +140,11 @@ onMounted(async () => {
 
 // Gérer le changement d'option de fréquence
 const handleOptionChange = () => {
+    frequenceModified.value = true; // Marquer que la fréquence a été modifiée
+
     if (selectedOption.value === "Tout l'année") {
         const frequenceObject = { type: "Tout l'année" };
         action.value.frequence = JSON.stringify(frequenceObject); // Première conversion
-        action.value.frequence = JSON.stringify(action.value.frequence); // Deuxième conversion pour échapper
     } else if (
         selectedOption.value === "Ponctuel" ||
         selectedOption.value === "Annuel" ||
@@ -107,10 +165,20 @@ const handleOptionChange = () => {
 // Fonction pour enregistrer les modifications
 const modifierAI = async () => {
     try {
-        // Préparation des données de fréquence avant envoi
-        if (typeof action.value.frequence === "object") {
-            action.value.frequence = JSON.stringify(action.value.frequence);
-            action.value.frequence = JSON.stringify(action.value.frequence); // Deuxième conversion pour échapper
+        // Préparation des données à envoyer
+        const dataToSend = { ...action.value };
+
+        // Ne modifie la fréquence que si elle a été changée explicitement
+        if (!frequenceModified.value) {
+            dataToSend.frequence = originalFrequence.value;
+        } else {
+            // Normaliser la fréquence avant l'envoi
+            if (typeof dataToSend.frequence === "object") {
+                dataToSend.frequence = JSON.stringify(dataToSend.frequence);
+            } else if (typeof dataToSend.frequence === "string") {
+                // S'assurer qu'il n'y a pas de double encodage
+                dataToSend.frequence = normalizeFrequence(dataToSend.frequence);
+            }
         }
         await axios.put(`/api/actions/auditinterne/${actionId}`, action.value);
         router.push("/admin/actions/auditinterne");
@@ -340,50 +408,60 @@ const modifierAI = async () => {
                             v-if="selectedOption === 'Ponctuel'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceAnnuel
                             v-if="selectedOption === 'Annuel'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceQuotidien
                             v-if="selectedOption === 'Quotidien'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceToutAnnee
                             v-if="selectedOption === 'Tout l\'année'"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceHebdomadaire
                             v-if="selectedOption === 'Hebdomadaire'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceMensuel
                             v-if="selectedOption === 'Mensuel'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceBimestriel
                             v-if="selectedOption === 'Bimestriel'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceTrimestriel
                             v-if="selectedOption === 'Trimestriel'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceQuadrimestriel
                             v-if="selectedOption === 'Quadrimestriel'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                         <FrequenceSemestriel
                             v-if="selectedOption === 'Semestriel'"
                             v-model:showModal="showModal"
                             v-model="action.frequence"
+                            @update:modelValue="frequenceModified = true"
                         />
                     </div>
 

@@ -198,6 +198,50 @@ const supprimerAction = async (id) => {
         }
     );
 };
+
+// Fonction pour normaliser une chaîne JSON potentiellement imbriquée
+const normalizeJsonString = (jsonString) => {
+    if (!jsonString) return "";
+
+    // Essayer de détecter et normaliser les JSON imbriqués
+    let normalizedValue = jsonString;
+    let isNormalized = false;
+
+    // Boucle pour gérer les multiples niveaux d'encodage
+    while (!isNormalized) {
+        try {
+            // Vérifier si c'est une chaîne JSON valide
+            if (
+                typeof normalizedValue === "string" &&
+                (normalizedValue.startsWith('"') ||
+                    normalizedValue.startsWith("{"))
+            ) {
+                const parsed = JSON.parse(normalizedValue);
+
+                // Si le résultat est encore une chaîne qui ressemble à du JSON, continuer
+                if (
+                    typeof parsed === "string" &&
+                    (parsed.startsWith('"') || parsed.startsWith("{"))
+                ) {
+                    normalizedValue = parsed;
+                } else {
+                    // Si c'est un objet ou une chaîne non-JSON, on a fini
+                    normalizedValue = parsed;
+                    isNormalized = true;
+                }
+            } else {
+                // Si ce n'est pas une chaîne JSON, on a terminé
+                isNormalized = true;
+            }
+        } catch (e) {
+            // Si on ne peut pas parser, c'est probablement déjà normalisé
+            isNormalized = true;
+        }
+    }
+
+    return normalizedValue;
+};
+
 // Données formatées pour afficher correctement la fréquence
 const formattedActions = computed(() => {
     return actionsAI.value.map((action) => {
@@ -209,14 +253,22 @@ const formattedActions = computed(() => {
             newAction.date = `${day}/${month}/${year}`; // Reformater en jj/mm/yyyy
         }
 
-        // Gérer la fréquence
+        // Gérer la fréquence - Normaliser d'abord pour éviter les problèmes d'encodage multiples
         try {
             if (newAction.frequence) {
-                // Vérifier si la fréquence est un JSON valide
+                // Normaliser la fréquence pour retirer les encodages multiples
+                const normalizedFrequence = normalizeJsonString(
+                    newAction.frequence
+                );
+
+                // Vérifier si la fréquence normalisée est un objet JSON
                 const frequenceData =
-                    typeof newAction.frequence === "string" &&
-                    newAction.frequence.trim().startsWith("{")
-                        ? JSON.parse(newAction.frequence)
+                    typeof normalizedFrequence === "object" &&
+                    normalizedFrequence !== null
+                        ? normalizedFrequence
+                        : typeof normalizedFrequence === "string" &&
+                          normalizedFrequence.trim().startsWith("{")
+                        ? JSON.parse(normalizedFrequence)
                         : null;
 
                 if (frequenceData) {
@@ -236,7 +288,8 @@ const formattedActions = computed(() => {
                 } else {
                     // Si ce n'est pas un JSON valide, conserver la valeur brute
                     newAction.frequenceComplete = null;
-                    newAction.frequenceWithDetails = newAction.frequence;
+                    newAction.frequenceWithDetails = normalizedFrequence;
+                    newAction.frequence = normalizedFrequence;
                 }
             } else {
                 // Si frequence est vide, conserver la valeur brute
