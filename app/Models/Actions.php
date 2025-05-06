@@ -28,10 +28,35 @@ class Actions extends Model
         'statut'
     ];
 
-    protected $casts = [
-        'frequence' => 'array'
-    ];
+    public function getFrequenceAttribute($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
 
+        // Essayez de décoder le JSON
+        $decoded = json_decode($value, true);
+
+        // Si c'est un JSON valide, retournez l'objet décodé
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $decoded;
+        }
+
+        // Sinon, retournez la valeur brute
+        return $value;
+    }
+
+    /**
+     * Mutateur personnalisé pour la colonne frequence
+     */
+    public function setFrequenceAttribute($value)
+    {
+        if (is_array($value) || is_object($value)) {
+            $this->attributes['frequence'] = json_encode($value);
+        } else {
+            $this->attributes['frequence'] = $value;
+        }
+    }
     public function sources()
     {
         return $this->belongsTo(Sources::class, 'sources_id');

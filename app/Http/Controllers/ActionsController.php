@@ -11,13 +11,15 @@ use App\Models\TypeActions;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log as FacadesLog;
 
 class ActionsController extends Controller
 {
     public function indexAI(Request $request)
     {
         $search = $request->query('search', '');
-        $perPage = $request->query('per_page', 6); // affichage 10 résultats par page
+        $perPage = $request->query('per_page', 10); // affichage 10 résultats par page
 
         $actionsAI = Actions::join('users', 'actions.users_id', '=', 'users.id')
             ->join('constats', 'actions.constats_id', '=', 'constats.id')
@@ -53,17 +55,39 @@ class ActionsController extends Controller
             ->orderBy('actions.id', 'desc') // Trier par ordre décroissant
             ->paginate($perPage);
 
+    //         $actionsForLog = $actionsAI->toArray();
+
+    //   FacadesLog::info('Actions AI:',$actionsForLog);
+
         return response()->json($actionsAI);
     }
     public function show($id)
     {
-        $action = Actions::find($id);
-        if (!$action) {
-            return response()->json([
-                'message' => 'Action non trouvée'
-            ], 404);
-        }
-        return response()->json($action);
+        $action = Actions::join('users', 'actions.users_id', '=', 'users.id')
+        ->join('constats', 'actions.constats_id', '=', 'constats.id')
+        ->join('sources', 'actions.sources_id', '=', 'sources.id')
+        ->join('type_actions', 'actions.type_actions_id', '=', 'type_actions.id')
+        ->join('responsables', 'actions.responsables_id', '=', 'responsables.id')
+        ->join('suivis', 'actions.suivis_id', '=', 'suivis.id')
+        ->where('actions.id', $id) // Filtrer par ID
+        ->select(
+            'actions.*',
+            'users.nom_utilisateur as nom_utilisateur',
+            'constats.libelle as constat_libelle',
+            'sources.libelle as source_libelle',
+            'type_actions.libelle as type_action_libelle',
+            'responsables.libelle as responsable_libelle',
+            'suivis.nom as suivi_nom'
+        )
+        ->first(); // Récupérer un seul enregistrement
+
+    if (!$action) {
+        return response()->json([
+            'message' => 'Action non trouvée'
+        ], 404);
+    }
+
+    return response()->json($action);
     }
     public function update(Request $request, $id)
     {
@@ -75,14 +99,11 @@ class ActionsController extends Controller
         }
 
         $action->update([
-            'num_actions' => $request->num_actions,
-            'date' => now(),
             'sources_id' => $request->sources_id,
             'type_actions_id' => $request->type_actions_id,
             'responsables_id' => $request->responsables_id,
             'suivis_id' => $request->suivis_id,
             'constats_id' => $request->constats_id,
-            'users_id' => Auth::id(),
             'frequence' => $request->frequence,
             'description' => $request->description,
             'observation' => $request->observation,
@@ -199,5 +220,81 @@ class ActionsController extends Controller
     {
         $users = User::all();
         return response()->json($users);
+    }
+
+    public function checkExistingNumActions(Request $request)
+    {
+        $numActions = $request->input('num_actions');
+
+        if (!$numActions || !is_array($numActions)) {
+            return response()->json(['message' => 'Données invalides.'], 400);
+        }
+
+        // Récupérer les num_actions existants dans la base de données
+        $existingNumActions = Actions::whereIn('num_actions', $numActions)->pluck('num_actions');
+
+        return response()->json($existingNumActions);
+    }
+
+    public function import(Request $request)
+    {
+        $data = $request->input('data');
+
+        if (!$data || !is_array($data)) {
+            return response()->json(['message' => 'Données invalides.'], 400);
+        }
+
+        $newRecords = [];
+        foreach ($data as $row) {
+             // Convertir les libellés en IDs
+             $sourceId = Sources::where('libelle', $row['source_libelle'])->value('id');
+             $typeActionId = TypeActions::where('libelle', $row['type_action_libelle'])->value('id');
+             $responsableId = Responsable::where('libelle', $row['responsable_libelle'])->value('id');
+             $suiviId = Suivi::where('nom', $row['suivi_nom'])->value('id');
+             $constatId = Constat::where('libelle', $row['constat_libelle'])->value('id');
+             $userId = User::where('nom_utilisateur', $row['nom_utilisateur'])->value('id');
+
+             // Vérifier si l'enregistrement existe déjà
+             $exists = Actions::where('num_actions', $row['num_actions'])->exists();
+
+             $frequence = $row['frequence'];
+
+            // Si on veux que l'importation du frequence est un json
+            // if (!empty($frequence)) {
+            //     // Vérifier si c'est déjà un format JSON
+            //     if (!in_array(substr($frequence, 0, 1), ['{', '['])) {
+            //         // Si c'est une chaîne simple, convertir en JSON
+            //         $frequence = json_encode(['type' => $frequence]);
+            //     }
+            // }
+
+             if (!$exists) {
+                 $newRecords[] = [
+                     'num_actions' => $row['num_actions'],
+                     'date' => $row['date'], // Convertir la date au format Y-m-d
+                     'sources_id' => $sourceId,
+                     'type_actions_id' => $typeActionId,
+                     'responsables_id' => $responsableId,
+                     'suivis_id' => $suiviId,
+                     'description' => $row['description'],
+                     'constats_id' => $constatId,
+                     'frequence' => $row['frequence'],
+                     'mesure' => $row['mesure'],
+                     'statut' => $row['statut'],
+                     'users_id' => $userId,
+                    'observation' => $row['observation'],
+                     'created_at' => now(),
+                     'updated_at' => now(),
+                 ];
+             }
+         }
+
+        // Insérer les nouveaux enregistrements
+        if (!empty($newRecords)) {
+            // FacadesLog::info('Enregistrements à insérer :', $newRecords);
+            DB::table('actions')->insert($newRecords);
+        }
+
+        return response()->json(['message' => 'Importation terminée.'], 200);
     }
 }

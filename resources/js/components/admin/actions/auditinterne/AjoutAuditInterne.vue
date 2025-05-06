@@ -98,7 +98,6 @@ const enregistrerAction = async () => {
             action.value.frequence = JSON.stringify(action.value.frequence);
         }
 
-        console.log(action.value);
         await axios.post("/api/actions", action.value);
         router.push("/admin/actions/auditinterne");
         toast.success("Action ajoutée avec succès");

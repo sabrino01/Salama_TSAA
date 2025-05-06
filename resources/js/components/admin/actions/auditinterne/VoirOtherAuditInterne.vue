@@ -215,6 +215,14 @@ onMounted(async () => {
                             action.statut
                         }}</span>
                     </div>
+                    <div class="flex w-full items-center mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
+                            Ajouté par :
+                        </span>
+                        <span class="ml-2 text-lg font-semibold">{{
+                            action.nom_utilisateur
+                        }}</span>
+                    </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
                         <router-link to="/admin/actions/auditinterne"
                             ><button
@@ -223,16 +231,6 @@ onMounted(async () => {
                                 Retour
                             </button></router-link
                         >
-                        <router-link
-                            :to="`/admin/actions/auditinterne/editer/${action.id}`"
-                            class="w-[15%]"
-                        >
-                            <button
-                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
-                            >
-                                Editer
-                            </button>
-                        </router-link>
                     </div>
                 </div>
             </div>

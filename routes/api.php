@@ -78,4 +78,6 @@ Route::get('/actions/auditinterne', [ActionsController::class, 'indexAI']);
 Route::get('/actions/auditinterne/{id}', [ActionsController::class, 'show']);
 Route::put('/actions/auditinterne/{id}', [ActionsController::class, 'update']);
 Route::delete('/actions/{id}', [ActionsController::class, 'destroy']);
+Route::post('/actions/auditinterne/import', [ActionsController::class, 'import']);
+Route::post('/actions/auditinterne/check-num-actions', [ActionsController::class, 'checkExistingNumActions']);
 //actions PTA

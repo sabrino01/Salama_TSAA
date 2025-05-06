@@ -67,6 +67,8 @@ import PtaUser from "../components/user/actions/pta/Pta.vue";
 import AjoutPtaUser from "../components/user/actions/pta/AjoutPta.vue";
 import VoirPtaUser from "../components/user/actions/pta/VoirPta.vue";
 import EditPtaUser from "../components/user/actions/pta/EditPta.vue";
+import VoirOtherAuditInterne from "../components/admin/actions/auditinterne/VoirOtherAuditInterne.vue";
+import VoirOtherAuditInterneUser from "../components/user/actions/auditinterne/VoirOtherAuditInterne.vue";
 
 const routes = [
     {
@@ -215,12 +217,17 @@ const routes = [
                 component: AjoutAuditInterne,
             },
             {
-                path: "actions/auditinterne/voir",
+                path: "actions/auditinterne/voir/:id",
                 name: "admin.actions.auditinterne.voir",
                 component: VoirAuditInterne,
             },
             {
-                path: "actions/auditinterne/editer",
+                path: "actions/auditinterne/voir/other/:id",
+                name: "admin.actions.auditinterne.voir.other",
+                component: VoirOtherAuditInterne,
+            },
+            {
+                path: "actions/auditinterne/editer/:id",
                 name: "admin.actions.auditinterne.editer",
                 component: EditAuditInterne,
             },
@@ -384,9 +391,14 @@ const routes = [
                 component: AjoutAuditInterneUser,
             },
             {
-                path: "actions/auditinterne/voir",
+                path: "actions/auditinterne/voir/:id",
                 name: "user.actions.auditinterne.voir",
                 component: VoirAuditInterneUser,
+            },
+            {
+                path: "actions/auditinterne/voir/other/:id",
+                name: "user.actions.auditinterne.voir.other",
+                component: VoirOtherAuditInterneUser,
             },
             {
                 path: "actions/auditinterne/editer",
