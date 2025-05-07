@@ -1,3 +1,111 @@
+<script setup>
+import Sidebar from "../../../assets/Sidebar.vue";
+import Navbar from "../../../assets/Navbar.vue";
+import Footer from "../../../assets/Footer.vue";
+import FrequencePonctuel from "../../../assets/FrequencePonctuel.vue";
+import FrequenceAnnuel from "../../../assets/FrequenceAnnuel.vue";
+import FrequenceQuotidien from "../../../assets/FrequenceQuotidien.vue";
+import FrequenceHebdomadaire from "../../../assets/FrequenceHebdomadaire.vue";
+import FrequenceMensuel from "../../../assets/FrequenceMensuel.vue";
+import FrequenceBimestriel from "../../../assets/FrequenceBimestriel.vue";
+import FrequenceTrimestriel from "../../../assets/FrequenceTrimestriel.vue";
+import FrequenceQuadrimestriel from "../../../assets/FrequenceQuadrimestriel.vue";
+import FrequenceSemestriel from "../../../assets/FrequenceSemestriel.vue";
+import FrequenceToutAnnee from "../../../assets/FrequenceToutAnnee.vue";
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { frequenceOptions } from "../../../../utils/frequenceOptions.js";
+import axios from "axios";
+
+const router = useRouter();
+
+// Récupérer les données de l'utilisateur depuis le localStorage
+const user = JSON.parse(localStorage.getItem("user"));
+
+// Numéro d'action
+const num_actions = ref([]);
+
+// Données pour les champs select
+const sources = ref([]);
+const typeActions = ref([]);
+const responsables = ref([]);
+const suivis = ref([]);
+const constats = ref([]);
+
+// Données du formulaire
+const action = ref({
+    num_actions: num_actions,
+    sources_id: "",
+    type_actions_id: "",
+    responsables_id: "",
+    suivis_id: "",
+    constats_id: "",
+    frequence: "",
+    description: "",
+    mesure: "",
+    observation: "",
+    users_id: user?.id || null,
+});
+
+// Options pour le champ fréquence
+const options = frequenceOptions;
+const selectedOption = ref(""); // Option sélectionnée
+const showModal = ref(false); // Contrôle de l'affichage du modal
+
+// Charger les données nécessaires pour les champs select et le numéro d'actions
+onMounted(async () => {
+    try {
+        const response = await axios.get("/api/actions/createPTA");
+        num_actions.value = response.data.num_actions;
+        sources.value = response.data.sources;
+        typeActions.value = response.data.typeActions;
+        responsables.value = response.data.responsables;
+        suivis.value = response.data.suivis;
+        constats.value = response.data.constats;
+    } catch (error) {
+        toast.error("Erreur lors du chargement des données", error);
+    }
+});
+
+const handleOptionChange = () => {
+    if (selectedOption.value === "Tout l'année") {
+        // Enregistrer directement la fréquence pour "Tout l'année"
+        action.value.frequence = JSON.stringify({ type: "Tout l'année" });
+    } else if (
+        selectedOption.value === "Ponctuel" ||
+        selectedOption.value === "Annuel" ||
+        selectedOption.value === "Quotidien" ||
+        selectedOption.value === "Hebdomadaire" ||
+        selectedOption.value === "Mensuel" ||
+        selectedOption.value === "Bimestriel" ||
+        selectedOption.value === "Trimestriel" ||
+        selectedOption.value === "Quadrimestriel" ||
+        selectedOption.value === "Semestriel"
+    ) {
+        showModal.value = true; // Ouvre le modal pour les options spécifiques
+    } else {
+        action.value.frequence = selectedOption.value; // Enregistre directement la fréquence pour les autres options
+    }
+};
+
+const enregistrerAction = async () => {
+    try {
+        // Préparation des données de fréquence avant envoi
+        if (
+            typeof action.value.frequence === "object" &&
+            action.value.frequence !== null
+        ) {
+            action.value.frequence = JSON.stringify(action.value.frequence);
+        }
+
+        await axios.post("/api/actions", action.value);
+        router.push("/admin/actions/pta");
+        toast.success("Action ajoutée avec succès");
+    } catch (error) {
+        toast.error("Erreur lors de l'ajout de l'action", error);
+    }
+};
+</script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -30,187 +138,245 @@
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Formulaire d'ajout PTA -->
                 <div class="w-full mt-5">
-                    <div class="flex w-[60%] items-center">
-                        <label
-                            for="date"
-                            class="w-[6%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Date :
-                        </label>
+                    <div class="flex w-[40%] justify-center">
                         <input
-                            type="date"
+                            type="text"
                             id="date"
-                            class="w-[16%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            class="w-[16%] border rounded-md px-4 py-2 bg-gray-100"
+                            :value="num_actions"
+                            readonly
                         />
                     </div>
-                    <div class="flex w-[60%] mt-5">
+                    <div class="flex w-[80%] mt-5">
                         <label
-                            for="dns"
-                            class="w-[30%] ml-4 text-lg font-semibold text-gray-800"
+                            for="description"
+                            class="w-[24%] ml-4 text-lg font-semibold text-gray-800"
                         >
-                            Description de la non conformité :
+                            Description de la Non-Conformité :
                         </label>
                         <textarea
-                            name="dns"
-                            id="dns"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            id="description"
+                            class="w-[55%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            v-model="action.description"
                         ></textarea>
                     </div>
-                    <div class="w-full flex mt-5">
-                        <div class="flex w-auto items-center">
-                            <label
-                                for="source"
-                                class="ml-4 text-lg font-semibold text-gray-800"
-                            >
-                                Source :
-                            </label>
-                            <select
-                                name="source"
-                                id="source"
-                                class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="source1">P25</option>
-                                <option value="source2">P24</option>
-                                <option value="source3">P23</option>
-                            </select>
-                        </div>
-                        <div class="border-r border-slate-500"></div>
-                        <div class="flex w-auto items-center">
-                            <label
-                                for="typeactions"
-                                class="ml-4 text-lg font-semibold text-gray-800"
-                            >
-                                Type d'actions :
-                            </label>
-                            <select
-                                name="typeactions"
-                                id="typeactions"
-                                class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="typeactions1">
-                                    Action à planifier
-                                </option>
-                                <option value="typeactions2">
-                                    Action à améliorer
-                                </option>
-                            </select>
-                        </div>
-                        <div class="border-r border-slate-500"></div>
-                        <div class="flex w-auto items-center">
-                            <label
-                                for="responsable"
-                                class="ml-4 text-lg font-semibold text-gray-800"
-                            >
-                                Responsable :
-                            </label>
-                            <select
-                                name="responsable"
-                                id="responsable"
-                                class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="responsable1">
-                                    Directeur Générale
-                                </option>
-                                <option value="responsable2">
-                                    Directeur du Service Informatique
-                                </option>
-                                <option value="responsable3">
-                                    Responsable du Service Informatique
-                                </option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <div class="w-full flex mt-5">
-                        <div class="flex w-auto items-center">
-                            <label
-                                for="suivi"
-                                class="ml-4 text-lg font-semibold text-gray-800"
-                            >
-                                Suivi :
-                            </label>
-                            <select
-                                name="suivi"
-                                id="suivi"
-                                class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="suivi1">Dominique</option>
-                                <option value="suivi2">Nasandratra</option>
-                                <option value="suivi3">Malala</option>
-                            </select>
-                        </div>
-                        <div class="border-r border-slate-500"></div>
-                        <div class="flex w-auto items-center">
-                            <label
-                                for="frequence"
-                                class="ml-4 text-lg font-semibold text-gray-800"
-                            >
-                                Fréquence :
-                            </label>
-                            <select
-                                name="frequence"
-                                id="frequence"
-                                class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="frequence1">Mensuel</option>
-                                <option value="frequence2">Annuel</option>
-                            </select>
-                        </div>
-                        <div class="border-r border-slate-500"></div>
-                        <div class="flex w-auto items-center">
-                            <label
-                                for="action"
-                                class="ml-4 text-lg font-semibold text-gray-800"
-                            >
-                                Action :
-                            </label>
-                            <select
-                                name="action"
-                                id="action"
-                                class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="action1">Non réalisé</option>
-                                <option value="action2">Réalisé</option>
-                                <option value="action3">Abandonné</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="w-full flex mt-5">
-                        <span
-                            class="text-lg ml-4 font-semibold text-gray-800 mr-4"
-                            >Mois :</span
+                    <div class="flex w-auto items-center mt-5">
+                        <label
+                            for="source"
+                            class="ml-4 text-lg font-semibold text-gray-800"
                         >
-                        <div class="flex flex-wrap space-x-6">
-                            <div
-                                v-for="(month, index) in months"
-                                :key="index"
-                                class="flex flex-col items-center"
+                            Source :
+                        </label>
+                        <select
+                            v-model="action.sources_id"
+                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
+                            <option
+                                v-for="source in sources"
+                                :key="source.id"
+                                :value="source.id"
                             >
-                                <!-- Checkbox pour chaque mois -->
-                                <label class="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        v-model="selectedMonths[index]"
-                                        class="form-checkbox h-5 w-5 text-blue-500"
-                                    />
-                                    <span class="text-gray-800 font-medium">{{
-                                        month
-                                    }}</span>
-                                </label>
+                                {{ source.code }} - {{ source.libelle }}
+                            </option>
+                        </select>
+                    </div>
 
-                                <!-- Input de type date affiché si le mois est sélectionné -->
-                                <input
-                                    v-if="selectedMonths[index]"
-                                    type="date"
-                                    :value="getDefaultDate(index)"
-                                    @input="updateDate(index, $event)"
-                                    class="mt-2 border border-gray-400 rounded-md px-2 py-1"
-                                />
-                            </div>
-                        </div>
+                    <div class="flex w-auto items-center mt-5">
+                        <label
+                            for="typeactions"
+                            class="ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Type d'actions :
+                        </label>
+                        <select
+                            v-model="action.type_actions_id"
+                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
+                            <option
+                                v-for="type in typeActions"
+                                :key="type.id"
+                                :value="type.id"
+                            >
+                                {{ type.code }} - {{ type.libelle }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="flex w-auto items-center mt-5">
+                        <label
+                            for="responsable"
+                            class="ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Responsable :
+                        </label>
+                        <select
+                            v-model="action.responsables_id"
+                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
+                            <option
+                                v-for="responsable in responsables"
+                                :key="responsable.id"
+                                :value="responsable.id"
+                            >
+                                {{ responsable.code }} -
+                                {{ responsable.libelle }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="flex w-auto items-center mt-5">
+                        <label
+                            for="suivi"
+                            class="ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Suivi :
+                        </label>
+                        <select
+                            v-model="action.suivis_id"
+                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
+                            <option
+                                v-for="suivi in suivis"
+                                :key="suivi.id"
+                                :value="suivi.id"
+                            >
+                                {{ suivi.nom }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="flex w-auto items-center mt-5">
+                        <label
+                            for="action"
+                            class="ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Action :
+                        </label>
+                        <select
+                            v-model="action.constats_id"
+                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
+                            <option
+                                v-for="constat in constats"
+                                :key="constat.id"
+                                :value="constat.id"
+                            >
+                                {{ constat.code }} - {{ constat.libelle }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Ajout du champ Fréquence -->
+                    <div class="flex w-auto items-center mt-5">
+                        <label
+                            for="frequence"
+                            class="ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Fréquence :
+                        </label>
+                        <select
+                            v-model="selectedOption"
+                            @change="handleOptionChange"
+                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        >
+                            <option value="" class="text-center">
+                                --- Options ---
+                            </option>
+                            <option
+                                v-for="option in options"
+                                :key="option"
+                                :value="option"
+                            >
+                                {{ option }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Composants dynamiques -->
+                    <div class="mt-5">
+                        <FrequencePonctuel
+                            v-if="selectedOption === 'Ponctuel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceAnnuel
+                            v-if="selectedOption === 'Annuel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceQuotidien
+                            v-if="selectedOption === 'Quotidien'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceToutAnnee
+                            v-if="selectedOption === 'Tout l\'année'"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceHebdomadaire
+                            v-if="selectedOption === 'Hebdomadaire'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceMensuel
+                            v-if="selectedOption === 'Mensuel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceBimestriel
+                            v-if="selectedOption === 'Bimestriel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceTrimestriel
+                            v-if="selectedOption === 'Trimestriel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceQuadrimestriel
+                            v-if="selectedOption === 'Quadrimestriel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <FrequenceSemestriel
+                            v-if="selectedOption === 'Semestriel'"
+                            v-model:showModal="showModal"
+                            v-model="action.frequence"
+                        />
+                        <!-- Vous pouvez ajouter d'autres composants ici si nécessaire -->
+                    </div>
+
+                    <div class="flex w-[60%] items-center mt-5">
+                        <label
+                            for="mesure"
+                            class="w-[16.5%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Mesure (Obsverif):
+                        </label>
+                        <input
+                            type="text"
+                            id="mesure"
+                            class="w-[40%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            v-model="action.mesure"
+                        />
                     </div>
 
                     <div class="flex w-[60%] items-center mt-5">
@@ -224,46 +390,8 @@
                             type="text"
                             id="observation"
                             class="w-[40%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            v-model="action.observation"
                         />
-                    </div>
-
-                    <div class="flex w-auto max-w-[100%] items-center mt-5">
-                        <label
-                            for="datesuivi"
-                            class="ml-4 mr-3 text-lg font-semibold text-gray-800"
-                        >
-                            Date suivi :
-                        </label>
-                        <div class="flex items-center space-x-4">
-                            <!-- Liste des inputs de type date -->
-                            <div
-                                v-for="(date, index) in dateInputs"
-                                :key="index"
-                                class="flex w-auto items-center space-x-2"
-                            >
-                                <input
-                                    type="date"
-                                    v-model="dateInputs[index]"
-                                    class="w-auto border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                                />
-                                <!-- Bouton pour supprimer un input -->
-                                <button
-                                    v-if="index > 0"
-                                    @click="removeDateInput(index)"
-                                    class="text-red-500"
-                                >
-                                    <Minus class="w-7 h-7 border" />
-                                </button>
-                            </div>
-
-                            <!-- Bouton pour ajouter un nouvel input -->
-                            <button
-                                @click="addDateInput"
-                                class="text-green-500"
-                            >
-                                <Plus class="w-8 h-8 border rounded-2xl" />
-                            </button>
-                        </div>
                     </div>
 
                     <div class="flex w-[80%] justify-end mt-5">
@@ -275,6 +403,7 @@
                             </button></router-link
                         >
                         <button
+                            @click="enregistrerAction"
                             class="w-[10%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Enregistrer
@@ -288,62 +417,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import Sidebar from "../../../assets/Sidebar.vue";
-import Navbar from "../../../assets/Navbar.vue";
-import Footer from "../../../assets/Footer.vue";
-import { ref } from "vue";
-import { Plus, Minus } from "lucide-vue-next";
-
-// Liste des mois abrégés
-const months = [
-    "Janvier",
-    "Février",
-    "Mars",
-    "Avril",
-    "Mai",
-    "Juin",
-    "Juillet",
-    "Août",
-    "Septembre",
-    "Octobre",
-    "Novembre",
-    "Décembre",
-];
-
-// État des cases à cocher pour chaque mois
-const selectedMonths = ref(Array(12).fill(false)); // Initialisé à false pour tous les mois
-
-// Liste des dates sélectionnées
-const selectedDates = ref(Array(12).fill("")); // Initialisé avec des dates vides
-
-// Fonction pour obtenir la date par défaut avec le mois verrouillé
-const getDefaultDate = (index) => {
-    const year = new Date().getFullYear(); // Année actuelle
-    const month = String(index + 1).padStart(2, "0"); // Mois (1-indexé) formaté sur 2 chiffres
-    const day = "01"; // Par défaut, le jour est le 1er
-    return `${year}-${month}-${day}`; // Format YYYY-MM-DD
-};
-
-// Fonction pour mettre à jour la date tout en verrouillant le mois
-const updateDate = (index, event) => {
-    const year = event.target.value.split("-")[0]; // Récupère l'année
-    const day = event.target.value.split("-")[2]; // Récupère le jour
-    const month = String(index + 1).padStart(2, "0"); // Mois verrouillé
-    selectedDates.value[index] = `${year}-${month}-${day}`; // Met à jour la date
-};
-
-// Liste des inputs de type date
-const dateInputs = ref([""]); // Initialise avec un seul champ de type date
-
-// Fonction pour ajouter un nouvel input
-const addDateInput = () => {
-    dateInputs.value.push(""); // Ajoute un nouvel input vide
-};
-
-// Fonction pour supprimer un input
-const removeDateInput = (index) => {
-    dateInputs.value.splice(index, 1); // Supprime l'input à l'index donné
-};
-</script>

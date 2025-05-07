@@ -1,5 +1,5 @@
 <script setup>
-import Sidebar from "../../../assets/SidebarUser.vue";
+import Sidebar from "../../../assets/Sidebar.vue";
 import Navbar from "../../../assets/Navbar.vue";
 import Footer from "../../../assets/Footer.vue";
 
@@ -126,11 +126,11 @@ onMounted(async () => {
                     </div>
                     <div class="flex w-full mt-5">
                         <span
-                            class="w-[19%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[24%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Description de la Non-Conformité :
                         </span>
-                        <span class="w-[81%] text-lg font-semibold">{{
+                        <span class="w-[76%] text-lg font-semibold">{{
                             action.description
                         }}</span>
                     </div>
@@ -166,7 +166,7 @@ onMounted(async () => {
                             action.suivi_nom
                         }}</span>
                     </div>
-                    <div class="flex w-full items-center mt-5">
+                    <div class="flex w-full mt-5">
                         <span
                             class="w-[16%] ml-4 text-lg font-semibold text-gray-800"
                         >
@@ -217,23 +217,13 @@ onMounted(async () => {
                         }}</span>
                     </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
-                        <router-link to="/user/actions/pta"
+                        <router-link to="/admin/actions/pta"
                             ><button
                                 class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
                             >
                                 Retour
                             </button></router-link
                         >
-                        <router-link
-                            :to="`/user/actions/pta/editer/${action.id}`"
-                            class="w-[15%]"
-                        >
-                            <button
-                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
-                            >
-                                Editer
-                            </button>
-                        </router-link>
                     </div>
                 </div>
             </div>

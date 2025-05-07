@@ -66,6 +66,8 @@ Route::put('/constat/{id}', [ConstatController::class, 'update']);
 Route::delete('/constat/{id}', [ConstatController::class, 'destroy']);
 //appel les informations
 Route::get('/sourcesAI', [ActionsController::class, 'sourcesAI']);
+Route::get('/sourcesPTA', [ActionsController::class, 'sourcesPTA']);
+Route::get('/typeactionsPTA', [ActionsController::class, 'typeActionsPTA']);
 Route::get('/typeactionsAI', [ActionsController::class, 'typeActionsAI']);
 Route::get('/responsables', [ActionsController::class, 'responsables']);
 Route::get('/suivis', [ActionsController::class, 'suivis']);
@@ -73,11 +75,14 @@ Route::get('/constats', [ActionsController::class, 'constats']);
 Route::get('/users', [ActionsController::class, 'users']);
 //actions audit interne
 Route::get('/actions/createAI', [ActionsController::class, 'createAI']);
-Route::post('/actions', [ActionsController::class, 'store']);
 Route::get('/actions/auditinterne', [ActionsController::class, 'indexAI']);
-Route::get('/actions/auditinterne/{id}', [ActionsController::class, 'show']);
-Route::put('/actions/auditinterne/{id}', [ActionsController::class, 'update']);
-Route::delete('/actions/{id}', [ActionsController::class, 'destroy']);
-Route::post('/actions/auditinterne/import', [ActionsController::class, 'import']);
-Route::post('/actions/auditinterne/check-num-actions', [ActionsController::class, 'checkExistingNumActions']);
 //actions PTA
+Route::get('/actions/createPTA', [ActionsController::class, 'createPTA']);
+Route::get('/actions/pta', [ActionsController::class, 'indexPTA']);
+//actions audit externe & pta
+Route::post('/actions', [ActionsController::class, 'store']);
+Route::get('/actions/{id}', [ActionsController::class, 'show']);
+Route::put('/actions/{id}', [ActionsController::class, 'update']);
+Route::delete('/actions/{id}', [ActionsController::class, 'destroy']);
+Route::post('/actions/import', [ActionsController::class, 'import']);
+Route::post('/actions/check-num-actions', [ActionsController::class, 'checkExistingNumActions']);

@@ -854,7 +854,7 @@ const importerFichier = async (event) => {
 
             // Vérifier les num_actions existants dans la base de données
             const response = await axios.post(
-                "/api/actions/auditinterne/check-num-actions",
+                "/api/actions/check-num-actions",
                 {
                     num_actions: numActionsToCheck,
                 }
@@ -877,7 +877,7 @@ const importerFichier = async (event) => {
             console.log("Nouvelles données à importer :", newData);
 
             // Envoyer les nouvelles données au backend
-            await axios.post("/api/actions/auditinterne/import", {
+            await axios.post("/api/actions/import", {
                 data: newData,
             });
 

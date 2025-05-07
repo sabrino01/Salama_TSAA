@@ -113,9 +113,7 @@ onMounted(async () => {
         constats.value = optionsResponse.data.constats;
 
         // Charger les données de l'action sélectionnée
-        const actionResponse = await axios.get(
-            `/api/actions/auditinterne/${actionId}`
-        );
+        const actionResponse = await axios.get(`/api/actions/${actionId}`);
         Object.assign(action.value, actionResponse.data);
 
         // Normaliser et stocker la valeur originale de la fréquence
@@ -180,7 +178,7 @@ const modifierAI = async () => {
                 dataToSend.frequence = normalizeFrequence(dataToSend.frequence);
             }
         }
-        await axios.put(`/api/actions/auditinterne/${actionId}`, action.value);
+        await axios.put(`/api/actions/${actionId}`, action.value);
         router.push("/user/actions/auditinterne");
         toast.success("Action Audit Interne modifiée avec succès !");
     } catch (error) {

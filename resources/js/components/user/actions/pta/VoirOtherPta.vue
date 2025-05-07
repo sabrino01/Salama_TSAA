@@ -166,7 +166,7 @@ onMounted(async () => {
                             action.suivi_nom
                         }}</span>
                     </div>
-                    <div class="flex w-full items-center mt-5">
+                    <div class="flex w-full mt-5">
                         <span
                             class="w-[16%] ml-4 text-lg font-semibold text-gray-800"
                         >
@@ -224,16 +224,6 @@ onMounted(async () => {
                                 Retour
                             </button></router-link
                         >
-                        <router-link
-                            :to="`/user/actions/pta/editer/${action.id}`"
-                            class="w-[15%]"
-                        >
-                            <button
-                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
-                            >
-                                Editer
-                            </button>
-                        </router-link>
                     </div>
                 </div>
             </div>

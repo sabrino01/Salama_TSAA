@@ -56,7 +56,7 @@ const formatJsonForTooltip = (jsonData) => {
 onMounted(async () => {
     const id = route.params.id;
     try {
-        const response = await axios.get(`/api/actions/auditinterne/${id}`);
+        const response = await axios.get(`/api/actions/${id}`);
         const fetchedAction = response.data;
 
         // Reformater la date
@@ -115,7 +115,7 @@ onMounted(async () => {
                     </p>
                 </div>
 
-                <!-- Formulaire d'ajout de membre -->
+                <!-- Vue d'Audit Interne -->
                 <div class="w-full mt-5">
                     <div class="flex w-full items-center">
                         <span class="ml-4 text-lg font-semibold text-gray-800">
@@ -168,7 +168,9 @@ onMounted(async () => {
                         }}</span>
                     </div>
                     <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
+                        <span
+                            class="w-[16%] ml-4 text-lg font-semibold text-gray-800"
+                        >
                             Fréquence :
                         </span>
                         <span class="ml-2 text-lg font-semibold">{{
