@@ -19,37 +19,69 @@ const formatDate = (date) => {
     return `${day}/${month}/${year}`; // Reformater en dd/mm/yyyy
 };
 
+// Fonction pour normaliser une chaîne JSON potentiellement imbriquée
+const normalizeJsonString = (jsonString) => {
+    if (!jsonString) return "";
+
+    let normalizedValue = jsonString;
+    let isNormalized = false;
+
+    while (!isNormalized) {
+        try {
+            if (
+                typeof normalizedValue === "string" &&
+                (normalizedValue.startsWith('"') ||
+                    normalizedValue.startsWith("{"))
+            ) {
+                const parsed = JSON.parse(normalizedValue);
+
+                if (
+                    typeof parsed === "string" &&
+                    (parsed.startsWith('"') || parsed.startsWith("{"))
+                ) {
+                    normalizedValue = parsed;
+                } else {
+                    normalizedValue = parsed;
+                    isNormalized = true;
+                }
+            } else {
+                isNormalized = true;
+            }
+        } catch (e) {
+            isNormalized = true;
+        }
+    }
+
+    return normalizedValue;
+};
+
 // Fonction générique pour formater les données JSON en texte lisible
 const formatJsonForTooltip = (jsonData) => {
     if (!jsonData || typeof jsonData !== "object") return "";
 
-    // Exclure le type car il est déjà affiché
     const { type, ...rest } = jsonData;
 
-    // Si pas de données supplémentaires, pas de tooltip
     if (Object.keys(rest).length === 0) return "";
 
-    // Convertir l'objet en chaîne JSON formatée
     const jsonString = JSON.stringify(rest, null, 2);
 
-    // Formatter la chaîne pour l'affichage
     return jsonString
-        .replace(/",/g, '"') // Supprimer les virgules après les guillemets
-        .replace(/,/g, "\n") // Remplacer virgules par sauts de ligne
-        .replace(/"/g, "") // Supprimer tous les guillemets
-        .replace(/\\/g, "") // Supprimer les backslashs
-        .replace(/\{/g, "") // Supprimer les accolades ouvrantes
-        .replace(/\}/g, "") // Supprimer les accolades fermantes
-        .replace(/\[/g, "") // Supprimer les crochets ouvrants
-        .replace(/\]/g, "") // Supprimer les crochets fermants
-        .replace(/\n\s*\n/g, "\n") // Supprimer les lignes vides
-        .replace(/^\s+/gm, "") // Supprimer les espaces au début de chaque ligne
+        .replace(/",/g, '"')
+        .replace(/,/g, "\n")
+        .replace(/"/g, "")
+        .replace(/\\/g, "")
+        .replace(/\{/g, "")
+        .replace(/\}/g, "")
+        .replace(/\[/g, "")
+        .replace(/\]/g, "")
+        .replace(/\n\s*\n/g, "\n")
+        .replace(/^\s+/gm, "")
         .replace(
-            /\b(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})\b/g, // Détecter le format datetime
+            /\b(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})\b/g,
             (_, year, month, day, hour, minute) =>
-                `${day}/${month}/${year} à ${hour}:${minute}` // Reformater la date
+                `${day}/${month}/${year} à ${hour}:${minute}`
         )
-        .trim(); // Supprimer les espaces inutiles au début et à la fin
+        .trim();
 };
 
 // Charger les données de l'action
@@ -64,15 +96,31 @@ onMounted(async () => {
 
         // Gérer la fréquence
         if (fetchedAction.frequence) {
-            const frequenceData =
-                typeof fetchedAction.frequence === "string" &&
-                fetchedAction.frequence.trim().startsWith("{")
-                    ? JSON.parse(fetchedAction.frequence)
-                    : null;
+            try {
+                const normalizedFrequence = normalizeJsonString(
+                    fetchedAction.frequence
+                );
 
-            if (frequenceData) {
-                fetchedAction.frequence = frequenceData.type || "Non défini";
-                frequenceDetails.value = formatJsonForTooltip(frequenceData);
+                const frequenceData =
+                    typeof normalizedFrequence === "object" &&
+                    normalizedFrequence !== null
+                        ? normalizedFrequence
+                        : typeof normalizedFrequence === "string" &&
+                          normalizedFrequence.trim().startsWith("{")
+                        ? JSON.parse(normalizedFrequence)
+                        : null;
+
+                if (frequenceData) {
+                    fetchedAction.frequence =
+                        frequenceData.type || "Non défini";
+                    frequenceDetails.value =
+                        formatJsonForTooltip(frequenceData);
+                } else {
+                    fetchedAction.frequence = normalizedFrequence;
+                }
+            } catch (e) {
+                console.error("Erreur lors du parsing de la fréquence:", e);
+                fetchedAction.frequence = fetchedAction.frequence;
             }
         }
 
