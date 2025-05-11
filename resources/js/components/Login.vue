@@ -170,11 +170,17 @@ const handleLogin = async () => {
             localStorage.setItem("user", JSON.stringify(response.data.user));
         }
 
-        // Redirection basée sur le rôle
-        if (response.data.user.role === "admin") {
-            router.push("/admin/dashboard");
+        // Vérifier les alertes en utilisant la route existante
+        const hasAlerts = await checkExistingAlerts(response.data.user.id);
+
+        // Redirection basée sur le rôle et les alertes
+        const baseRoute =
+            response.data.user.role === "admin" ? "/admin" : "/user";
+
+        if (hasAlerts) {
+            router.push(`${baseRoute}/notifications`);
         } else {
-            router.push("/user/dashboard");
+            router.push(`${baseRoute}/dashboard`);
         }
     } catch (error) {
         if (error.response && error.response.data.errors) {
@@ -186,6 +192,326 @@ const handleLogin = async () => {
             erreurs.login = error.response.data.message;
         }
     }
+};
+
+// Fonction pour vérifier les alertes en utilisant les routes existantes
+const checkExistingAlerts = async (userId) => {
+    try {
+        // Vérifie d'abord si les alertes sont activées
+        const isAlertEnabled = localStorage.getItem("appAlert") === "true";
+
+        if (!isAlertEnabled) {
+            return false;
+        }
+
+        // Utilise la route getAllNotifications existante
+        const response = await axios.get(`/api/notifications`, {
+            params: {
+                user_id: userId,
+            },
+        });
+
+        // Vérifie d'abord que les données existent et ont le bon format
+        if (
+            !response.data ||
+            !response.data.en_cours ||
+            !response.data.en_retard
+        ) {
+            console.error("Format de réponse invalide:", response.data);
+            return false;
+        }
+
+        // Vérifie si en_cours.data existe (pagination)
+        const enCours = response.data.en_cours.data || [];
+        const enRetard = response.data.en_retard.data || [];
+
+        // Vérifie s'il y a des alertes actives dans les données
+        const hasActiveAlerts =
+            enCours.some((item) => needsAlert(item.frequence)) ||
+            enRetard.some((item) => needsAlert(item.frequence));
+
+        return hasActiveAlerts;
+    } catch (error) {
+        console.error("Erreur lors de la vérification des alertes:", error);
+        return false;
+    }
+};
+
+// Fonction pour vérifier si une fréquence nécessite une alerte
+const needsAlert = (frequence) => {
+    if (!frequence) return false;
+
+    try {
+        const frequenceObj =
+            typeof frequence === "string" ? JSON.parse(frequence) : frequence;
+
+        // Utilise la même logique que dans votre composant Notifications.vue
+        const infosDebut = verifierAlerteDebut(frequenceObj);
+        const infosSuivis = verifierAlerteSuivis(frequenceObj);
+
+        return infosDebut.doitAlerter || infosSuivis.doitAlerter;
+    } catch (error) {
+        console.error("Erreur lors de l'analyse de la fréquence:", error);
+        return false;
+    }
+};
+// Données pour la gestion des fréquences
+const joursMap = {
+    Lundi: 1,
+    Mardi: 2,
+    Mercredi: 3,
+    Jeudi: 4,
+    Vendredi: 5,
+    Samedi: 6,
+    Dimanche: 0,
+};
+
+const calculerJoursRestantsParJour = (
+    jourString,
+    intervalle = 4,
+    type = null,
+    periode = null
+) => {
+    const jourIndex = joursMap[jourString];
+    if (jourIndex === undefined) return 0;
+
+    const aujourdhui = new Date();
+    const jourActuel = aujourdhui.getDay();
+    let joursRestants = (jourIndex - jourActuel + 7) % 7;
+
+    // Si c'est aujourd'hui mais qu'on a déjà dépassé l'heure, on ajoute 7 jours
+    if (joursRestants === 0) {
+        joursRestants = 7;
+    }
+
+    // Ajustements pour les périodes spécifiques
+    if (type) {
+        if (periode === "semaineProchaine" && joursRestants < 7) {
+            joursRestants += 7;
+        } else if (periode === "moisProchain") {
+            const premierJourMoisProchain = new Date(
+                aujourdhui.getFullYear(),
+                aujourdhui.getMonth() + 1,
+                1
+            );
+            const jourPremierMois = premierJourMoisProchain.getDay();
+            joursRestants = (jourIndex - jourPremierMois + 7) % 7;
+
+            const dernierJourMoisCourant = new Date(
+                aujourdhui.getFullYear(),
+                aujourdhui.getMonth() + 1,
+                0
+            ).getDate();
+            joursRestants += dernierJourMoisCourant - aujourdhui.getDate();
+        }
+
+        // Ajustement pour les fréquences mensuelles et plus
+        const moisSupplementaires = {
+            Mensuel: 1,
+            Bimestriel: 2,
+            Trimestriel: 3,
+            Quadrimestriel: 4,
+            Semestriel: 6,
+        };
+
+        if (moisSupplementaires[type]) {
+            joursRestants += moisSupplementaires[type] * 30;
+        }
+    }
+
+    return joursRestants;
+};
+
+const verifierAlerteDebut = (frequenceObj) => {
+    if (typeof frequenceObj === "string") return { doitAlerter: false };
+
+    let doitAlerter = false;
+    let joursRestants = 0;
+
+    switch (frequenceObj.type) {
+        case "Ponctuel":
+            joursRestants = calculerJoursRestants(frequenceObj.debut);
+            doitAlerter = joursRestants >= -7 && joursRestants <= 7;
+            break;
+
+        case "Hebdomadaire":
+            if (
+                frequenceObj.mode === "dateHeure" &&
+                frequenceObj.dateHeure?.blocs
+            ) {
+                let minJours = Number.MAX_SAFE_INTEGER;
+                frequenceObj.dateHeure.blocs.forEach((bloc) => {
+                    const jours = calculerJoursRestants(bloc.debut);
+                    if (Math.abs(jours) < Math.abs(minJours)) {
+                        minJours = jours;
+                    }
+                });
+                joursRestants = minJours;
+                doitAlerter = joursRestants >= -7 && joursRestants <= 7;
+            } else if (
+                frequenceObj.mode === "joursHeure" &&
+                frequenceObj.joursHeure
+            ) {
+                let minJours = Number.MAX_SAFE_INTEGER;
+                frequenceObj.joursHeure.jours.forEach((jour) => {
+                    const jours = calculerJoursRestantsParJour(jour);
+                    if (Math.abs(jours) < Math.abs(minJours)) {
+                        minJours = jours;
+                    }
+                });
+                joursRestants = minJours;
+                doitAlerter = joursRestants >= -4 && joursRestants <= 4;
+            }
+            break;
+
+        case "Mensuel":
+        case "Bimestriel":
+        case "Trimestriel":
+        case "Quadrimestriel":
+        case "Semestriel":
+        case "Annuel":
+            const plagesAlerte = {
+                Mensuel: 5, // ±5 jours
+                Bimestriel: 7, // ±7 jours
+                Trimestriel: 10, // ±10 jours
+                Quadrimestriel: 10, // ±10 jours
+                Semestriel: 14, // ±14 jours
+                Annuel: 21, // ±21 jours
+            };
+
+            if (frequenceObj.mode === "dateHeure" && frequenceObj.dateHeure) {
+                joursRestants = calculerJoursRestants(
+                    frequenceObj.dateHeure.debut
+                );
+                const plage = plagesAlerte[frequenceObj.type] || 7;
+                doitAlerter = joursRestants >= -plage && joursRestants <= plage;
+            } else if (
+                frequenceObj.mode === "joursHeure" &&
+                frequenceObj.joursHeure
+            ) {
+                let minJours = Number.MAX_SAFE_INTEGER;
+                frequenceObj.joursHeure.jours.forEach((jour) => {
+                    const jours = calculerJoursRestantsParJour(
+                        jour,
+                        4,
+                        frequenceObj.type
+                    );
+                    if (Math.abs(jours) < Math.abs(minJours)) {
+                        minJours = jours;
+                    }
+                });
+                joursRestants = minJours;
+                const plage = plagesAlerte[frequenceObj.type] || 7;
+                doitAlerter = joursRestants >= -plage && joursRestants <= plage;
+            }
+            break;
+    }
+
+    return { doitAlerter, joursRestants };
+};
+
+const verifierAlerteSuivis = (frequenceObj) => {
+    if (typeof frequenceObj === "string") return { doitAlerter: false };
+
+    let doitAlerter = false;
+    let joursRestants = 0;
+
+    switch (frequenceObj.type) {
+        case "Ponctuel":
+            if (frequenceObj.suivis?.length > 0) {
+                joursRestants = calculerJoursRestants(frequenceObj.suivis[0]);
+                doitAlerter = joursRestants >= -4 && joursRestants <= 4;
+            }
+            break;
+
+        case "Hebdomadaire":
+            if (
+                frequenceObj.mode === "dateHeure" &&
+                frequenceObj.dateHeure?.suivis?.length > 0
+            ) {
+                joursRestants = calculerJoursRestants(
+                    frequenceObj.dateHeure.suivis[0]
+                );
+                doitAlerter = joursRestants >= -4 && joursRestants <= 4;
+            } else if (
+                frequenceObj.mode === "joursHeure" &&
+                frequenceObj.joursHeure?.suivis?.length > 0
+            ) {
+                const premierSuivi = frequenceObj.joursHeure.suivis[0];
+                if (premierSuivi.jours?.length > 0) {
+                    let minJours = Number.MAX_SAFE_INTEGER;
+                    premierSuivi.jours.forEach((jour) => {
+                        const jours = calculerJoursRestantsParJour(jour, 2);
+                        if (Math.abs(jours) < Math.abs(minJours)) {
+                            minJours = jours;
+                        }
+                    });
+                    joursRestants = minJours;
+                    doitAlerter = joursRestants >= -2 && joursRestants <= 2;
+                }
+            }
+            break;
+
+        case "Mensuel":
+        case "Bimestriel":
+        case "Trimestriel":
+        case "Quadrimestriel":
+        case "Semestriel":
+        case "Annuel":
+            if (
+                frequenceObj.mode === "dateHeure" &&
+                frequenceObj.dateHeure?.suivis?.length > 0
+            ) {
+                joursRestants = calculerJoursRestants(
+                    frequenceObj.dateHeure.suivis[0]
+                );
+                // Plages d'alerte selon le type
+                const plagesAlerte = {
+                    Mensuel: 3, // ±3 jours
+                    Bimestriel: 5, // ±5 jours
+                    Trimestriel: 7, // ±7 jours
+                    Quadrimestriel: 7, // ±7 jours
+                    Semestriel: 10, // ±10 jours
+                    Annuel: 14, // ±14 jours
+                };
+                const plage = plagesAlerte[frequenceObj.type] || 7;
+                doitAlerter = joursRestants >= -plage && joursRestants <= plage;
+            } else if (
+                frequenceObj.mode === "joursHeure" &&
+                frequenceObj.joursHeure?.suivis?.length > 0
+            ) {
+                const premierSuivi = frequenceObj.joursHeure.suivis[0];
+                if (premierSuivi.jours?.length > 0) {
+                    let minJours = Number.MAX_SAFE_INTEGER;
+                    premierSuivi.jours.forEach((jour) => {
+                        const jours = calculerJoursRestantsParJour(
+                            jour,
+                            2,
+                            frequenceObj.type
+                        );
+                        if (Math.abs(jours) < Math.abs(minJours)) {
+                            minJours = jours;
+                        }
+                    });
+                    joursRestants = minJours;
+                    // Même plages d'alerte que ci-dessus
+                    const plagesAlerte = {
+                        Mensuel: 3,
+                        Bimestriel: 5,
+                        Trimestriel: 7,
+                        Quadrimestriel: 7,
+                        Semestriel: 10,
+                        Annuel: 14,
+                    };
+                    const plage = plagesAlerte[frequenceObj.type] || 7;
+                    doitAlerter =
+                        joursRestants >= -plage && joursRestants <= plage;
+                }
+            }
+            break;
+    }
+
+    return { doitAlerter, joursRestants };
 };
 
 // Fonction pour réinitialiser l'erreur d'un champ spécifique

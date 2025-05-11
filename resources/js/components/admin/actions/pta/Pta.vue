@@ -1,13 +1,3 @@
-<script>
-export const ptaData = ref([
-    {
-        sources: "PTA",
-        dns: "Planifier les réunions",
-        datesuivi: "15/11/2024",
-    },
-]);
-</script>
-
 <script setup>
 import Sidebar from "../../../assets/Sidebar.vue";
 import Navbar from "../../../assets/Navbar.vue";
@@ -37,24 +27,46 @@ const searchQuery = ref("");
 const perPage = ref(10); // Même valeur que dans votre backend
 const lastPage = ref(1);
 const tableRef = ref(null); // Référence vers le composant TableActions.vue
+// Ajoutez cette nouvelle référence pour suivre l'état de la pagination
+const paginationEnabled = ref(true);
+const allActions = ref([]); // Pour stocker toutes les actions quand la pagination est désactivée
 
 // Charger les types d'actions depuis l'API
 const chargerActions = async (page = 1, search = "") => {
     try {
-        const response = await axios.get("/api/actions/pta", {
-            params: { page, search },
-        });
-        actionsPTA.value = response.data.data;
-        totalActions.value = response.data.total;
-        currentPage.value = response.data.current_page;
-        lastPage.value = response.data.last_page;
-        perPage.value = response.data.per_page;
+        if (paginationEnabled.value) {
+            // Si la pagination est activée, charger les actions avec pagination
+            const response = await axios.get("/api/actions/pta", {
+                params: { page, search },
+            });
+            actionsPTA.value = response.data.data;
+            totalActions.value = response.data.total;
+            currentPage.value = response.data.current_page;
+            lastPage.value = response.data.last_page;
+            perPage.value = response.data.per_page;
+        } else {
+            // Si la pagination est désactivée, charger toutes les actions
+            const response = await axios.get("/api/actions/pta", {
+                params: { page: 1, search, per_page: 1000000 },
+            });
+            allActions.value = response.data; // Stocker toutes les actions
+
+            allActions.value = response.data.data || response.data;
+            actionsPTA.value = allActions.value;
+            totalActions.value = allActions.value.length;
+            currentPage.value = 1; // Réinitialiser la page courante
+            lastPage.value = 1; // Réinitialiser la dernière page
+        }
     } catch (error) {
-        toast.error(
-            "Erreur lors du chargement de l'audit interne ou de l'action",
-            error
-        );
+        toast.error("Erreur lors du chargement du PTA", error);
     }
+};
+
+// Ajoutez cette fonction pour basculer l'état de la pagination
+const togglePagination = () => {
+    paginationEnabled.value = !paginationEnabled.value;
+    // Rechargez les données avec la nouvelle configuration
+    chargerActions(1, searchQuery.value);
 };
 
 const chargerSourcesPTA = async () => {
@@ -1019,6 +1031,24 @@ onMounted(() => {
                             </button>
                         </div>
                     </div>
+
+                    <!-- Toggle de pagination -->
+                    <div class="relative ml-4">
+                        <button
+                            @click="togglePagination"
+                            class="flex items-center justify-center border border-gray-400 text-black px-4 py-2 rounded-md"
+                            :class="{
+                                'bg-blue-100': !paginationEnabled,
+                                'bg-white': paginationEnabled,
+                            }"
+                        >
+                            {{
+                                paginationEnabled
+                                    ? "Désactiver Pagination"
+                                    : "Activer Pagination"
+                            }}
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Tableau PTA -->
@@ -1039,17 +1069,31 @@ onMounted(() => {
                         class="flex items-center text-gray-500 justify-start px-4 space-x-2"
                     >
                         <span>Résultat</span>
-                        <strong>{{ (currentPage - 1) * perPage + 1 }}</strong>
+                        <strong>{{
+                            paginationEnabled
+                                ? (currentPage - 1) * perPage + 1
+                                : 1
+                        }}</strong>
                         <span>à</span>
                         <strong>
-                            {{ Math.min(currentPage * perPage, totalActions) }}
+                            {{
+                                paginationEnabled
+                                    ? Math.min(
+                                          currentPage * perPage,
+                                          totalActions
+                                      )
+                                    : totalActions
+                            }}
                         </strong>
                         <span>sur</span>
                         <strong>{{ totalActions }}</strong>
                     </div>
 
-                    <!-- Pagination -->
-                    <div class="flex items-center justify-end space-x-2">
+                    <!-- Pagination - masquer quand elle est désactivée -->
+                    <div
+                        v-if="paginationEnabled"
+                        class="flex items-center justify-end space-x-2"
+                    >
                         <button
                             class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
                             :disabled="currentPage === 1"

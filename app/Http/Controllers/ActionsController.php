@@ -10,7 +10,6 @@ use App\Models\Suivi;
 use App\Models\TypeActions;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log as FacadesLog;
 
@@ -180,8 +179,10 @@ class ActionsController extends Controller
 
     public function createAI()
     {
-        // Récupérer le dernier numéro d'action enregistré
-        $lastAction = Actions::latest('id')->first();
+        // Récupérer le dernier numéro d'action au format AI-XXXX
+        $lastAction = Actions::where('num_actions', 'like', 'AI-%')
+        ->orderByRaw('TRY_CAST(SUBSTRING(num_actions, 5, LEN(num_actions) - 4) AS INT) DESC')
+                    ->first();
 
         if ($lastAction && preg_match('/AI-(\d+)/', $lastAction->num_actions, $matches)) {
             // Extraire la partie numérique et incrémenter
@@ -211,15 +212,17 @@ class ActionsController extends Controller
 
     public function createPTA()
     {
-        // Récupérer le dernier numéro d'action enregistré
-        $lastAction = Actions::latest('id')->first();
+       // Récupérer le dernier numéro d'action au format PTA-XXXX
+        $lastAction = Actions::where('num_actions', 'like', 'PTA-%')
+        ->orderByRaw('TRY_CAST(SUBSTRING(num_actions, 5, LEN(num_actions) - 4) AS INT) DESC')
+        ->first();
 
         if ($lastAction && preg_match('/PTA-(\d+)/', $lastAction->num_actions, $matches)) {
             // Extraire la partie numérique et incrémenter
             $lastNumber = (int) $matches[1];
             $numActions = 'PTA-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
         } else {
-            // Si aucun enregistrement n'existe, commencer par AI-0001
+            // Si aucun enregistrement n'existe, commencer par PTA-0001
             $numActions = 'PTA-0001';
         }
 
@@ -346,7 +349,7 @@ class ActionsController extends Controller
              // Vérifier si l'enregistrement existe déjà
              $exists = Actions::where('num_actions', $row['num_actions'])->exists();
 
-             $frequence = $row['frequence'];
+            //  $frequence = $row['frequence'];
 
             // Si on veux que l'importation du frequence est un json
             // if (!empty($frequence)) {
@@ -385,5 +388,149 @@ class ActionsController extends Controller
         }
 
         return response()->json(['message' => 'Importation terminée.'], 200);
+    }
+
+    public function notifications(Request $request)
+    {
+        $filterEnCours = $request->query('filter_en_cours', 'all');
+        $filterEnRetard = $request->query('filter_en_retard', 'all');
+        $perPage = $request->query('per_page', 10);
+        $pageEnCours = $request->query('page_en_cours', 1);
+        $pageEnRetard = $request->query('page_en_retard', 1);
+        $userId = $request->query('user_id'); // Récupérer l'userId depuis la requête
+
+        // Query pour "En cours"
+        $queryEnCours = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
+        ->join('users', 'actions.users_id', '=', 'users.id')
+        ->where('actions.statut', 'En cours');
+
+        // Query pour "En retard"
+        $queryEnRetard = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
+        ->join('users', 'actions.users_id', '=', 'users.id')
+        ->where('actions.statut', 'En retard');
+
+        // Filtrer par userId si disponible
+        if ($userId) {
+            $queryEnCours->where('actions.users_id', $userId);
+            $queryEnRetard->where('actions.users_id', $userId);
+        }
+
+        // Sélection des colonnes
+        $queryEnCours->select(
+            'actions.id',
+            'actions.num_actions',
+            'actions.description',
+            'actions.frequence',
+            'actions.statut',
+            'sources.libelle as source_libelle',
+            'users.id as users_id'
+         )->orderBy('actions.id', 'desc');
+
+        $queryEnRetard->select(
+            'actions.id',
+            'actions.num_actions',
+            'actions.description',
+            'actions.frequence',
+            'actions.statut',
+            'sources.libelle as source_libelle',
+            'users.id as users_id'
+         )->orderBy('actions.id', 'desc');
+
+        // Appliquer les filtres
+        if ($filterEnCours === 'AI') {
+            $queryEnCours->where('actions.num_actions', 'like', 'AI-%');
+        } elseif ($filterEnCours === 'PTA') {
+            $queryEnCours->where('actions.num_actions', 'like', 'PTA-%');
+        }
+
+        if ($filterEnRetard === 'AI') {
+            $queryEnRetard->where('actions.num_actions', 'like', 'AI-%');
+        } elseif ($filterEnRetard === 'PTA') {
+            $queryEnRetard->where('actions.num_actions', 'like', 'PTA-%');
+        }
+
+        // Paginer les résultats
+        $totalEnCours = $queryEnCours->paginate($perPage, ['*'], 'page_en_cours', $pageEnCours);
+        $totalEnRetard = $queryEnRetard->paginate($perPage, ['*'], 'page_en_retard', $pageEnRetard);
+
+        return response()->json([
+            'en_cours' => [
+                'data' => $totalEnCours->items(),
+                'total' => $totalEnCours->total(),
+                'last_page' => $totalEnCours->lastPage(),
+                'current_page' => $totalEnCours->currentPage(),
+            ],
+            'en_retard' => [
+                'data' => $totalEnRetard->items(),
+                'total' => $totalEnRetard->total(),
+                'last_page' => $totalEnRetard->lastPage(),
+                'current_page' => $totalEnRetard->currentPage(),
+            ],
+        ]);
+    }
+
+    public function getAllNotifications(Request $request)
+    {
+        $filterEnCours = $request->query('filter_en_cours', 'all');
+        $filterEnRetard = $request->query('filter_en_retard', 'all');
+        $userId = $request->query('user_id');
+
+        // Query pour "En cours" sans pagination
+        $queryEnCours = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
+            ->join('users', 'actions.users_id', '=', 'users.id')
+            ->where('actions.statut', 'En cours');
+
+        // Query pour "En retard" sans pagination
+        $queryEnRetard = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
+            ->join('users', 'actions.users_id', '=', 'users.id')
+            ->where('actions.statut', 'En retard');
+
+        if ($userId) {
+            $queryEnCours->where('actions.users_id', $userId);
+            $queryEnRetard->where('actions.users_id', $userId);
+        }
+
+        // Sélection des colonnes
+        $queryEnCours->select(
+            'actions.id',
+            'actions.num_actions',
+            'actions.description',
+            'actions.frequence',
+            'actions.statut',
+            'sources.libelle as source_libelle',
+            'users.id as users_id'
+        )->orderBy('actions.id', 'desc');
+
+        $queryEnRetard->select(
+            'actions.id',
+            'actions.num_actions',
+            'actions.description',
+            'actions.frequence',
+            'actions.statut',
+            'sources.libelle as source_libelle',
+            'users.id as users_id'
+        )->orderBy('actions.id', 'desc');
+
+        // Appliquer les filtres
+        if ($filterEnCours === 'AI') {
+            $queryEnCours->where('actions.num_actions', 'like', 'AI-%');
+        } elseif ($filterEnCours === 'PTA') {
+            $queryEnCours->where('actions.num_actions', 'like', 'PTA-%');
+        }
+
+        if ($filterEnRetard === 'AI') {
+            $queryEnRetard->where('actions.num_actions', 'like', 'AI-%');
+        } elseif ($filterEnRetard === 'PTA') {
+            $queryEnRetard->where('actions.num_actions', 'like', 'PTA-%');
+        }
+
+        // Récupérer toutes les données sans pagination
+        $enCours = $queryEnCours->get();
+        $enRetard = $queryEnRetard->get();
+
+        return response()->json([
+            'en_cours' => $enCours,
+            'en_retard' => $enRetard
+        ]);
     }
 }

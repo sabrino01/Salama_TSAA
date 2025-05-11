@@ -172,13 +172,11 @@ onMounted(async () => {
                             formatDate(action.date)
                         }}</span>
                     </div>
-                    <div class="flex w-full mt-5">
-                        <span
-                            class="w-[24%] ml-4 text-lg font-semibold text-gray-800"
-                        >
+                    <div class="flex w-auto mt-5">
+                        <span class="ml-4 text-lg font-semibold text-gray-800">
                             Description de la Non-Conformité :
                         </span>
-                        <span class="w-[76%] text-lg font-semibold">{{
+                        <span class="ml-2 text-lg font-semibold">{{
                             action.description
                         }}</span>
                     </div>

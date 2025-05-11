@@ -3,6 +3,9 @@
 use App\Http\Controllers\ActionsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConstatController;
+use App\Http\Controllers\EmailAlertController;
+use App\Http\Controllers\EmailConfigController;
+use App\Http\Controllers\EmailMemberController;
 use App\Http\Controllers\ResponsableController;
 use App\Http\Controllers\SourcesController;
 use App\Http\Controllers\SuiviController;
@@ -86,3 +89,23 @@ Route::put('/actions/{id}', [ActionsController::class, 'update']);
 Route::delete('/actions/{id}', [ActionsController::class, 'destroy']);
 Route::post('/actions/import', [ActionsController::class, 'import']);
 Route::post('/actions/check-num-actions', [ActionsController::class, 'checkExistingNumActions']);
+//notifications
+Route::get('/notifications', [ActionsController::class, 'notifications']);
+Route::get('/notifications/all', [ActionsController::class, 'getAllNotifications']);
+Route::prefix('email-config')->group(function () {
+    Route::get('/{userId}', [EmailConfigController::class, 'getConfig']);
+    Route::post('/{userId}', [EmailConfigController::class, 'saveConfig']);
+    Route::post('/test', [EmailConfigController::class, 'testConfig']);
+});
+
+Route::prefix('email-notifications')->group(function () {
+    Route::post('/{userId}/toggle', [EmailConfigController::class, 'toggleNotifications']);
+});
+
+Route::prefix('email-members')->group(function () {
+    Route::get('/{userId}', [EmailMemberController::class, 'getMembers']);
+    Route::post('/{userId}/add', [EmailMemberController::class, 'addMember']);
+    Route::post('/{userId}/remove', [EmailMemberController::class, 'removeMember']);
+});
+
+Route::post('/email-alert/{userId}', [EmailAlertController::class, 'sendAlert']);
