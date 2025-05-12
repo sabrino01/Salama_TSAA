@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActionsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConstatController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailAlertController;
 use App\Http\Controllers\EmailConfigController;
 use App\Http\Controllers\EmailMemberController;
@@ -109,3 +110,7 @@ Route::prefix('email-members')->group(function () {
 });
 
 Route::post('/email-alert/{userId}', [EmailAlertController::class, 'sendAlert']);
+// Routes pour dashboard
+Route::get('/constats/statistiques/AI', [DashboardController::class, 'indexAI']);
+Route::get('/users', [DashboardController::class, 'getUsers']);
+Route::get('/constats/statistiques/PTA', [DashboardController::class, 'indexPTA']);

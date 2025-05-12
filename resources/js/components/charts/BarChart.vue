@@ -1,7 +1,17 @@
-<!-- filepath: h:\Salama_TSAA\resources\js\components\charts\BarChart.vue -->
 <template>
     <div>
-        <Chart type="bar" :data="chartData" :options="chartOptions" />
+        <Chart
+            v-if="isDataValid"
+            type="bar"
+            :data="safeChartData"
+            :options="chartOptions"
+        />
+        <div
+            v-else
+            class="flex items-center justify-center h-64 bg-gray-100 rounded-lg"
+        >
+            <p class="text-gray-500">En attente de données...</p>
+        </div>
     </div>
 </template>
 
@@ -16,6 +26,7 @@ import {
     CategoryScale,
     LinearScale,
 } from "chart.js";
+import { defineProps, computed } from "vue";
 
 // Register Chart.js components
 ChartJS.register(
@@ -27,33 +38,89 @@ ChartJS.register(
     LinearScale
 );
 
-// Chart data
-const chartData = {
-    labels: ["A.A", "N.R", "R", "R.P"], // Horizontal labels
-    datasets: [
-        {
-            label: "Constat",
-            data: [10, 20, 30, 40, 50], // Vertical values
-            backgroundColor: ["#0062ff", "#ff6384", "#36a2eb", "#ffcd56"], // Bar colors
-        },
-    ],
-};
+const props = defineProps({
+    chartData: {
+        type: Object,
+        required: true,
+    },
+    // Ajout d'une prop optionnelle pour personnaliser le titre du graphique
+    chartTitle: {
+        type: String,
+        default: "Statistiques des Constats",
+    },
+});
 
-// Chart options
+// Vérifier si les données sont valides pour le graphique
+const isDataValid = computed(() => {
+    return (
+        props.chartData &&
+        props.chartData.labels &&
+        props.chartData.datasets &&
+        props.chartData.datasets.length > 0 &&
+        props.chartData.labels.length > 0
+    );
+});
+
+// Créer un objet de données sécurisé pour le graphique
+const safeChartData = computed(() => {
+    if (!isDataValid.value) {
+        return {
+            labels: ["Aucune donnée"],
+            datasets: [
+                {
+                    label: props.chartTitle,
+                    data: [0],
+                    backgroundColor: ["#cccccc"],
+                },
+            ],
+        };
+    }
+    return props.chartData;
+});
+
+// Chart options avec titre personnalisable
 const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    plugins: {
+        title: {
+            display: true,
+            text: props.chartTitle,
+            font: {
+                size: 16,
+            },
+        },
+        legend: {
+            display: true,
+            position: "top",
+        },
+        tooltip: {
+            callbacks: {
+                label: function (context) {
+                    return `${context.dataset.label}: ${context.raw.toFixed(
+                        1
+                    )}%`;
+                },
+            },
+        },
+    },
     scales: {
         y: {
             beginAtZero: true,
             ticks: {
-                callback: (value) => `${value}%`, // Add percentage to y-axis labels
+                callback: (value) => `${value}%`,
+            },
+            title: {
+                display: true,
+                text: "Pourcentage (%)",
+            },
+        },
+        x: {
+            title: {
+                display: true,
+                text: "Types de constat",
             },
         },
     },
 };
 </script>
-
-<style scoped>
-/* Optional: Add custom styles for the chart container */
-</style>

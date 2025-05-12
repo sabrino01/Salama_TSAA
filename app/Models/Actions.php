@@ -77,7 +77,7 @@ class Actions extends Model
         return $this->belongsTo(Suivi::class, 'suivis_id');
     }
 
-    public function constats()
+    public function constat()
     {
         return $this->belongsTo(Constat::class, 'constats_id');
     }
