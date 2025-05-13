@@ -198,4 +198,65 @@ class DashboardController extends Controller
         $users = User::select('id', 'nom_utilisateur')->get();
         return response()->json($users);
     }
+
+     public function getStats(Request $request)
+    {
+        $prefix = $request->prefix ?? 'AI'; // AI par défaut
+
+        $stats = [
+            'en_cours' => Actions::where('statut', 'En cours')
+                                ->where('num_actions', 'like', $prefix . '-%')
+                                ->count(),
+            'en_retard' => Actions::where('statut', 'En retard')
+                                 ->where('num_actions', 'like', $prefix . '-%')
+                                 ->count(),
+            'cloture' => Actions::where('statut', 'Clôturé')
+                               ->where('num_actions', 'like', $prefix . '-%')
+                               ->count(),
+            'abandonne' => Actions::where('statut', 'Abandonné')
+                                 ->where('num_actions', 'like', $prefix . '-%')
+                                 ->count(),
+        ];
+
+        return response()->json($stats);
+    }
+
+    public function getAIActionsByStatus(Request $request)
+    {
+        $statut = $request->statut;
+
+        $query = Actions::where('statut', $statut)
+            ->where('num_actions', 'like', 'AI-%')
+            ->select('id', 'description', 'num_actions', 'statut')
+            ->orderBy('id', 'desc');
+
+        $actions = $query->get();
+
+        return response()->json([
+            'actions' => $actions,
+            'total' => Actions::where('statut', $statut)
+                            ->where('num_actions', 'like', 'AI-%')
+                            ->count()
+        ]);
+    }
+
+    public function getPTAActionsByStatus(Request $request)
+    {
+        $statut = $request->statut;
+
+        $query = Actions::where('statut', $statut)
+            ->where('num_actions', 'like', 'PTA-%')
+            ->select('id', 'description', 'num_actions', 'statut')
+            ->orderBy('id', 'desc');
+
+        $actions = $query->get();
+
+        return response()->json([
+            'actions' => $actions,
+            'total' => Actions::where('statut', $statut)
+                            ->where('num_actions', 'like', 'PTA-%')
+                            ->count()
+        ]);
+    }
+
 }

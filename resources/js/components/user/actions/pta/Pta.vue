@@ -519,35 +519,40 @@ const exportToPdf = () => {
         });
 
         // Initialiser le PDF
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: "landscape" });
 
-        // Ajouter un titre
-        doc.setFontSize(18);
-        doc.text("Actions PTA", 14, 20);
+        dataToExport.forEach((action, index) => {
+            if (index > 0) doc.addPage();
+            // Ajouter un titre
+            doc.setFontSize(18);
+            doc.text("Actions PTA", 14, 20);
 
-        // Ajouter une table avec les données
-        const tableData = dataToExport.map((action) => [
-            action.num_actions,
-            action.date,
-            action.description,
-            action.frequenceWithDetails || action.frequence,
-            action.statut,
-            action.nom_utilisateur,
-        ]);
-
-        doc.autoTable({
-            head: [
+            // Créer une table avec une seule ligne (cette action uniquement)
+            const tableData = [
                 [
-                    "N°",
-                    "Date",
-                    "Description",
-                    "Fréquence",
-                    "Statut",
-                    "Ajouté par",
+                    action.num_actions,
+                    action.date,
+                    action.description,
+                    action.frequenceWithDetails || action.frequence,
+                    action.statut,
+                    action.nom_utilisateur,
                 ],
-            ],
-            body: tableData,
-            startY: 30,
+            ];
+
+            doc.autoTable({
+                head: [
+                    [
+                        "N°",
+                        "Date",
+                        "Description",
+                        "Fréquence",
+                        "Statut",
+                        "Ajouté par",
+                    ],
+                ],
+                body: tableData,
+                startY: 30,
+            });
         });
 
         // Sauvegarder le PDF

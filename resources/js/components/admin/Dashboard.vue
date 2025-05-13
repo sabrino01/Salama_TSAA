@@ -278,65 +278,69 @@
                         </div>
 
                         <!-- Statistique -->
-                        <div
-                            id="statistiques-ai-container"
-                            class="mt-5"
-                            v-if="resultatsRechercheAI.length > 0"
-                        >
-                            <BarChart
-                                :chart-data="chartDataAI"
-                                chart-title="Statistiques Audit Interne"
-                                class="h-96"
-                            />
-                        </div>
-                        <div
-                            class="mt-5 text-center text-gray-500"
-                            v-else-if="
-                                rechercheAI.type && !resultatsRechercheAI.length
-                            "
-                        >
-                            Aucun résultat trouvé pour votre recherche. Veuillez
-                            modifier vos recherches.
-                        </div>
+                        <div id="statistiques-ai-container" class="mt-5">
+                            <!-- BarChart -->
+                            <div v-if="resultatsRechercheAI.length > 0">
+                                <BarChart
+                                    :chart-data="chartDataAI"
+                                    chart-title="Statistiques Audit Interne"
+                                    class="h-96"
+                                />
+                            </div>
 
-                        <!-- Tableau de constat -->
-                        <table
-                            class="table-fixed bg-white border rounded-lg w-full mt-5"
-                            v-if="resultatsRechercheAI.length > 0"
-                        >
-                            <thead class="bg-gray-200 text-lg h-10">
-                                <tr>
-                                    <th>Type de constat</th>
-                                    <th>Nombres de constat</th>
-                                    <th>%</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-center">
-                                <tr
-                                    v-for="(
-                                        resultat, index
-                                    ) in resultatsRechercheAI"
-                                    :key="index"
-                                >
-                                    <td>{{ resultat.code }}</td>
-                                    <td>{{ resultat.nombre }}</td>
-                                    <td>
-                                        {{ resultat.pourcentage.toFixed(1) }}%
-                                    </td>
-                                </tr>
-                            </tbody>
-                            <tfoot
-                                class="bg-gray-200 h-10 text-center font-bold"
+                            <!-- Message Aucun résultat -->
+                            <div
+                                class="mt-5 text-center text-gray-500"
+                                v-if="
+                                    rechercheAI.type &&
+                                    resultatsRechercheAI.length === 0
+                                "
                             >
-                                <tr>
-                                    <td class="text-lg">Total</td>
-                                    <td>{{ totalConstatsAI }}</td>
-                                    <td>
-                                        {{ totalPourcentageAI.toFixed(1) }}%
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                Aucun résultat trouvé pour votre recherche.
+                                Veuillez modifier vos recherches.
+                            </div>
+
+                            <!-- Tableau de constat -->
+                            <table
+                                class="table-fixed bg-white border rounded-lg w-full mt-5"
+                                v-if="resultatsRechercheAI.length > 0"
+                            >
+                                <thead class="bg-gray-200 text-lg h-10">
+                                    <tr>
+                                        <th>Type de constat</th>
+                                        <th>Nombres de constat</th>
+                                        <th>%</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-center">
+                                    <tr
+                                        v-for="(
+                                            resultat, index
+                                        ) in resultatsRechercheAI"
+                                        :key="index"
+                                    >
+                                        <td>{{ resultat.code }}</td>
+                                        <td>{{ resultat.nombre }}</td>
+                                        <td>
+                                            {{
+                                                resultat.pourcentage.toFixed(1)
+                                            }}%
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot
+                                    class="bg-gray-200 h-10 text-center font-bold"
+                                >
+                                    <tr>
+                                        <td class="text-lg">Total</td>
+                                        <td>{{ totalConstatsAI }}</td>
+                                        <td>
+                                            {{ totalPourcentageAI.toFixed(1) }}%
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Ligne verticale -->
@@ -581,66 +585,68 @@
                         </div>
 
                         <!-- Statistique -->
-                        <div
-                            id="statistiques-pta-container"
-                            class="mt-5"
-                            v-if="resultatsRecherchePTA.length > 0"
-                        >
-                            <BarChart
-                                :chart-data="chartDataPTA"
-                                chart-title="Statistiques PTA"
-                                class="h-96"
-                            />
-                        </div>
-                        <div
-                            class="mt-5 text-center text-gray-500"
-                            v-else-if="
-                                recherchePTA.type &&
-                                !resultatsRecherchePTA.length
-                            "
-                        >
-                            Aucun résultat trouvé pour votre recherche. Veuillez
-                            modifier vos recherches.
-                        </div>
-
-                        <!-- Tableau de constat -->
-                        <table
-                            class="table-fixed bg-white border rounded-lg w-full mt-5"
-                            v-if="resultatsRecherchePTA.length > 0"
-                        >
-                            <thead class="bg-gray-200 text-lg h-10">
-                                <tr>
-                                    <th>Type de constat</th>
-                                    <th>Nombres de constat</th>
-                                    <th>%</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-center">
-                                <tr
-                                    v-for="(
-                                        resultat, index
-                                    ) in resultatsRecherchePTA"
-                                    :key="index"
-                                >
-                                    <td>{{ resultat.code }}</td>
-                                    <td>{{ resultat.nombre }}</td>
-                                    <td>
-                                        {{ resultat.pourcentage.toFixed(1) }}%
-                                    </td>
-                                </tr>
-                            </tbody>
-                            <tfoot
-                                class="bg-gray-200 h-10 text-center font-bold"
+                        <div id="statistiques-pta-container" class="mt-5">
+                            <div v-if="resultatsRecherchePTA.length > 0">
+                                <BarChart
+                                    :chart-data="chartDataPTA"
+                                    chart-title="Statistiques PTA"
+                                    class="h-96"
+                                />
+                            </div>
+                            <div
+                                class="mt-5 text-center text-gray-500"
+                                v-else-if="
+                                    recherchePTA.type &&
+                                    !resultatsRecherchePTA.length
+                                "
                             >
-                                <tr>
-                                    <td class="text-lg">Total</td>
-                                    <td>{{ totalConstatsPTA }}</td>
-                                    <td>
-                                        {{ totalPourcentagePTA.toFixed(1) }}%
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                Aucun résultat trouvé pour votre recherche.
+                                Veuillez modifier vos recherches.
+                            </div>
+
+                            <!-- Tableau de constat -->
+                            <table
+                                class="table-fixed bg-white border rounded-lg w-full mt-5"
+                                v-if="resultatsRecherchePTA.length > 0"
+                            >
+                                <thead class="bg-gray-200 text-lg h-10">
+                                    <tr>
+                                        <th>Type de constat</th>
+                                        <th>Nombres de constat</th>
+                                        <th>%</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-center">
+                                    <tr
+                                        v-for="(
+                                            resultat, index
+                                        ) in resultatsRecherchePTA"
+                                        :key="index"
+                                    >
+                                        <td>{{ resultat.code }}</td>
+                                        <td>{{ resultat.nombre }}</td>
+                                        <td>
+                                            {{
+                                                resultat.pourcentage.toFixed(1)
+                                            }}%
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot
+                                    class="bg-gray-200 h-10 text-center font-bold"
+                                >
+                                    <tr>
+                                        <td class="text-lg">Total</td>
+                                        <td>{{ totalConstatsPTA }}</td>
+                                        <td>
+                                            {{
+                                                totalPourcentagePTA.toFixed(1)
+                                            }}%
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -664,27 +670,45 @@
                             class="flex w-full mt-5 justify-between space-x-5 text-white"
                         >
                             <div
-                                class="flex w-1/3 items-center bg-green-500 p-8 rounded-md shadow-lg"
+                                @click="openModalAI('En cours')"
+                                class="flex w-1/3 items-center bg-green-500 p-6 rounded-md shadow-lg cursor-pointer hover:shadow-xl transition-all"
                             >
                                 <p class="w-[50%] justify-center">En cours</p>
                                 <p class="w-[50%] text-end text-lg font-bold">
-                                    19
+                                    {{ statsAI.en_cours || 0 }}
                                 </p>
                             </div>
+
+                            <!-- Carte "En retard" - AI -->
                             <div
-                                class="flex w-1/3 items-center bg-gray-500 p-8 rounded-md shadow-lg"
+                                @click="openModalAI('En retard')"
+                                class="flex w-1/3 items-center bg-red-500 p-6 rounded-md shadow-lg cursor-pointer hover:shadow-xl transition-all"
+                            >
+                                <p class="w-[50%] justify-center">En retard</p>
+                                <p class="w-[50%] text-end text-lg font-bold">
+                                    {{ statsAI.en_retard || 0 }}
+                                </p>
+                            </div>
+
+                            <!-- Carte "Clôturé" - AI -->
+                            <div
+                                @click="openModalAI('Clôturé')"
+                                class="flex w-1/3 items-center bg-gray-500 p-8 rounded-md shadow-lg cursor-pointer hover:shadow-xl transition-all"
                             >
                                 <p class="w-[50%] justify-center">Clôturé</p>
                                 <p class="w-[50%] text-end text-lg font-bold">
-                                    42
+                                    {{ statsAI.cloture || 0 }}
                                 </p>
                             </div>
+
+                            <!-- Carte "Abandonné" - AI -->
                             <div
-                                class="flex w-1/3 items-center bg-purple-600 p-8 rounded-md shadow-lg"
+                                @click="openModalAI('Abandonné')"
+                                class="flex w-1/3 items-center bg-purple-600 p-8 rounded-md shadow-lg cursor-pointer hover:shadow-xl transition-all"
                             >
                                 <p class="w-[50%] justify-center">Abandonné</p>
                                 <p class="w-[50%] text-end text-lg font-bold">
-                                    10
+                                    {{ statsAI.abandonne || 0 }}
                                 </p>
                             </div>
                         </div>
@@ -704,33 +728,65 @@
                             class="flex w-full mt-5 justify-between space-x-5 text-white"
                         >
                             <div
-                                class="flex w-1/3 items-center bg-green-500 p-8 rounded-md shadow-lg"
+                                @click="openModalPTA('En cours')"
+                                class="flex w-1/3 items-center bg-green-500 p-6 rounded-md shadow-lg cursor-pointer hover:shadow-xl transition-all"
                             >
                                 <p class="w-[50%] justify-center">En cours</p>
                                 <p class="w-[50%] text-end text-lg font-bold">
-                                    23
+                                    {{ statsPTA.en_cours || 0 }}
                                 </p>
                             </div>
+
+                            <!-- Carte "En retard" - PTA -->
                             <div
-                                class="flex w-1/3 items-center bg-gray-500 p-8 rounded-md shadow-lg"
+                                @click="openModalPTA('En retard')"
+                                class="flex w-1/3 items-center bg-red-500 p-6 rounded-md shadow-lg cursor-pointer hover:shadow-xl transition-all"
+                            >
+                                <p class="w-[50%] justify-center">En retard</p>
+                                <p class="w-[50%] text-end text-lg font-bold">
+                                    {{ statsPTA.en_retard || 0 }}
+                                </p>
+                            </div>
+
+                            <!-- Carte "Clôturé" - PTA -->
+                            <div
+                                @click="openModalPTA('Clôturé')"
+                                class="flex w-1/3 items-center bg-gray-500 p-8 rounded-md shadow-lg cursor-pointer hover:shadow-xl transition-all"
                             >
                                 <p class="w-[50%] justify-center">Clôturé</p>
                                 <p class="w-[50%] text-end text-lg font-bold">
-                                    37
+                                    {{ statsPTA.cloture || 0 }}
                                 </p>
                             </div>
+
+                            <!-- Carte "Abandonné" - PTA -->
                             <div
-                                class="flex w-1/3 items-center bg-purple-600 p-6 rounded-md shadow-lg"
+                                @click="openModalPTA('Abandonné')"
+                                class="flex w-1/3 items-center bg-purple-600 p-8 rounded-md shadow-lg cursor-pointer hover:shadow-xl transition-all"
                             >
                                 <p class="w-[50%] justify-center">Abandonné</p>
                                 <p class="w-[50%] text-end text-lg font-bold">
-                                    8
+                                    {{ statsPTA.abandonne || 0 }}
                                 </p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Modal pour Audit Interne -->
+            <AIActionModal
+                v-if="showModalAI"
+                :titre="selectedStatusAI"
+                @close="closeModalAI"
+            />
+
+            <!-- Modal pour PTA -->
+            <PTAActionModal
+                v-if="showModalPTA"
+                :titre="selectedStatusPTA"
+                @close="closeModalPTA"
+            />
 
             <!-- Footer -->
             <Footer />
@@ -744,6 +800,8 @@ import Navbar from "../assets/Navbar.vue";
 import Footer from "../assets/Footer.vue";
 import BarChart from "../charts/BarChart.vue";
 import ExportPDF from "../charts/ExportBarChartPDF.vue";
+import AIActionModal from "../assets/AIActionsModal.vue";
+import PTAActionModal from "../assets/PTAActionsModal.vue";
 import { ref, computed, onMounted } from "vue";
 import { Info } from "lucide-vue-next";
 import axios from "axios";
@@ -917,13 +975,27 @@ const chartDataPTA = computed(() => {
     };
 });
 
-// Charger les utilisateurs au démarrage
+// Charger les données au montage du composant
 onMounted(async () => {
     try {
-        const response = await axios.get("/api/users");
-        users.value = response.data;
+        // Chargement parallèle des données pour éviter des attentes séquentielles
+        const [usersResponse, statsAIResponse, statsPTAResponse] =
+            await Promise.all([
+                axios.get("/api/users"),
+                axios.get("/api/api/actions/stats", {
+                    params: { prefix: "AI" },
+                }),
+                axios.get("/api/api/actions/stats", {
+                    params: { prefix: "PTA" },
+                }),
+            ]);
+
+        // Mise à jour des données
+        users.value = usersResponse.data;
+        statsAI.value = statsAIResponse.data;
+        statsPTA.value = statsPTAResponse.data;
     } catch (error) {
-        console.error("Erreur lors du chargement des utilisateurs:", error);
+        console.error("Erreur lors du chargement des données:", error);
     }
 });
 
@@ -1066,5 +1138,45 @@ const rechercherPTA = async () => {
     } finally {
         isLoadingPTA.value = false;
     }
+};
+
+// État du composant pour Audit Interne
+const showModalAI = ref(false);
+const selectedStatusAI = ref("");
+const statsAI = ref({
+    en_cours: 0,
+    en_retard: 0,
+    cloture: 0,
+    abandonne: 0,
+});
+
+// État du composant pour PTA
+const showModalPTA = ref(false);
+const selectedStatusPTA = ref("");
+const statsPTA = ref({
+    en_cours: 0,
+    en_retard: 0,
+    cloture: 0,
+    abandonne: 0,
+});
+
+// Fonctions pour gérer le modal AI
+const openModalAI = (status) => {
+    selectedStatusAI.value = status;
+    showModalAI.value = true;
+};
+
+const closeModalAI = () => {
+    showModalAI.value = false;
+};
+
+// Fonctions pour gérer le modal PTA
+const openModalPTA = (status) => {
+    selectedStatusPTA.value = status;
+    showModalPTA.value = true;
+};
+
+const closeModalPTA = () => {
+    showModalPTA.value = false;
 };
 </script>

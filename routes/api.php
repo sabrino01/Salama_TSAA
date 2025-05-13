@@ -114,3 +114,13 @@ Route::post('/email-alert/{userId}', [EmailAlertController::class, 'sendAlert'])
 Route::get('/constats/statistiques/AI', [DashboardController::class, 'indexAI']);
 Route::get('/users', [DashboardController::class, 'getUsers']);
 Route::get('/constats/statistiques/PTA', [DashboardController::class, 'indexPTA']);
+Route::prefix('api')->group(function () {
+    // Récupérer les statistiques pour le tableau de bord par préfixe
+    Route::get('/actions/stats', [DashboardController::class, 'getStats']);
+
+    // Récupérer les actions AI filtrées par statut
+    Route::get('/actions/ai', [DashboardController::class, 'getAIActionsByStatus']);
+
+    // Récupérer les actions PTA filtrées par statut
+    Route::get('/actions/pta', [DashboardController::class, 'getPTAActionsByStatus']);
+});
