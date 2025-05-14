@@ -49,7 +49,7 @@ const emailService = {
             );
             return response.data;
         } catch (error) {
-            console.error("Erreur toggleNotifications:", error);
+            console.error("Erreur Notifications:", error);
             throw error.response?.data || error;
         }
     },
@@ -64,7 +64,7 @@ const emailService = {
             const response = await axios.get(`/api/email-members/${userId}`);
             return response.data;
         } catch (error) {
-            console.error("Erreur getMembers:", error);
+            console.error("Erreur d'avoir les Membres:", error);
             throw error.response?.data || error;
         }
     },
@@ -83,7 +83,7 @@ const emailService = {
             );
             return response.data;
         } catch (error) {
-            console.error("Erreur addMember:", error);
+            console.error("Erreur d'ajout des Membres:", error);
             throw error.response?.data || error;
         }
     },
@@ -102,7 +102,7 @@ const emailService = {
             );
             return response.data;
         } catch (error) {
-            console.error("Erreur removeMember:", error);
+            console.error("Erreur de suppression du Membre:", error);
             throw error.response?.data || error;
         }
     },
@@ -121,7 +121,7 @@ const emailService = {
             );
             return response.data;
         } catch (error) {
-            console.error("Erreur sendAlert:", error);
+            console.error("Erreur d'envoi d'Alert:", error);
             throw error.response?.data || error;
         }
     },
@@ -136,7 +136,7 @@ const emailService = {
             const response = await axios.post("/api/email-config/test", config);
             return response.data;
         } catch (error) {
-            console.error("Erreur testConfig:", error);
+            console.error("Erreur du test de Configuration:", error);
             throw error.response?.data || error;
         }
     },

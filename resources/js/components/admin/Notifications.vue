@@ -837,7 +837,7 @@ const user = computed(() => {
     try {
         return JSON.parse(localStorage.getItem("user")) || {};
     } catch (e) {
-        console.error(
+        toast.error(
             "Erreur lors de la récupération des données utilisateur:",
             e
         );
@@ -863,7 +863,7 @@ const addEmailMember = async () => {
         emailMembers.value.push(newEmail.value);
         newEmail.value = "";
     } catch (error) {
-        console.error("Erreur lors de l'ajout d'un membre:", error);
+        toast.error("Erreur lors de l'ajout d'un membre:", error);
     }
 };
 
@@ -874,7 +874,7 @@ const removeEmailMember = async (index) => {
         await emailService.removeMember(emailToRemove, userId.value);
         emailMembers.value.splice(index, 1);
     } catch (error) {
-        console.error("Erreur lors de la suppression d'un membre:", error);
+        toast.error("Erreur lors de la suppression d'un membre:", error);
     }
 };
 
@@ -884,7 +884,7 @@ const loadEmailMembers = async () => {
         const members = await emailService.getMembers(userId.value);
         emailMembers.value = members;
     } catch (error) {
-        console.error("Erreur lors du chargement des membres:", error);
+        toast.error("Erreur lors du chargement des membres:", error);
     }
 };
 
@@ -920,7 +920,7 @@ const handleEmailToggle = async () => {
 
         localStorage.setItem("emailNotification", emailNotification.value);
     } catch (error) {
-        console.error("Erreur lors du toggle des notifications:", error);
+        toast.error("Erreur lors du chargement des notifications:", error);
         emailNotification.value = !emailNotification.value;
     }
 };
@@ -934,7 +934,7 @@ const saveEmailConfig = async () => {
         if (activeTab.value === "serveur") {
             // Vérifier que les champs obligatoires sont remplis
             if (!emailConfig.value.host || !emailConfig.value.username) {
-                alert("Veuillez remplir tous les champs obligatoires");
+                toast.error("Veuillez remplir tous les champs obligatoires");
                 return;
             }
         }
@@ -944,7 +944,7 @@ const saveEmailConfig = async () => {
         emailNotification.value = true;
         localStorage.setItem("emailNotification", "true");
     } catch (error) {
-        console.error("Erreur de configuration email:", error);
+        toast.error("Erreur de configuration email:", error);
         emailNotification.value = false;
         localStorage.setItem("emailNotification", "false");
     }
@@ -968,7 +968,7 @@ const loadEmailConfig = async () => {
         // Charger aussi les membres
         await loadEmailMembers();
     } catch (error) {
-        console.error("Erreur lors du chargement de la configuration:", error);
+        toast.error("Erreur lors du chargement de la configuration:", error);
     }
 };
 
