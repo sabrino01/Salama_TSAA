@@ -1572,7 +1572,7 @@ watch(emailNotification, (newValue) => {
 // Appeler les données au montage du composant
 onMounted(async () => {
     if (userId.value) {
-        await loadEmailConfig();
+        loadEmailConfig();
         isInitialLoad.value = true;
         await fetchAllData(true);
         await fetchFilteredData();

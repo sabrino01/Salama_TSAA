@@ -16,27 +16,39 @@ class EmailConfigController extends Controller
     public function getConfig($userId)
     {
         try {
-            $config = EmailConfig::where('user_id', $userId)->first();
+        //Log::info('Récupération de la configuration email', ['userId' => $userId]);
 
-            if (!$config) {
-                return response()->json([
-                    'host' => '',
-                    'port' => 587,
-                    'username' => '',
-                    'is_active' => false
-                ]);
-            }
+        $config = EmailConfig::where('user_id', $userId)->first();
 
-            return response()->json([
-                'host' => $config->host,
-                'port' => $config->port,
-                'username' => $config->username,
-                'is_active' => $config->is_active
-            ]);
-        } catch (Exception $e) {
-            Log::error('Erreur lors de la récupération de la configuration email: ' . $e->getMessage());
-            return response()->json(['error' => 'Erreur serveur'], 500);
+        if (!$config) {
+            Log::warning('Configuration email non trouvée', ['userId' => $userId]);
+            return response()->json(['error' => 'Configuration non trouvée'], 404);
         }
+
+        $configData = [
+            'id' => $config->id,
+            'host' => $config->host,
+            'port' => $config->port,
+            'username' => $config->username,
+            'is_active' => $config->is_active,
+            // On n'envoie pas le mot de passe pour des raisons de sécurité
+        ];
+
+        // Log::info('Configuration email récupérée avec succès', [
+        //     'userId' => $userId,
+        //     'config' => $configData
+        // ]);
+
+        return response()->json($configData);
+    } catch (Exception $e) {
+        Log::error('Erreur lors de la récupération de la configuration email', [
+            'userId' => $userId,
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json(['error' => 'Erreur serveur: ' . $e->getMessage()], 500);
+    }
     }
 
     /**
@@ -59,6 +71,7 @@ class EmailConfigController extends Controller
                     'host' => $validated['host'],
                     'port' => $validated['port'],
                     'username' => $validated['username'],
+                    'password' => $validated['password'],
                     'is_active' => true
                 ]
             );

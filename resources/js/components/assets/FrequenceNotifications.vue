@@ -411,7 +411,6 @@ export default {
     },
     methods: {
         parseFrequence() {
-            // Si c'est une chaîne de caractères, vérifier si c'est du JSON
             if (typeof this.frequence === "string") {
                 try {
                     this.frequenceObj = JSON.parse(this.frequence);
@@ -423,14 +422,23 @@ export default {
             }
         },
 
+        // ✅ CORRIGÉ : calcule de façon fiable la différence entre deux dates (sans décalage de fuseau horaire)
         calculerJoursRestants(dateStr) {
             if (!dateStr) return 0;
 
-            const date = new Date(dateStr);
-            const aujourdhui = new Date();
-            aujourdhui.setHours(0, 0, 0, 0);
+            const dateParts = dateStr.split("-");
+            if (dateParts.length < 3) return 0;
 
-            const diffTime = date - aujourdhui;
+            const inputDate = new Date(
+                parseInt(dateParts[0]),
+                parseInt(dateParts[1]) - 1,
+                parseInt(dateParts[2])
+            );
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const diffTime = inputDate - today;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
             return diffDays;
@@ -445,41 +453,34 @@ export default {
             const jourIndex = this.joursMap[jourString];
             if (jourIndex === undefined) return 0;
 
-            const aujourdhui = new Date();
-            const jourActuel = aujourdhui.getDay();
-            let joursRestants = (jourIndex - jourActuel + 7) % 7;
+            const today = new Date();
+            const currentDay = today.getDay();
+            let joursRestants = (jourIndex - currentDay + 7) % 7;
 
-            // Si c'est aujourd'hui mais qu'on a déjà dépassé l'heure, on ajoute 7 jours
             if (joursRestants === 0) {
-                // Logique pour vérifier l'heure pourrait être ajoutée ici
                 joursRestants = 7;
             }
 
-            // Ajustements selon le type et la période pour les types mensuels et plus
             if (type) {
                 if (periode === "semaineProchaine" && joursRestants < 7) {
                     joursRestants += 7;
                 } else if (periode === "moisProchain") {
-                    // Trouver le premier jour du mois prochain qui correspond au jour demandé
-                    const premierJourMoisProchain = new Date(
-                        aujourdhui.getFullYear(),
-                        aujourdhui.getMonth() + 1,
+                    const firstDayNextMonth = new Date(
+                        today.getFullYear(),
+                        today.getMonth() + 1,
                         1
                     );
-                    const jourPremierMois = premierJourMoisProchain.getDay();
-                    joursRestants = (jourIndex - jourPremierMois + 7) % 7;
+                    const dayOfFirst = firstDayNextMonth.getDay();
+                    joursRestants = (jourIndex - dayOfFirst + 7) % 7;
 
-                    // Ajouter les jours du mois en cours
-                    const dernierJourMoisCourant = new Date(
-                        aujourdhui.getFullYear(),
-                        aujourdhui.getMonth() + 1,
+                    const lastDayCurrentMonth = new Date(
+                        today.getFullYear(),
+                        today.getMonth() + 1,
                         0
                     ).getDate();
-                    joursRestants +=
-                        dernierJourMoisCourant - aujourdhui.getDate();
+                    joursRestants += lastDayCurrentMonth - today.getDate();
                 }
 
-                // Ajouter des mois selon le type
                 const moisSupplementaires = {
                     Mensuel: 1,
                     Bimestriel: 2,
@@ -488,7 +489,6 @@ export default {
                     Semestriel: 6,
                 };
 
-                // Pour simuler l'ajout de mois, on ajoute approximativement 30 jours par mois
                 if (moisSupplementaires[type]) {
                     joursRestants += moisSupplementaires[type] * 30;
                 }
@@ -504,8 +504,6 @@ export default {
 
         getBorderClass(jours) {
             if (jours === 0) return "bg-blue-400";
-
-            // Pour Ponctuel
             if (jours > 7) return "bg-green-400";
             if (jours > 0) return "bg-yellow-400";
             if (jours >= -7) return "bg-orange-400";
@@ -530,26 +528,20 @@ export default {
                         joursDebut
                     )}`;
 
-                    if (
-                        this.frequenceObj.suivis &&
-                        this.frequenceObj.suivis.length > 0
-                    ) {
+                    if (this.frequenceObj.suivis?.length) {
                         result += " - suivis: ";
-                        this.frequenceObj.suivis.forEach((suivi, index) => {
-                            const joursSuivi =
-                                this.calculerJoursRestants(suivi);
-                            result += `${this.formatJoursRestants(joursSuivi)}${
-                                index < this.frequenceObj.suivis.length - 1
-                                    ? ", "
-                                    : ""
-                            }`;
-                        });
+                        result += this.frequenceObj.suivis
+                            .map((suivi) =>
+                                this.formatJoursRestants(
+                                    this.calculerJoursRestants(suivi)
+                                )
+                            )
+                            .join(", ");
                     }
                 } else if (this.frequenceObj.type === "Hebdomadaire") {
                     if (
                         this.frequenceObj.mode === "dateHeure" &&
-                        this.frequenceObj.dateHeure &&
-                        this.frequenceObj.dateHeure.blocs
+                        this.frequenceObj.dateHeure?.blocs
                     ) {
                         const joursDebut = this.calculerJoursRestants(
                             this.frequenceObj.dateHeure.blocs[0].debut
@@ -576,10 +568,7 @@ export default {
                         result += ` - debut: ${this.formatJoursRestants(
                             joursDebut
                         )}`;
-                    } else if (
-                        this.frequenceObj.mode === "joursHeure" &&
-                        this.frequenceObj.joursHeure
-                    ) {
+                    } else if (this.frequenceObj.mode === "joursHeure") {
                         result += ` - ${this.frequenceObj.joursHeure.periodeMois} - ${this.frequenceObj.joursHeure.frequence}`;
                     }
                 } else if (

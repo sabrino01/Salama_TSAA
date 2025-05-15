@@ -69,7 +69,10 @@ const pages = computed(() => {
 
 // Aller à une page spécifique
 const goToPage = (page) => {
-    chargerMembres(page, searchQuery.value);
+    if (page >= 1 && page <= lastPage.value) {
+        currentPage.value = page;
+        chargerMembres(page, searchQuery.value);
+    }
 };
 
 // Supprimer un membre
@@ -181,7 +184,7 @@ onMounted(() => {
                             placeholder="Rechercher...."
                             class="outline-none bg-transparent text-gray-800 placeholder-gray-500"
                             v-model="searchQuery"
-                            @input="chargerMembres(1, searchQuery)"
+                            @input="rechercherMembres"
                         />
                     </div>
                 </div>
