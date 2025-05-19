@@ -18,7 +18,7 @@ const lastPage = ref(1);
 // Charger les membres depuis l'API
 const chargerMembres = async (page = 1, search = "") => {
     try {
-        const response = await axios.get("/api/users", {
+        const response = await axios.get("/api/users/all", {
             params: { page, search },
         });
         membres.value = response.data.data;

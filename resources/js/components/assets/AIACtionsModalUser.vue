@@ -113,11 +113,6 @@ const user = computed(() => {
 });
 const userId = computed(() => user.value?.id);
 
-// Chargement des données initiales
-onMounted(() => {
-    loadActions();
-});
-
 // Fonction pour charger les actions
 async function loadActions() {
     loading.value = true;
@@ -139,13 +134,11 @@ async function loadActions() {
 // Fonction pour naviguer vers la page de détail d'une action
 function goToAction(id) {
     const action = actions.value.find((a) => a.id === id);
-
     if (!action) {
         console.warn("Action non trouvée pour l'ID:", id);
         return;
     }
-
-    if (userId.value === action.users_id) {
+    if (userId.value == action.users_id) {
         router.push(`/user/actions/auditinterne/voir/${id}`);
     } else {
         router.push(`/user/actions/auditinterne/voir/other/${id}`);
@@ -153,4 +146,9 @@ function goToAction(id) {
 
     emit("close");
 }
+
+// Chargement des données initiales
+onMounted(() => {
+    loadActions();
+});
 </script>

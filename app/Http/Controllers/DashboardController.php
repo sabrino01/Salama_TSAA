@@ -227,7 +227,7 @@ class DashboardController extends Controller
 
         $query = Actions::where('statut', $statut)
             ->where('num_actions', 'like', 'AI-%')
-            ->select('id', 'description', 'num_actions', 'statut')
+            ->select('id', 'description', 'num_actions', 'statut','users_id')
             ->orderBy('id', 'desc');
 
         $actions = $query->get();
@@ -246,7 +246,7 @@ class DashboardController extends Controller
 
         $query = Actions::where('statut', $statut)
             ->where('num_actions', 'like', 'PTA-%')
-            ->select('id', 'description', 'num_actions', 'statut')
+            ->select('id', 'description', 'num_actions', 'statut','users_id')
             ->orderBy('id', 'desc');
 
         $actions = $query->get();

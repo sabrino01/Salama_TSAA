@@ -112,11 +112,6 @@ const user = computed(() => {
 });
 const userId = computed(() => user.value?.id);
 
-// Chargement des actions
-onMounted(() => {
-    loadActions();
-});
-
 async function loadActions() {
     loading.value = true;
     try {
@@ -141,8 +136,7 @@ function goToAction(id) {
         console.warn("Action non trouvée pour l'id:", id);
         return;
     }
-
-    if (action.users_id === userId.value) {
+    if (action.users_id == userId.value) {
         router.push(`/user/actions/pta/voir/${id}`);
     } else {
         router.push(`/user/actions/pta/voir/other/${id}`);
@@ -150,4 +144,9 @@ function goToAction(id) {
 
     emit("close");
 }
+
+// Chargement des actions
+onMounted(() => {
+    loadActions();
+});
 </script>

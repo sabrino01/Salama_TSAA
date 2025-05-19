@@ -142,7 +142,7 @@ function goToAction(id) {
         return;
     }
 
-    if (action.users_id === userId.value) {
+    if (action.users_id == userId.value) {
         router.push(`/admin/actions/pta/voir/${id}`);
     } else {
         router.push(`/admin/actions/pta/voir/other/${id}`);

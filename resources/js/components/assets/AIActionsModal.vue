@@ -145,7 +145,7 @@ function goToAction(id) {
         return;
     }
 
-    if (userId.value === action.users_id) {
+    if (userId.value == action.users_id) {
         router.push(`/admin/actions/auditinterne/voir/${id}`);
     } else {
         router.push(`/admin/actions/auditinterne/voir/other/${id}`);
