@@ -11,6 +11,7 @@
                 <p class="text-gray-500 text-sm">{{ userData.departement }}</p>
             </div>
         </div>
+
         <!-- Image de profil et dropdown -->
         <div class="relative">
             <button @click="toggleDropdown" class="focus:outline-none">
@@ -25,13 +26,18 @@
                 v-if="isDropdownOpen"
                 class="absolute right-0 mt-2 w-48 bg-white border shadow-lg rounded-lg overflow-hidden z-50"
             >
-                <button
-                    @click="goToProfile"
-                    class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left"
-                >
-                    Profile
-                </button>
-                <div class="border-b border-gray-300"></div>
+                <!-- Si rôle est admin ou user -->
+                <template v-if="['admin', 'user'].includes(userData.role)">
+                    <button
+                        @click="goToProfile"
+                        class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left"
+                    >
+                        Profile
+                    </button>
+                    <div class="border-b border-gray-300"></div>
+                </template>
+
+                <!-- Bouton Déconnexion (toujours visible) -->
                 <button
                     @click="handleLogout"
                     class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left"

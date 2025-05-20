@@ -71,6 +71,18 @@ import VoirOtherAuditInterne from "../components/admin/actions/auditinterne/Voir
 import VoirOtherAuditInterneUser from "../components/user/actions/auditinterne/VoirOtherAuditInterne.vue";
 import VoirOtherPta from "../components/admin/actions/pta/VoirOtherPta.vue";
 import VoirOtherPtaUser from "../components/user/actions/pta/VoirOtherPta.vue";
+import AuditInterneResponsable from "../components/responsable/actions/auditinterne/AuditInterne.vue";
+import VoirAuditInterneResponsable from "../components/responsable/actions/auditinterne/VoirAuditInterne.vue";
+import EditAuditInterneResponsable from "../components/responsable/actions/auditinterne/EditAuditInterne.vue";
+import PtaResponsable from "../components/responsable/actions/pta/Pta.vue";
+import VoirPtaResponsable from "../components/responsable/actions/pta/VoirPta.vue";
+import EditPtaResponsable from "../components/responsable/actions/pta/EditPta.vue";
+import AuditInterneSuivi from "../components/suivi/actions/auditinterne/AuditInterne.vue";
+import VoirAuditInterneSuivi from "../components/suivi/actions/auditinterne/VoirAuditInterne.vue";
+import EditAuditInterneSuivi from "../components/suivi/actions/auditinterne/EditAuditInterne.vue";
+import PtaSuivi from "../components/suivi/actions/pta/Pta.vue";
+import VoirPtaSuivi from "../components/suivi/actions/pta/VoirPta.vue";
+import EditPtaSuivi from "../components/suivi/actions/pta/EditPta.vue";
 
 const routes = [
     {

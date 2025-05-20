@@ -57,7 +57,7 @@ class ResponsableController extends Controller
             'email' => $validateData['email'],
             'mot_de_passe' => bcrypt($validateData['mot_de_passe']),
             'role' => 'responsable',
-            'departement' => 'Aucun'
+            'departement' => 'Responsable'
         ]);
 
         return response()->json(['message' => 'Responsable ajouté avec succès', 201]);

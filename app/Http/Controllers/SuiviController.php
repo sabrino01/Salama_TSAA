@@ -54,7 +54,7 @@ class SuiviController extends Controller
             'email' => $validateData['email'],
             'mot_de_passe' => bcrypt($validateData['mot_de_passe']),
             'role' => 'suivi',
-            'departement' => 'Aucun'
+            'departement' => 'Suivi'
         ]);
 
         return response()->json([
