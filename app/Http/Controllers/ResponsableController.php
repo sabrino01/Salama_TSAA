@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Responsable;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class ResponsableController extends Controller
@@ -15,6 +16,8 @@ class ResponsableController extends Controller
         $responsable = Responsable::where('code', 'like', "%$search%")
             ->orWhere('libelle', 'like', "%$search%")
             ->orWhere('description', 'like', "%$search%")
+            ->orWhere('email','like', "%$search%")
+            ->orWhere('nom_utilisateur', 'like', "%$search%")
             ->paginate($perPage);
 
         return response()->json($responsable);
@@ -33,13 +36,28 @@ class ResponsableController extends Controller
         $validateData = $request->validate([
             'code' => 'required|string|max:255|unique:responsables',
             'libelle' => 'required|string|max:255',
-            'description' => 'required|string|max:255'
+            'description' => 'required|string|max:255',
+            'email' => 'required|string|max:255',
+            'nom_utilisateur' => 'required|string|max:255',
+            'mot_de_passe' => 'required|string|min:8'
         ]);
 
         Responsable::create([
             'code' => $validateData['code'],
             'libelle' => $validateData['libelle'],
-            'description' => $validateData['description']
+            'description' => $validateData['description'],
+            'email' => $validateData['email'],
+            'nom_utilisateur' => $validateData['nom_utilisateur'],
+            'mot_de_passe' => bcrypt($validateData['mot_de_passe'])
+        ]);
+
+        User::create([
+            'nom' => $validateData['libelle'],
+            'nom_utilisateur' => $validateData['nom_utilisateur'],
+            'email' => $validateData['email'],
+            'mot_de_passe' => bcrypt($validateData['mot_de_passe']),
+            'role' => 'responsable',
+            'departement' => 'Aucun'
         ]);
 
         return response()->json(['message' => 'Responsable ajouté avec succès', 201]);
@@ -57,7 +75,7 @@ class ResponsableController extends Controller
         $validateData = $request->validate([
             'code' => 'required|string|max:255|unique:responsables,code,' . $id,
             'libelle' => 'required|string|max:255',
-            'description' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:255'
         ]);
 
         $responsable->update([

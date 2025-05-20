@@ -15,6 +15,9 @@ class Responsable extends Model
     protected $fillable = [
         'code',
         'libelle',
-        'description'
+        'description',
+        'email',
+        'nom_utilisateur',
+        'mot_de_passe',
     ];
 }

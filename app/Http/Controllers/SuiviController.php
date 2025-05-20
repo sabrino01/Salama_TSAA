@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Suivi;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class SuiviController extends Controller
@@ -14,6 +15,7 @@ class SuiviController extends Controller
 
         $suivi = Suivi::where('nom', 'like', "%$search%")
             ->orWhere('description', 'like', "%$search%")
+            ->orWhere('email', 'like', "%$search%")
             ->paginate($perPage);
 
         return response()->json($suivi);
@@ -34,12 +36,25 @@ class SuiviController extends Controller
     {
         $validateData = $request->validate([
             'nom' => 'required|string|max:255',
-            'description' => 'required|string|max:255'
+            'description' => 'required|string|max:255',
+            'email' => 'required|string|max:255',
+            'mot_de_passe' => 'required|string|min:8'
         ]);
 
         Suivi::create([
             'nom' => $validateData['nom'],
-            'description' => $validateData['description']
+            'description' => $validateData['description'],
+            'email' => $validateData['email'],
+            'mot_de_passe' => bcrypt($validateData['mot_de_passe'])
+        ]);
+
+        User::create([
+            'nom' => $validateData['nom'],
+            'nom_utilisateur' => $validateData['nom'],
+            'email' => $validateData['email'],
+            'mot_de_passe' => bcrypt($validateData['mot_de_passe']),
+            'role' => 'suivi',
+            'departement' => 'Aucun'
         ]);
 
         return response()->json([

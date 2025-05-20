@@ -18,7 +18,17 @@
                 </tr>
             </thead>
             <tbody class="font-poppins text-center">
-                <tr v-for="(row, rowIndex) in data" :key="rowIndex">
+                <!-- Aucune donnée -->
+                <tr v-if="data.length === 0">
+                    <td
+                        :colspan="columns.length + (actions.length > 0 ? 1 : 0)"
+                        class="py-4 text-gray-500 italic"
+                    >
+                        Aucune donnée disponible.
+                    </td>
+                </tr>
+                <!-- Données présentes -->
+                <tr v-else v-for="(row, rowIndex) in data" :key="rowIndex">
                     <td
                         v-for="(column, colIndex) in columns"
                         :key="colIndex"

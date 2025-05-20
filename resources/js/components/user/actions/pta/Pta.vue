@@ -41,10 +41,10 @@ const chargerActions = async (page = 1, search = "") => {
                 params: { page, search },
             });
             actionsPTA.value = response.data.data;
-            totalActions.value = response.data.total;
-            currentPage.value = response.data.current_page;
-            lastPage.value = response.data.last_page;
-            perPage.value = response.data.per_page;
+            totalActions.value = Number(response.data.total) || 0;
+            currentPage.value = Number(response.data.current_page) || 1;
+            lastPage.value = Number(response.data.last_page) || 1;
+            perPage.value = Number(response.data.per_page) || 10;
         } else {
             // Si la pagination est désactivée, charger toutes les actions
             const response = await axios.get("/api/actions/pta", {
@@ -1088,14 +1088,18 @@ onMounted(() => {
                     >
                         <span>Résultat</span>
                         <strong>{{
-                            paginationEnabled
+                            totalActions === 0
+                                ? 0
+                                : paginationEnabled
                                 ? (currentPage - 1) * perPage + 1
                                 : 1
                         }}</strong>
                         <span>à</span>
                         <strong>
                             {{
-                                paginationEnabled
+                                totalActions === 0
+                                    ? 0
+                                    : paginationEnabled
                                     ? Math.min(
                                           currentPage * perPage,
                                           totalActions
@@ -1114,7 +1118,7 @@ onMounted(() => {
                     >
                         <button
                             class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
-                            :disabled="currentPage === 1"
+                            :disabled="currentPage <= 1 || totalActions === 0"
                             @click="changerPage(currentPage - 1)"
                         >
                             <ChevronLeft class="w-4 h-4" /> Préc.
@@ -1139,7 +1143,9 @@ onMounted(() => {
 
                         <button
                             class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
-                            :disabled="currentPage >= lastPage"
+                            :disabled="
+                                currentPage >= lastPage || totalActions === 0
+                            "
                             @click="changerPage(currentPage + 1)"
                         >
                             Suiv. <ChevronRight class="w-4 h-4" />

@@ -173,14 +173,27 @@ const handleLogin = async () => {
         // Vérifier les alertes en utilisant la route existante
         const hasAlerts = await checkExistingAlerts(response.data.user.id);
 
-        // Redirection basée sur le rôle et les alertes
-        const baseRoute =
-            response.data.user.role === "admin" ? "/admin" : "/user";
+        // Map des rôles vers leurs routes de base
+        const roleRoutes = {
+            admin: "/admin",
+            user: "/user",
+            responsable: "/responsable/actions/auditinterne",
+            suivi: "/suivi/actions/auditinterne",
+        };
 
-        if (hasAlerts) {
-            router.push(`${baseRoute}/notifications`);
+        const role = response.data.user.role;
+        const baseRoute = roleRoutes[role] || "/"; // fallback si le rôle est inconnu
+
+        // Redirection basée sur le rôle et les alertes
+        if (["admin", "user"].includes(role)) {
+            if (hasAlerts) {
+                router.push(`${baseRoute}/notifications`);
+            } else {
+                router.push(`${baseRoute}/dashboard`);
+            }
         } else {
-            router.push(`${baseRoute}/dashboard`);
+            // Pour responsable ou suivi, on va directement à leur route spécifique
+            router.push(baseRoute);
         }
     } catch (error) {
         if (error.response && error.response.data.errors) {

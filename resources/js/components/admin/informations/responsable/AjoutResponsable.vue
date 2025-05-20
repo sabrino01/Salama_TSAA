@@ -13,11 +13,17 @@ const responsable = reactive({
     code: "",
     libelle: "",
     description: "", // Valeur par défaut
+    email: "",
+    nom_utilisateur: "",
+    mot_de_passe: "",
 });
 const erreurs = reactive({
     code: "",
     libelle: "",
     description: "",
+    email: "",
+    nom_utilisateur: "",
+    mot_de_passe: "",
 });
 
 const enregistrerResponsable = async () => {
@@ -31,7 +37,15 @@ const enregistrerResponsable = async () => {
         erreurs.libelle = "Le champ Libelle pour le Responsable est requis.";
     if (!responsable.description)
         erreurs.description =
-            "Le champ description pour le Responsable est requis.";
+            "Le champ Description pour le Responsable est requis.";
+    if (!responsable.email)
+        erreurs.email = "Le champ Email pour le Responsable est requis.";
+    if (!responsable.nom_utilisateur)
+        erreurs.nom_utilisateur =
+            "Le champ Nom d'utilisateur pour le Responsable est requis.";
+    if (!responsable.mot_de_passe)
+        erreurs.mot_de_passe =
+            "Le champ du Mot de passe pour le Responsable est requis.";
 
     // Si des erreurs existent, arrêter l'exécution
     if (Object.values(erreurs).some((err) => err)) return;
@@ -96,7 +110,7 @@ const resetError = (field) => {
                     <div class="flex w-[60%] items-center">
                         <label
                             for="code"
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Code :
                         </label>
@@ -123,7 +137,7 @@ const resetError = (field) => {
                     <div class="flex w-[60%] items-center mt-5">
                         <label
                             for="libelle"
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Libelle :
                         </label>
@@ -150,7 +164,7 @@ const resetError = (field) => {
                     <div class="flex w-[60%] items-center mt-5">
                         <label
                             for="description"
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                            class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
                         >
                             Description :
                         </label>
@@ -174,7 +188,88 @@ const resetError = (field) => {
                             </p>
                         </div>
                     </div>
-                    <div class="flex w-[62%] justify-center mt-5">
+                    <div class="flex w-[60%] items-center mt-5">
+                        <label
+                            for="email"
+                            class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Email :
+                        </label>
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="email"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                :class="{
+                                    'border-gray-400': !erreurs.email,
+                                    'border-red-500': erreurs.email,
+                                }"
+                                v-model="responsable.email"
+                                @input="resetError('email')"
+                            />
+                            <p
+                                v-if="erreurs.email"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.email }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <label
+                            for="nom_utilisateur"
+                            class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Nom d'utilisateur :
+                        </label>
+                        <div class="w-[50%]">
+                            <input
+                                type="text"
+                                id="nom_utilisateur"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                :class="{
+                                    'border-gray-400': !erreurs.nom_utilisateur,
+                                    'border-red-500': erreurs.nom_utilisateur,
+                                }"
+                                v-model="responsable.nom_utilisateur"
+                                @input="resetError('nom_utilisateur')"
+                            />
+                            <p
+                                v-if="erreurs.nom_utilisateur"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.nom_utilisateur }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <label
+                            for="mot_de_passe"
+                            class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Mot de passe :
+                        </label>
+                        <div class="w-[50%]">
+                            <input
+                                type="password"
+                                id="mot_de_passe"
+                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                :class="{
+                                    'border-gray-400': !erreurs.mot_de_passe,
+                                    'border-red-500': erreurs.mot_de_passe,
+                                }"
+                                v-model="responsable.mot_de_passe"
+                                @input="resetError('mot_de_passe')"
+                            />
+                            <p
+                                v-if="erreurs.mot_de_passe"
+                                class="flex text-red-500 text-sm mt-1"
+                            >
+                                {{ erreurs.mot_de_passe }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex w-[41%] justify-end mt-5">
                         <router-link to="/admin/informations/responsable"
                             ><button
                                 class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
@@ -184,7 +279,7 @@ const resetError = (field) => {
                         >
                         <button
                             @click="enregistrerResponsable"
-                            class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
+                            class="w-[18%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Enregistrer
                         </button>

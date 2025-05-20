@@ -45,7 +45,19 @@
                 </tr>
             </thead>
             <tbody class="font-poppins text-center">
+                <!-- Si aucune donnée n'est disponible -->
+                <tr v-if="sortedData.length === 0">
+                    <td
+                        :colspan="columns.length + 2"
+                        class="py-4 text-gray-500 italic"
+                    >
+                        Aucune donnée disponible.
+                    </td>
+                </tr>
+
+                <!-- Si des données sont présentes -->
                 <tr
+                    v-else
                     v-for="(row, rowIndex) in sortedData"
                     :key="rowIndex"
                     :class="{

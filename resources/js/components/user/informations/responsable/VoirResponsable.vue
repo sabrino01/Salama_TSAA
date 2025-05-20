@@ -84,6 +84,26 @@ onMounted(async () => {
                             responsable.description
                         }}</span>
                     </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <span
+                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Email :
+                        </span>
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            responsable.email
+                        }}</span>
+                    </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <span
+                            class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Nom d'utilisateur :
+                        </span>
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            responsable.nom_utilisateur
+                        }}</span>
+                    </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
                         <router-link to="/user/informations/responsable"
                             ><button

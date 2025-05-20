@@ -14,6 +14,8 @@ class Suivi extends Model
 
     protected $fillable = [
         'nom',
-        'description'
+        'description',
+        'email',
+        'mot_de_passe',
     ];
 }

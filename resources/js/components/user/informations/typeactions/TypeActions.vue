@@ -8,13 +8,14 @@ import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { toPath } from "lodash";
 
 const router = useRouter();
 const typeActions = ref([]);
 const totalTypeActions = ref(0);
 const currentPage = ref(1);
 const searchQuery = ref("");
-const perPage = ref(4); // Même valeur que dans votre backend
+const perPage = ref(10); // Même valeur que dans votre backend
 const lastPage = ref(1);
 
 // Charger les types d'actions depuis l'API
@@ -24,10 +25,10 @@ const chargerTypeActions = async (page = 1, search = "") => {
             params: { page, search },
         });
         typeActions.value = response.data.data;
-        totalTypeActions.value = response.data.total;
-        currentPage.value = response.data.current_page;
-        lastPage.value = response.data.last_page;
-        perPage.value = response.data.per_page;
+        totalTypeActions.value = Number(response.data.total) || 0;
+        currentPage.value = Number(response.data.current_page) || 1;
+        lastPage.value = Number(response.data.last_page) || 1;
+        perPage.value = Number(response.data.per_page) || 10;
     } catch (error) {
         toast.error("Erreur lors du chargement des types d'actions", error);
     }
@@ -221,14 +222,20 @@ onMounted(() => {
                         class="flex items-center text-gray-500 justify-start px-4 space-x-2"
                     >
                         <span>Résultat</span>
-                        <strong>{{ (currentPage - 1) * perPage + 1 }}</strong>
+                        <strong>{{
+                            totalTypeActions === 0
+                                ? 0
+                                : (currentPage - 1) * perPage + 1
+                        }}</strong>
                         <span>à</span>
                         <strong>
                             {{
-                                Math.min(
-                                    currentPage * perPage,
-                                    totalTypeActions
-                                )
+                                totalTypeActions === 0
+                                    ? 0
+                                    : Math.min(
+                                          currentPage * perPage,
+                                          totalTypeActions
+                                      )
                             }}
                         </strong>
                         <span>sur</span>
@@ -239,7 +246,9 @@ onMounted(() => {
                     <div class="flex items-center justify-end space-x-2">
                         <button
                             class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
-                            :disabled="currentPage === 1"
+                            :disabled="
+                                currentPage <= 1 || totalTypeActions === 0
+                            "
                             @click="changerPage(currentPage - 1)"
                         >
                             <ChevronLeft class="w-4 h-4" /> Préc.
@@ -264,7 +273,10 @@ onMounted(() => {
 
                         <button
                             class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
-                            :disabled="currentPage >= lastPage"
+                            :disabled="
+                                currentPage >= lastPage ||
+                                totalTypeActions === 0
+                            "
                             @click="changerPage(currentPage + 1)"
                         >
                             Suiv. <ChevronRight class="w-4 h-4" />

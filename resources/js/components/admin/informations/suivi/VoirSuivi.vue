@@ -74,6 +74,16 @@ onMounted(async () => {
                             suivi.description
                         }}</span>
                     </div>
+                    <div class="flex w-[60%] items-center mt-5">
+                        <span
+                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                        >
+                            Email :
+                        </span>
+                        <span class="w-[50%] px-4 text-lg font-semibold">{{
+                            suivi.email
+                        }}</span>
+                    </div>
                     <div class="flex w-[61.6%] justify-center mt-5">
                         <router-link to="/admin/informations/suivi"
                             ><button

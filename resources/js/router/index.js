@@ -439,7 +439,84 @@ const routes = [
             },
         ],
     },
-    // Not found route
+
+    // Route pour responsable des actions
+    {
+        path: "/responsable",
+        meta: { requiresAuth: true },
+        children: [
+            {
+                path: "actions/auditinterne",
+                name: "responsable.actions.auditinterne",
+                component: AuditInterneResponsable,
+            },
+            {
+                path: "actions/auditinterne/voir/:id",
+                name: "responsable.actions.auditinterne.voir",
+                component: VoirAuditInterneResponsable,
+            },
+            {
+                path: "actions/auditinterne/editer/:id",
+                name: "responsable.actions.auditinterne.editer",
+                component: EditAuditInterneResponsable,
+            },
+            {
+                path: "actions/pta",
+                name: "responsable.actions.pta",
+                component: PtaResponsable,
+            },
+            {
+                path: "actions/pta/voir/:id",
+                name: "responsable.actions.pta.voir",
+                component: VoirPtaResponsable,
+            },
+            {
+                path: "actions/pta/editer/:id",
+                name: "responsable.actions.pta.editer",
+                component: EditPtaResponsable,
+            },
+        ],
+    },
+
+    // Route pour les suivis d'actions
+    {
+        path: "/suivi",
+        meta: { requiresAuth: true },
+        children: [
+            {
+                path: "actions/auditinterne",
+                name: "suivi.actions.auditinterne",
+                component: AuditInterneSuivi,
+            },
+            {
+                path: "actions/auditinterne/voir/:id",
+                name: "suivi.actions.auditinterne.voir",
+                component: VoirAuditInterneSuivi,
+            },
+            {
+                path: "actions/auditinterne/editer/:id",
+                name: "suivi.actions.auditinterne.editer",
+                component: EditAuditInterneSuivi,
+            },
+            {
+                path: "actions/pta",
+                name: "suivi.actions.pta",
+                component: PtaSuivi,
+            },
+            {
+                path: "actions/pta/voir/:id",
+                name: "suivi.actions.pta.voir",
+                component: VoirPtaSuivi,
+            },
+            {
+                path: "actions/pta/editer/:id",
+                name: "suivi.actions.pta.editer",
+                component: EditPtaSuivi,
+            },
+        ],
+    },
+
+    // Route non trouvé
     {
         path: "/:pathMatch(.*)*",
         name: "notfound",
