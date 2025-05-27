@@ -42,7 +42,7 @@ class ResponsableController extends Controller
             'mot_de_passe' => 'required|string|min:8'
         ]);
 
-        Responsable::create([
+        $responsable = Responsable::create([
             'code' => $validateData['code'],
             'libelle' => $validateData['libelle'],
             'description' => $validateData['description'],
@@ -57,7 +57,8 @@ class ResponsableController extends Controller
             'email' => $validateData['email'],
             'mot_de_passe' => bcrypt($validateData['mot_de_passe']),
             'role' => 'responsable',
-            'departement' => 'Responsable'
+            'departement' => 'Responsable',
+            'responsables_id' => $responsable->id
         ]);
 
         return response()->json(['message' => 'Responsable ajouté avec succès', 201]);

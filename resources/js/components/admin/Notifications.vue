@@ -546,199 +546,85 @@
                         class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4"
                     >
                         <div class="px-6 pt-6">
-                            <h2 class="text-xl font-semibold mb-4">
+                            <h2 class="text-xl font-semibold mb-6">
                                 Configuration Email
                             </h2>
 
-                            <!-- Onglets -->
-                            <div class="flex border-b border-gray-200 mb-6">
-                                <button
-                                    @click="activeTab = 'membres'"
-                                    :class="[
-                                        'py-2 px-4 font-medium text-sm',
-                                        activeTab === 'membres'
-                                            ? 'border-b-2 border-blue-500 text-blue-600'
-                                            : 'text-gray-500 hover:text-gray-700',
-                                    ]"
-                                >
-                                    Membres
-                                </button>
-                                <button
-                                    @click="activeTab = 'serveur'"
-                                    :class="[
-                                        'py-2 px-4 font-medium text-sm',
-                                        activeTab === 'serveur'
-                                            ? 'border-b-2 border-blue-500 text-blue-600'
-                                            : 'text-gray-500 hover:text-gray-700',
-                                    ]"
-                                >
-                                    Serveur
-                                </button>
-                            </div>
-
-                            <!-- Contenu des onglets -->
+                            <!-- Configuration Serveur -->
                             <div class="space-y-4">
-                                <!-- Onglet Membres -->
-                                <div
-                                    v-if="activeTab === 'membres'"
-                                    class="space-y-4"
-                                >
-                                    <div
-                                        class="flex items-center space-x-2 mb-4"
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700"
+                                        >Serveur SMTP</label
                                     >
-                                        <input
-                                            v-model="newEmail"
-                                            type="email"
-                                            placeholder="Ajouter une adresse email"
-                                            class="flex-1 border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                        <button
-                                            @click="addEmailMember"
-                                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            :disabled="!isValidEmail(newEmail)"
-                                        >
-                                            Ajouter
-                                        </button>
-                                    </div>
-
-                                    <div
-                                        v-if="emailMembers.length === 0"
-                                        class="py-4 text-center text-gray-500"
-                                    >
-                                        Aucun membre ajouté pour recevoir des
-                                        alertes
-                                    </div>
-
-                                    <div
-                                        v-else
-                                        class="max-h-64 overflow-y-auto"
-                                    >
-                                        <div
-                                            v-for="(
-                                                email, index
-                                            ) in emailMembers"
-                                            :key="index"
-                                            class="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2 mb-2"
-                                        >
-                                            <div
-                                                class="flex items-center space-x-3"
-                                            >
-                                                <div
-                                                    class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700"
-                                                >
-                                                    {{
-                                                        email
-                                                            .charAt(0)
-                                                            .toUpperCase()
-                                                    }}
-                                                </div>
-                                                <span>{{ email }}</span>
-                                            </div>
-                                            <button
-                                                @click="
-                                                    removeEmailMember(index)
-                                                "
-                                                class="text-red-500 hover:text-red-700 p-1"
-                                            >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    class="h-5 w-5"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                                        clip-rule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
+                                    <input
+                                        v-model="emailConfig.host"
+                                        type="text"
+                                        class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="smtp.gmail.com"
+                                    />
                                 </div>
 
-                                <!-- Onglet Serveur -->
-                                <div
-                                    v-if="activeTab === 'serveur'"
-                                    class="space-y-4"
-                                >
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-gray-700"
-                                            >Serveur SMTP</label
-                                        >
-                                        <input
-                                            v-model="emailConfig.host"
-                                            type="text"
-                                            class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="smtp.gmail.com"
-                                        />
-                                    </div>
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700"
+                                        >Port</label
+                                    >
+                                    <input
+                                        v-model="emailConfig.port"
+                                        type="number"
+                                        class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="587"
+                                    />
+                                </div>
 
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-gray-700"
-                                            >Port</label
-                                        >
-                                        <input
-                                            v-model="emailConfig.port"
-                                            type="number"
-                                            class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="587"
-                                        />
-                                    </div>
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-gray-700"
+                                        >Email</label
+                                    >
+                                    <input
+                                        v-model="emailConfig.username"
+                                        type="email"
+                                        class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="votre@email.com"
+                                    />
+                                </div>
 
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-gray-700"
-                                            >Email</label
-                                        >
+                                <div class="relative">
+                                    <label
+                                        class="block text-sm font-medium text-gray-700"
+                                        >Mot de passe</label
+                                    >
+                                    <div class="relative flex items-center">
                                         <input
-                                            v-model="emailConfig.username"
-                                            type="email"
+                                            v-model="emailConfig.password"
+                                            :type="
+                                                showPassword
+                                                    ? 'text'
+                                                    : 'password'
+                                            "
                                             class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="votre@email.com"
                                         />
-                                    </div>
-
-                                    <div class="relative">
-                                        <label
-                                            class="block text-sm font-medium text-gray-700"
-                                            >Mot de passe</label
+                                        <button
+                                            type="button"
+                                            @click="
+                                                showPassword = !showPassword
+                                            "
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
                                         >
-                                        <div class="relative flex items-center">
-                                            <input
-                                                v-model="emailConfig.password"
-                                                :type="
-                                                    showPassword
-                                                        ? 'text'
-                                                        : 'password'
-                                                "
-                                                class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            <Eye
+                                                v-if="!showPassword"
+                                                class="h-5 w-5"
                                             />
-                                            <button
-                                                type="button"
-                                                @click="
-                                                    showPassword = !showPassword
-                                                "
-                                                class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                                            >
-                                                <Eye
-                                                    v-if="!showPassword"
-                                                    class="h-5 w-5"
-                                                />
-                                                <EyeOff
-                                                    v-else
-                                                    class="h-5 w-5"
-                                                />
-                                            </button>
-                                        </div>
+                                            <EyeOff v-else class="h-5 w-5" />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Footer conditionnel selon l'onglet actif -->
+                        <!-- Footer -->
                         <div
                             class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 mt-4"
                         >
@@ -748,9 +634,7 @@
                             >
                                 Annuler
                             </button>
-                            <!-- Bouton Enregistrer uniquement pour l'onglet Serveur -->
                             <button
-                                v-if="activeTab === 'serveur'"
                                 @click="saveEmailConfig"
                                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
                             >
@@ -818,8 +702,6 @@ const isInitialLoad = ref(true);
 const allDataEnCours = ref([]);
 const allDataEnRetard = ref([]);
 const activeTab = ref("membres"); // Pour gérer les onglets
-const emailMembers = ref([]); // Liste des emails pour les notifications
-const newEmail = ref(""); // Pour ajouter un nouvel email
 
 // Données pour la gestion des fréquences
 const joursMap = {
@@ -846,105 +728,202 @@ const user = computed(() => {
 });
 const userId = computed(() => user.value?.id);
 
-// Fonction pour valider un email
-const isValidEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-};
-
-// Fonction pour ajouter un membre email
-const addEmailMember = async () => {
-    if (!isValidEmail(newEmail.value)) {
-        return;
-    }
-
-    try {
-        await emailService.addMember(newEmail.value, userId.value);
-        emailMembers.value.push(newEmail.value);
-        newEmail.value = "";
-    } catch (error) {
-        toast.error("Erreur lors de l'ajout d'un membre:", error);
-    }
-};
-
-// Fonction pour supprimer un membre email
-const removeEmailMember = async (index) => {
-    try {
-        const emailToRemove = emailMembers.value[index];
-        await emailService.removeMember(emailToRemove, userId.value);
-        emailMembers.value.splice(index, 1);
-    } catch (error) {
-        toast.error("Erreur lors de la suppression d'un membre:", error);
-    }
-};
-
-// Fonction pour charger les membres emails
-const loadEmailMembers = async () => {
-    try {
-        const members = await emailService.getMembers(userId.value);
-        emailMembers.value = members;
-    } catch (error) {
-        toast.error("Erreur lors du chargement des membres:", error);
-    }
-};
-
 const handleEmailToggle = async () => {
     try {
         if (emailNotification.value) {
+            // Vérifier si la configuration existe
             if (!emailConfig.value.host || !emailConfig.value.username) {
                 showEmailConfig.value = true;
                 activeTab.value = "serveur";
+                emailNotification.value = false;
                 return;
             }
-            await emailService.toggleNotifications(true, userId.value);
 
-            // Envoyer les alertes en attente
+            // Activer les notifications
+            const result = await emailService.toggleNotifications(
+                true,
+                userId.value
+            );
+
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            // IMPORTANT : Vérifier toutes les alertes avant d'essayer de les envoyer
+            verifierToutesAlertesForEmail();
+
+            // Envoyer les alertes en attente si il y en a
             if (alertQueue.value.length > 0) {
+                let successCount = 0;
+                let errorCount = 0;
+
                 for (const alert of alertQueue.value) {
-                    await emailService.sendAlert(
-                        {
-                            sujet: `Alerte ${
-                                alert.type === "debut" ? "début" : "suivi"
-                            } d'action`,
-                            message: formatAlertMessage(alert),
-                            type: alert.type,
-                            item: alert.item,
-                        },
-                        userId.value
+                    try {
+                        await emailService.sendAlert(
+                            {
+                                sujet: `Alerte ${
+                                    alert.type === "debut" ? "début" : "suivi" // Utilisez "suivi" au lieu de "suivis"
+                                } d'action`,
+                                message: formatAlertMessage(alert),
+                                type:
+                                    alert.type === "suivis"
+                                        ? "suivi"
+                                        : alert.type, // Conversion ici
+                                item: alert.item,
+                            },
+                            userId.value
+                        );
+                        successCount++;
+                    } catch (alertError) {
+                        console.error("Erreur envoi alerte:", alertError);
+                        errorCount++;
+                    }
+                }
+
+                if (successCount > 0) {
+                    toast.success(
+                        `${successCount} alerte(s) envoyée(s) par email`
                     );
                 }
+                if (errorCount > 0) {
+                    toast.error(
+                        `${errorCount} alerte(s) n'ont pas pu être envoyées`
+                    );
+                }
+            } else {
+                // Envoyer un email de test pour confirmer que ça marche
+                await emailService.sendAlert(
+                    {
+                        sujet: "Test de notification par email",
+                        message:
+                            "Les notifications par email sont maintenant activées pour votre compte.",
+                        type: "test",
+                        item: { description: "Configuration de test" },
+                    },
+                    userId.value
+                );
+                toast.success(
+                    "Notifications activées ! Un email de test a été envoyé."
+                );
             }
         } else {
-            await emailService.toggleNotifications(false, userId.value);
+            // Désactiver les notifications
+            const result = await emailService.toggleNotifications(
+                false,
+                userId.value
+            );
+
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            toast.success("Notifications par email désactivées");
         }
 
-        localStorage.setItem("emailNotification", emailNotification.value);
+        localStorage.setItem(
+            "emailNotification",
+            emailNotification.value.toString()
+        );
     } catch (error) {
-        toast.error("Erreur lors du chargement des notifications:", error);
+        console.error("Erreur lors du toggle des notifications:", error);
+        toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
         emailNotification.value = !emailNotification.value;
     }
 };
 
+// Nouvelle fonction pour vérifier les alertes uniquement pour l'email (sans afficher les modales)
+const verifierToutesAlertesForEmail = () => {
+    const alerts = [];
+
+    [...allDataEnCours.value, ...allDataEnRetard.value].forEach((item) => {
+        if (!item.frequence) return;
+
+        try {
+            const frequenceObj = parseFrequence(item.frequence);
+            const infosDebut = verifierAlerteDebut(frequenceObj);
+            const infosSuivis = verifierAlerteSuivis(frequenceObj);
+
+            if (infosDebut.doitAlerter) {
+                alerts.push({
+                    type: "debut",
+                    item,
+                    joursRestants: infosDebut.joursRestants,
+                });
+            }
+
+            if (infosSuivis.doitAlerter) {
+                alerts.push({
+                    type: "suivi",
+                    item,
+                    joursRestants: infosSuivis.joursRestants,
+                });
+            }
+        } catch (error) {
+            console.error("Erreur lors de la vérification des alertes:", error);
+        }
+    });
+
+    // Trier les alertes
+    alerts.sort((a, b) => {
+        if (a.joursRestants === 0) return -1;
+        if (b.joursRestants === 0) return 1;
+
+        const absA = Math.abs(a.joursRestants);
+        const absB = Math.abs(b.joursRestants);
+        if (absA === absB) {
+            return a.joursRestants > b.joursRestants ? -1 : 1;
+        }
+        return absA - absB;
+    });
+
+    // Mettre à jour la file d'attente des alertes (filtrer seulement les alertes <= 7 jours)
+    alertQueue.value = alerts.filter((alert) => {
+        const jours = Math.abs(alert.joursRestants);
+        return jours <= 7;
+    });
+
+    // Ne PAS appeler afficherProchaineAlerte() ici pour éviter l'ouverture des modales
+};
+
 const saveEmailConfig = async () => {
     try {
-        // Sauvegarder la configuration du serveur
-        await emailService.saveConfig(emailConfig.value, userId.value);
-
-        // Si on est sur l'onglet membres, pas besoin de valider les champs du serveur
+        // Vérifier que les champs obligatoires sont remplis
         if (activeTab.value === "serveur") {
-            // Vérifier que les champs obligatoires sont remplis
-            if (!emailConfig.value.host || !emailConfig.value.username) {
-                toast.error("Veuillez remplir tous les champs obligatoires");
+            if (
+                !emailConfig.value.host ||
+                !emailConfig.value.username ||
+                !emailConfig.value.password
+            ) {
+                toast.error(
+                    "Veuillez remplir tous les champs obligatoires (host, username, password)"
+                );
                 return;
             }
         }
 
+        // Sauvegarder la configuration du serveur
+        const result = await emailService.saveConfig(
+            emailConfig.value,
+            userId.value
+        );
+
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+
+        // Activer les notifications
         await emailService.toggleNotifications(true, userId.value);
+
         showEmailConfig.value = false;
         emailNotification.value = true;
         localStorage.setItem("emailNotification", "true");
+
+        toast.success("Configuration sauvegardée et notifications activées !");
     } catch (error) {
-        toast.error("Erreur de configuration email:", error);
+        console.error("Erreur sauvegarde config:", error);
+        toast.error(
+            `Erreur de configuration: ${error.message || "Erreur inconnue"}`
+        );
         emailNotification.value = false;
         localStorage.setItem("emailNotification", "false");
     }
@@ -959,16 +938,17 @@ const loadEmailConfig = async () => {
                 host: config.host,
                 port: config.port,
                 username: config.username,
-                password: "",
+                password: "", // Ne pas afficher le mot de passe
             };
             emailNotification.value = config.is_active;
-            localStorage.setItem("emailNotification", config.is_active);
+            localStorage.setItem(
+                "emailNotification",
+                config.is_active.toString()
+            );
         }
-
-        // Charger aussi les membres
-        await loadEmailMembers();
     } catch (error) {
-        toast.error("Erreur lors du chargement de la configuration:", error);
+        console.error("Erreur lors du chargement de la configuration:", error);
+        toast.error("Erreur lors du chargement de la configuration");
     }
 };
 
@@ -1069,7 +1049,7 @@ const verifierToutesAlertes = () => {
 
             if (infosSuivis.doitAlerter) {
                 alerts.push({
-                    type: "suivis",
+                    type: "suivi",
                     item,
                     joursRestants: infosSuivis.joursRestants,
                 });
@@ -1119,7 +1099,7 @@ const afficherProchaineAlerte = () => {
             joursRestantsDebut.value = nextAlert.joursRestants;
             showDebutAlertModal.value = true;
             showSuivisAlertModal.value = false;
-        } else {
+        } else if (nextAlert.type === "suivi") {
             currentItem.value = nextAlert.item;
             joursRestantsSuivis.value = nextAlert.joursRestants;
             showSuivisAlertModal.value = true;
@@ -1250,11 +1230,19 @@ const parseFrequence = (frequence) => {
 const calculerJoursRestants = (dateStr) => {
     if (!dateStr) return 0;
 
-    const date = new Date(dateStr);
-    const aujourdhui = new Date();
-    aujourdhui.setHours(0, 0, 0, 0);
+    const dateParts = dateStr.split("-");
+    if (dateParts.length < 3) return 0;
 
-    const diffTime = date - aujourdhui;
+    const inputDate = new Date(
+        parseInt(dateParts[0]),
+        parseInt(dateParts[1]) - 1,
+        parseInt(dateParts[2])
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = inputDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     return diffDays;

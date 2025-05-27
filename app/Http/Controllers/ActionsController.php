@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Actions;
+use App\Models\Actions_responsable;
+use App\Models\Actions_suivi;
 use App\Models\Constat;
 use App\Models\Responsable;
 use App\Models\Sources;
 use App\Models\Suivi;
 use App\Models\TypeActions;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log as FacadesLog;
@@ -24,8 +27,6 @@ class ActionsController extends Controller
             ->join('constats', 'actions.constats_id', '=', 'constats.id')
             ->join('sources', 'actions.sources_id', '=', 'sources.id')
             ->join('type_actions', 'actions.type_actions_id', '=', 'type_actions.id')
-            ->join('responsables', 'actions.responsables_id', '=', 'responsables.id')
-            ->join('suivis', 'actions.suivis_id', '=', 'suivis.id')
             ->where('actions.num_actions', 'like', 'AI-%') // Filtrer uniquement les num_actions commençant par AI-
             ->where(function ($query) use ($search) {
                 $query->where('actions.num_actions', 'like', "%$search%")
@@ -35,24 +36,48 @@ class ActionsController extends Controller
                         ->orWhere('actions.mesure', 'like', "%$search%")
                         ->orWhere('sources.libelle', 'like', "%$search%")
                         ->orWhere('type_actions.libelle', 'like', "%$search%")
-                        ->orWhere('responsables.libelle', 'like', "%$search%")
-                        ->orWhere('suivis.nom', 'like', "%$search%")
                       ->orWhere('actions.statut', 'like', "%$search%")
                       ->orWhere('actions.frequence', 'like', "%$search%")
                       ->orWhere('users.nom_utilisateur', 'like', "%$search%")
-                      ->orWhere('constats.libelle', 'like', "%$search%");
+                      ->orWhere('constats.libelle', 'like', "%$search%")
+                       // Recherche dans les responsables
+                    ->orWhereExists(function ($subquery) use ($search) {
+                        $subquery->select(DB::raw(1))
+                                ->from('responsables')
+                                ->whereRaw("CHARINDEX(CAST(responsables.id AS VARCHAR), actions.responsables_id) > 0")
+                                ->where('responsables.libelle', 'like', "%$search%");
+                    })
+                    // Recherche dans les suivis
+                    ->orWhereExists(function ($subquery) use ($search) {
+                        $subquery->select(DB::raw(1))
+                                ->from('suivis')
+                                ->whereRaw("CHARINDEX(CAST(suivis.id AS VARCHAR), actions.suivis_id) > 0")
+                                ->where('suivis.nom', 'like', "%$search%");
+                    });
             })
             ->select(
                 'actions.*',
                 'users.nom_utilisateur as nom_utilisateur',
                 'constats.libelle as constat_libelle',
                 'sources.libelle as source_libelle',
-                'type_actions.libelle as type_action_libelle',
-                'responsables.libelle as responsable_libelle',
-                'suivis.nom as suivi_nom'
+                'type_actions.libelle as type_action_libelle'
             )
             ->orderBy('actions.id', 'desc') // Trier par ordre décroissant
             ->paginate($perPage);
+
+          // Enrichir les résultats avec les noms des responsables et suivis
+            $actionsAI->getCollection()->transform(function ($action) {
+                $responsablesIds = array_filter(explode(',', $action->responsables_id));
+                $suivisIds = array_filter(explode(',', $action->suivis_id));
+
+                $responsables = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->toArray();
+                $suivis = Suivi::whereIn('id', $suivisIds)->pluck('nom')->toArray();
+
+                $action->responsables_libelle = implode(', ', $responsables);
+                $action->suivis_noms = implode(', ', $suivis);
+
+                return $action;
+            });
 
     //         $actionsForLog = $actionsAI->toArray();
 
@@ -106,61 +131,227 @@ class ActionsController extends Controller
 
         return response()->json($actionsPTA);
     }
+
     public function show($id)
     {
-        $action = Actions::join('users', 'actions.users_id', '=', 'users.id')
-        ->join('constats', 'actions.constats_id', '=', 'constats.id')
-        ->join('sources', 'actions.sources_id', '=', 'sources.id')
-        ->join('type_actions', 'actions.type_actions_id', '=', 'type_actions.id')
-        ->join('responsables', 'actions.responsables_id', '=', 'responsables.id')
-        ->join('suivis', 'actions.suivis_id', '=', 'suivis.id')
-        ->where('actions.id', $id) // Filtrer par ID
-        ->select(
-            'actions.*',
-            'users.nom_utilisateur as nom_utilisateur',
-            'constats.libelle as constat_libelle',
-            'sources.libelle as source_libelle',
-            'type_actions.libelle as type_action_libelle',
-            'responsables.libelle as responsable_libelle',
-            'suivis.nom as suivi_nom'
-        )
-        ->first(); // Récupérer un seul enregistrement
+        $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
 
-    if (!$action) {
-        return response()->json([
-            'message' => 'Action non trouvée'
-        ], 404);
+        if (!$action) {
+            return response()->json(['message' => 'Action non trouvée'], 404);
+        }
+
+        // Traitement des responsables
+        $responsablesIds = explode(',', $action->responsables_id);
+        $responsables = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
+
+        // Traitement des suivis
+        $suivisIds = explode(',', $action->suivis_id);
+        $suivis = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
+
+        // On peut aussi renommer les libellés si nécessaire
+        $action->responsable_libelle = $responsables;
+        $action->suivi_nom = $suivis;
+        $action->constat_libelle = $action->constat->libelle ?? null;
+        $action->source_libelle = $action->sources->libelle ?? null;
+        $action->type_action_libelle = $action->type_actions->libelle ?? null;
+        $action->nom_utilisateur = $action->user->nom_utilisateur ?? null;
+
+        // Récupérer les responsables qui ont mis à jour leur statut et observations
+        $responsablesUpdates = DB::table('actions_responsables')
+            ->join('responsables', 'actions_responsables.responsables_id', '=', 'responsables.id')
+            ->where('actions_responsables.actions_id', $id)
+            ->whereNotNull('actions_responsables.statut_resp')
+            ->whereNotNull('actions_responsables.observation_resp')
+            ->where('actions_responsables.statut_resp', '!=', '')
+            ->where('actions_responsables.observation_resp', '!=', '')
+            ->select(
+                'actions_responsables.responsables_id',
+                'actions_responsables.statut_resp',
+                'actions_responsables.observation_resp',
+                'responsables.libelle as responsable_nom',
+                'actions_responsables.updated_at as date_update'
+            )
+            ->get();
+
+        // Ajouter les données des responsables updates directement à l'action
+        $action->responsables_updates = $responsablesUpdates;
+        $action->has_updates = $responsablesUpdates->count() > 0;
+
+         // Traiter les observations par suivi pour l'affichage (seulement si il y a des mises à jour de responsables)
+        if ($action->has_updates && $action->observation_par_suivi) {
+            $action->observations_suivi = json_decode($action->observation_par_suivi, true);
+            $action->has_observations_suivi = count($action->observations_suivi) > 0;
+        } else {
+            $action->observations_suivi = [];
+            $action->has_observations_suivi = false;
+        }
+
+        return response()->json($action);
     }
 
-    return response()->json($action);
-    }
     public function update(Request $request, $id)
     {
-        $action = Actions::find($id);
+        $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
+
         if (!$action) {
             return response()->json([
                 'message' => 'Action non trouvée'
             ], 404);
         }
 
+        // Vérifie si les champs sont envoyés comme tableau et les transforme en chaîne
+        $responsables = is_array($request->responsables_id)
+            ? implode(',', $request->responsables_id)
+            : $request->responsables_id;
+
+        $suivis = is_array($request->suivis_id)
+            ? implode(',', $request->suivis_id)
+            : $request->suivis_id;
+
+        // Gérer observation_par_suivi (nouveau champ JSON)
+        $observationParSuivi = $action->observation_par_suivi;
+
+        // Gestion de la suppression d'une observation
+        if ($request->has('supprimer_observation_index') && $request->supprimer_observation_index !== null) {
+            $indexToDelete = (int) $request->supprimer_observation_index;
+
+            // Décoder le JSON existant
+            $observations = $observationParSuivi ? json_decode($observationParSuivi, true) : [];
+
+            // Vérifier si l'index existe
+            if (isset($observations[$indexToDelete])) {
+                // Supprimer l'observation à l'index spécifié
+                array_splice($observations, $indexToDelete, 1);
+
+                // Réencoder en JSON
+                $observationParSuivi = empty($observations) ? null : json_encode($observations);
+            } else {
+                return response()->json([
+                    'message' => 'Index d\'observation invalide'
+                ], 400);
+            }
+        }
+        // Si une nouvelle observation de suivi est envoyée
+        elseif ($request->has('nouvelle_observation_suivi') && $request->nouvelle_observation_suivi) {
+            // Vérifier s'il y a des mises à jour de responsables
+            $hasResponsableUpdates = DB::table('actions_responsables')
+                ->where('actions_id', $id)
+                ->whereNotNull('statut_resp')
+                ->whereNotNull('observation_resp')
+                ->where('statut_resp', '!=', '')
+                ->where('observation_resp', '!=', '')
+                ->exists();
+
+            if ($hasResponsableUpdates) {
+                // Décoder le JSON existant ou créer un nouveau tableau
+                $observations = $observationParSuivi ? json_decode($observationParSuivi, true) : [];
+
+                // Validation de la date envoyée depuis le frontend
+                $dateObservation = $request->date_observation_suivi;
+
+                // Si aucune date n'est fournie, utiliser la date actuelle
+                if (!$dateObservation) {
+                    $dateObservation = now()->format('Y-m-d H:i:s');
+                } else {
+                    // Valider et formater la date reçue
+                    try {
+                        $dateObservation = Carbon::createFromFormat('Y-m-d', $dateObservation)->format('Y-m-d H:i:s');
+                    } catch (\Exception $e) {
+                        // Si le format n'est pas valide, essayer avec d'autres formats
+                        try {
+                            $dateObservation = Carbon::parse($dateObservation)->format('Y-m-d H:i:s');
+                        } catch (\Exception $e) {
+                            return response()->json([
+                                'message' => 'Format de date invalide. Utilisez le format YYYY-MM-DD.'
+                            ], 400);
+                        }
+                    }
+                }
+
+                // Ajouter la nouvelle observation avec la date choisie
+                $nouvelleObservation = [
+                    'date' => $dateObservation,
+                    'observation' => $request->nouvelle_observation_suivi,
+                ];
+
+                $observations[] = $nouvelleObservation;
+                $observationParSuivi = json_encode($observations);
+            } else {
+                return response()->json([
+                    'message' => 'Impossible d\'ajouter une observation de suivi. Aucune mise à jour de responsable trouvée.'
+                ], 400);
+            }
+        }
+
         $action->update([
             'sources_id' => $request->sources_id,
             'type_actions_id' => $request->type_actions_id,
-            'responsables_id' => $request->responsables_id,
-            'suivis_id' => $request->suivis_id,
+            'responsables_id' => $responsables,
+            'suivis_id' => $suivis,
             'constats_id' => $request->constats_id,
             'frequence' => $request->frequence,
             'description' => $request->description,
             'observation' => $request->observation,
             'mesure' => $request->mesure,
-            'statut' => $request->statut
+            'statut' => $request->statut,
+            'observation_par_suivi' => $observationParSuivi
         ]);
+
+        // Recharger l'action avec les relations pour avoir les données fraîches
+        $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
+
+        // Traitement des responsables (comme dans show)
+        $responsablesIds = explode(',', $action->responsables_id);
+        $responsables = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
+
+        // Traitement des suivis (comme dans show)
+        $suivisIds = explode(',', $action->suivis_id);
+        $suivis = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
+
+        // Ajouter les libellés
+        $action->responsable_libelle = $responsables;
+        $action->suivi_nom = $suivis;
+        $action->constat_libelle = $action->constat->libelle ?? null;
+        $action->source_libelle = $action->sources->libelle ?? null;
+        $action->type_action_libelle = $action->type_actions->libelle ?? null;
+        $action->nom_utilisateur = $action->user->nom_utilisateur ?? null;
+
+        // Récupérer les responsables qui ont mis à jour leur statut et observations
+        $responsablesUpdates = DB::table('actions_responsables')
+            ->join('responsables', 'actions_responsables.responsables_id', '=', 'responsables.id')
+            ->where('actions_responsables.actions_id', $id)
+            ->whereNotNull('actions_responsables.statut_resp')
+            ->whereNotNull('actions_responsables.observation_resp')
+            ->where('actions_responsables.statut_resp', '!=', '')
+            ->where('actions_responsables.observation_resp', '!=', '')
+            ->select(
+                'actions_responsables.responsables_id',
+                'actions_responsables.statut_resp',
+                'actions_responsables.observation_resp',
+                'responsables.libelle as responsable_nom',
+                'actions_responsables.updated_at as date_update'
+            )
+            ->get();
+
+        // Ajouter les données des responsables updates à l'action
+        $action->responsables_updates = $responsablesUpdates;
+        $action->has_updates = $responsablesUpdates->count() > 0;
+
+        // Traiter les observations par suivi pour l'affichage
+        if ($action->observation_par_suivi) {
+            $action->observations_suivi = json_decode($action->observation_par_suivi, true);
+            $action->has_observations_suivi = count($action->observations_suivi) > 0;
+        } else {
+            $action->observations_suivi = [];
+            $action->has_observations_suivi = false;
+        }
 
         return response()->json([
             'message' => 'Action mise à jour avec succès',
             'action' => $action
         ]);
     }
+
     public function destroy($id)
     {
         $action = Actions::find($id);
@@ -253,8 +444,12 @@ class ActionsController extends Controller
             'date' => now(),
             'sources_id' => $request->sources_id,
             'type_actions_id' => $request->type_actions_id,
-            'responsables_id' => $request->responsables_id,
-            'suivis_id' => $request->suivis_id,
+           'responsables_id' => is_array($request->responsables_id)
+                ? implode(',', $request->responsables_id)
+                : null,
+            'suivis_id' => is_array($request->suivis_id)
+                ? implode(',', $request->suivis_id)
+                : null,
             'constats_id' => $request->constats_id,
             'users_id' => $request->users_id,
             'frequence' => $request->frequence,
@@ -263,6 +458,29 @@ class ActionsController extends Controller
             'mesure' => $request->mesure,
             'statut' => 'En cours'
         ]);
+
+         // Créer les enregistrements dans la table actions_responsables
+        if ($request->responsables_id && is_array($request->responsables_id)) {
+            foreach ($request->responsables_id as $responsable_id) {
+                Actions_responsable::create([
+                    'actions_id' => $action->id,
+                    'responsables_id' => $responsable_id,
+                    'statut_resp' => 'En cours',
+                    'observation_resp' => null
+                ]);
+            }
+        }
+
+        if ($request->suivis_id && is_array($request->suivis_id)) {
+            foreach ($request ->suivis_id as $suivi_id) {
+                Actions_suivi::create([
+                    'actions_id' => $action->id,
+                    'suivis_id' => $suivi_id,
+                    'statut_suivi' => 'En cours',
+                    'observation_suivi' => null
+                ]);
+            }
+        }
 
         return response()->json([
             'message' => 'Actions ajouté avec succès',
@@ -341,8 +559,10 @@ class ActionsController extends Controller
              // Convertir les libellés en IDs
              $sourceId = Sources::where('libelle', $row['source_libelle'])->value('id');
              $typeActionId = TypeActions::where('libelle', $row['type_action_libelle'])->value('id');
-             $responsableId = Responsable::where('libelle', $row['responsable_libelle'])->value('id');
-             $suiviId = Suivi::where('nom', $row['suivi_nom'])->value('id');
+            $responsableNoms = array_map('trim', explode(',', $row['responsables_libelle']));
+            $responsableIds = Responsable::whereIn('libelle', $responsableNoms)->pluck('id')->toArray();
+            $suiviNoms = array_map('trim', explode(',', $row['suivis_noms']));
+            $suiviIds = Suivi::whereIn('nom', $suiviNoms)->pluck('id')->toArray();
              $constatId = Constat::where('libelle', $row['constat_libelle'])->value('id');
              $userId = User::where('nom_utilisateur', $row['nom_utilisateur'])->value('id');
 
@@ -366,8 +586,8 @@ class ActionsController extends Controller
                      'date' => $row['date'], // Convertir la date au format Y-m-d
                      'sources_id' => $sourceId,
                      'type_actions_id' => $typeActionId,
-                     'responsables_id' => $responsableId,
-                     'suivis_id' => $suiviId,
+                     'responsables_id' => implode(',', $responsableIds),
+                    'suivis_id' => implode(',', $suiviIds),
                      'description' => $row['description'],
                      'constats_id' => $constatId,
                      'frequence' => $row['frequence'],

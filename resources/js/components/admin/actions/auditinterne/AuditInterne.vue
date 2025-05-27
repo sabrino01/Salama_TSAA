@@ -360,6 +360,7 @@ const voirAuditInterneUserOther = (id) => {
 const editerAuditInterne = (id) => {
     router.push(`/admin/actions/auditinterne/editer/${id}`);
 };
+
 // Colonne pour la table
 const columns = [
     { label: "N°", field: "num_actions" },
@@ -392,6 +393,20 @@ const columns = [
                 tooltipContent,
             };
         },
+    },
+    {
+        label: "Responsables",
+        field: "responsables_libelle",
+        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
+        isExpandable: true, // Indique que cette colonne a un contenu extensible
+        render: (row) => row.responsables_libelle || "—",
+    },
+    {
+        label: "Suivis",
+        field: "suivis_noms",
+        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
+        isExpandable: true, // Indique que cette colonne a un contenu extensible
+        render: (row) => row.suivis_noms || "—",
     },
     { label: "Statut", field: "statut" },
     { label: "Ajouter par", field: "nom_utilisateur" },
@@ -537,8 +552,8 @@ const exportToPdf = () => {
                     action.date,
                     action.source_libelle,
                     action.type_action_libelle,
-                    action.responsable_libelle,
-                    action.suivi_nom,
+                    action.responsables_libelle,
+                    action.suivis_noms,
                     action.description,
                     action.frequenceWithDetails || action.frequence,
                     action.mesure,
@@ -624,8 +639,8 @@ const generateExcelFile = async (
             date: row.date,
             source: row.source_libelle,
             type_action: row.type_action_libelle,
-            responsable: row.responsable_libelle,
-            suivi: row.suivi_nom,
+            responsable: row.responsables_libelle,
+            suivi: row.suivis_noms,
             description: row.description,
             constat_libelle: row.constat_libelle,
             frequenceWithDetails: row.frequenceWithDetails,
@@ -841,8 +856,8 @@ const importerFichier = async (event) => {
                     date: formattedDate,
                     source_libelle: sourceLibelle,
                     type_action_libelle: typeActionLibelle,
-                    responsable_libelle: responsableLibelle,
-                    suivi_nom: suiviNom,
+                    responsables_libelle: responsableLibelle,
+                    suivis_noms: suiviNom,
                     description: description,
                     constat_libelle: constatLibelle,
                     frequence: frequence,

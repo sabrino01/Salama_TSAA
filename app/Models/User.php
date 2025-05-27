@@ -21,6 +21,8 @@ class User extends Authenticatable
         'departement',
         'mot_de_passe',
         'role',
+        'responsables_id',
+        'suivis_id'
     ];
     /**
      * The attributes that should be cast.

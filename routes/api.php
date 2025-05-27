@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActionsController;
+use App\Http\Controllers\ActionsResponsableController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConstatController;
 use App\Http\Controllers\DashboardController;
@@ -109,7 +110,6 @@ Route::prefix('email-members')->group(function () {
     Route::post('/{userId}/remove', [EmailMemberController::class, 'removeMember']);
 });
 
-Route::post('/email-alert/{userId}', [EmailAlertController::class, 'sendAlert']);
 // Routes pour dashboard
 Route::get('/constats/statistiques/AI', [DashboardController::class, 'indexAI']);
 Route::get('/users', [DashboardController::class, 'getUsers']);
@@ -123,4 +123,20 @@ Route::prefix('api')->group(function () {
 
     // Récupérer les actions PTA filtrées par statut
     Route::get('/actions/pta', [DashboardController::class, 'getPTAActionsByStatus']);
+});
+
+// Route pour afficher toutes les actions responsables AI (fonction indexResponsablesAI)
+Route::get('/actions-responsables-ai', [ActionsResponsableController::class, 'indexResponsablesAI']);
+
+// Route pour récupérer une action responsable spécifique
+Route::get('/actions-responsables/{id}', [ActionsResponsableController::class, 'showActionResponsable']);
+
+// Route pour mettre à jour une action responsable
+Route::put('/actions-responsables/{id}', [ActionsResponsableController::class, 'updateActionResponsable']);
+
+Route::prefix('email')->group(function () {
+    Route::post('/toggle-notifications', [EmailConfigController::class, 'toggleNotifications']);
+    Route::post('/save-config', [EmailConfigController::class, 'saveConfig']);
+    Route::get('/get-config', [EmailConfigController::class, 'getConfig']);
+    Route::post('/send-alert', [EmailConfigController::class, 'sendAlert']);
 });

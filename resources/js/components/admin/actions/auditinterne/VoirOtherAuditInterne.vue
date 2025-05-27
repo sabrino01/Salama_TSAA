@@ -2,8 +2,19 @@
 import Sidebar from "../../../assets/Sidebar.vue";
 import Navbar from "../../../assets/Navbar.vue";
 import Footer from "../../../assets/Footer.vue";
+import {
+    RefreshCcw,
+    FileCheck,
+    Check,
+    X,
+    CheckCircle,
+    Search,
+    AlertTriangle,
+    Ban,
+    Clock,
+} from "lucide-vue-next";
 
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
 
@@ -18,6 +29,58 @@ const formatDate = (date) => {
     const [year, month, day] = date.split("-");
     return `${day}/${month}/${year}`; // Reformater en dd/mm/yyyy
 };
+
+// Fonction pour l’icône
+const getConstatIcon = (value) => {
+    const icons = {
+        "En Cours": RefreshCcw,
+        Réalisé: Check,
+        "Non Réalisé": X,
+        "Ecart Réglé": CheckCircle,
+        "Ecart Réglé à Suivre": Search,
+        "Ecart non réglé": AlertTriangle,
+        "Réalisé partiel": FileCheck,
+        "Actions abandonnées": Ban,
+        Retard: Clock,
+    };
+    return icons[value] || null;
+};
+
+// Fonction pour la couleur
+const getConstatColor = (value) => {
+    const colors = {
+        "En Cours": "text-blue-500",
+        Réalisé: "text-green-500",
+        "Non Réalisé": "text-red-500",
+        "Ecart Réglé": "text-blue-800",
+        "Ecart Réglé à Suivre": "text-gray-500",
+        "Ecart non réglé": "text-yellow-500",
+        "Réalisé partiel": "text-green-600",
+        "Actions abandonnées": "text-purple-500",
+        Retard: "text-red-500",
+    };
+    return colors[value] || "";
+};
+
+// Variables réactives pour icône et couleur
+const constatIcon = computed(() =>
+    getConstatIcon(action.value.constat_libelle)
+);
+const constatColor = computed(() =>
+    getConstatColor(action.value.constat_libelle)
+);
+
+const trimmedResponsables = computed(() => {
+    return action.value.responsable_libelle
+        ? action.value.responsable_libelle.split(",").map((e) => e.trim())
+        : [];
+});
+
+const trimmedSuivis = computed(() => {
+    return action.value.suivi_nom
+        ? action.value.suivi_nom.split(",").map((e) => e.trim())
+        : [];
+});
 
 // Fonction pour normaliser une chaîne JSON potentiellement imbriquée
 const normalizeJsonString = (jsonString) => {
@@ -165,116 +228,210 @@ onMounted(async () => {
 
                 <!-- Formulaire d'ajout de membre -->
                 <div class="w-full mt-5">
-                    <div class="flex w-full items-center">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
+                    <div class="flex justify-center">
+                        <div
+                            class="w-1/12 bg-white border-b-4 border-b-blue-700 flex items-center justify-center py-2"
+                        >
+                            <span class="text-lg font-semibold text-gray-500">
+                                {{ action.num_actions }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center mt-2">
+                        <div class="flex items-center justify-center py-2">
+                            <span class="text-2xl font-semibold text-gray-500">
+                                Ajouter par : {{ action.nom_utilisateur }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center mt-6">
+                        <span class="ml-4 text-xl font-semibold text-gray-800">
                             Date :
                         </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            formatDate(action.date)
-                        }}</span>
-                    </div>
-                    <div class="flex w-full mt-5">
                         <span
-                            class="w-[5%] ml-4 text-lg font-semibold text-gray-800"
+                            class="ml-2 text-xl text-gray-400 font-semibold bg-white border-b border-b-gray-400 px-2"
                         >
-                            Action :
+                            {{ formatDate(action.date) }}
                         </span>
-                        <span class="w-[95%] text-lg font-semibold">{{
-                            action.description
-                        }}</span>
                     </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Source :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.source_libelle
-                        }}</span>
-                    </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Type d'actions :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.type_action_libelle
-                        }}</span>
-                    </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Responsable :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.responsable_libelle
-                        }}</span>
-                    </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Suivi :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.suivi_nom
-                        }}</span>
-                    </div>
-                    <div class="flex w-auto items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Fréquence :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.frequence
-                        }}</span>
-                    </div>
+
                     <div
-                        v-if="frequenceDetails"
-                        class="flex w-full items-start mt-2 ml-8 text-gray-600 whitespace-pre-wrap"
+                        class="flex flex-wrap justify-start gap-x-20 text-xl mt-6 ml-20"
                     >
-                        <span class="text-lg text-black">{{
-                            frequenceDetails
-                        }}</span>
+                        <div class="flex items-center">
+                            <span class="font-semibold text-gray-800">
+                                Source :
+                            </span>
+                            <span
+                                class="ml-2 text-gray-500 font-semibold bg-white border-b border-b-gray-400 px-2"
+                            >
+                                {{ action.source_libelle }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center">
+                            <span class="ml-6 font-semibold text-gray-800">
+                                Type d'actions :
+                            </span>
+                            <span
+                                class="ml-2 text-gray-500 font-semibold bg-white border-b border-b-gray-400 px-2"
+                            >
+                                {{ action.type_action_libelle }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center">
+                            <span class="ml-6 font-semibold text-gray-800">
+                                Constat :
+                            </span>
+                            <span
+                                class="ml-2 font-semibold text-2xl border-b border-b-gray-400 px-2 flex items-center gap-2"
+                                :class="constatColor"
+                            >
+                                <component
+                                    v-if="constatIcon"
+                                    :is="constatIcon"
+                                    class="w-6 h-6"
+                                />
+                                {{ action.constat_libelle }}
+                            </span>
+                        </div>
                     </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Constat :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.constat_libelle
-                        }}</span>
+
+                    <div class="flex text-xl gap-20 justify-start mt-8 ml-20">
+                        <!-- Responsable -->
+                        <div class="flex items-start">
+                            <span class="font-semibold text-gray-800">
+                                Responsable :
+                            </span>
+                            <div
+                                class="ml-2 text-gray-500 font-semibold border-b border-b-gray-400 px-2"
+                            >
+                                <div
+                                    v-for="(
+                                        respo, index
+                                    ) in trimmedResponsables"
+                                    :key="'responsable-' + index"
+                                    class="break-words"
+                                >
+                                    {{ respo }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suivi -->
+                        <div class="flex items-start">
+                            <span class="ml-6 font-semibold text-gray-800">
+                                Suivi :
+                            </span>
+                            <div
+                                class="ml-2 text-gray-500 font-semibold border-b border-b-gray-400 px-2"
+                            >
+                                <div
+                                    v-for="(suivi, index) in trimmedSuivis"
+                                    :key="'suivi-' + index"
+                                    class="break-words"
+                                >
+                                    {{ suivi }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Mesure :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.mesure
-                        }}</span>
+
+                    <!-- Conteneur horizontal -->
+                    <div class="flex justify-start text-xl gap-20 mt-6">
+                        <!-- Fréquence -->
+                        <div class="flex items-start ml-20">
+                            <span class="font-semibold text-gray-800 mt-1">
+                                Fréquence :
+                            </span>
+
+                            <!-- Colonne pour la valeur + détails -->
+                            <div class="ml-2 flex flex-col">
+                                <!-- Valeur principale -->
+                                <div
+                                    class="font-semibold bg-white border-b border-b-gray-400 px-2 text-gray-500"
+                                >
+                                    {{ action.frequence }}
+                                </div>
+
+                                <!-- Détails en-dessous -->
+                                <div
+                                    v-if="frequenceDetails"
+                                    class="mt-1 text-gray-900 font-poppins whitespace-pre-wrap text-sm"
+                                >
+                                    {{ frequenceDetails }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Livrable -->
+                        <div class="flex items-start">
+                            <span class="ml-6 font-semibold text-gray-800">
+                                Livrable :
+                            </span>
+                            <div
+                                class="ml-2 font-semibold bg-white border-b border-b-gray-400 px-2 text-gray-500"
+                            >
+                                {{ action.mesure }}
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Obsérvation :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.observation
-                        }}</span>
+
+                    <div
+                        class="flex flex-wrap justify-start gap-12 mt-6 w-full text-xl ml-4"
+                    >
+                        <!-- Champ Action -->
+                        <div class="flex w-[48%] items-start">
+                            <span class="w-[10%] font-semibold text-gray-800">
+                                Action :
+                            </span>
+                            <div
+                                class="w-[90%] font-semibold bg-white border-b border-b-gray-400 px-2 py-2 text-gray-600 whitespace-pre-wrap break-words"
+                                style="max-width: 100%"
+                            >
+                                {{ action.description }}
+                            </div>
+                        </div>
+
+                        <!-- Champ Observation -->
+                        <div class="flex w-[48%] items-start">
+                            <span class="w-[18%] font-semibold text-gray-800">
+                                Observation :
+                            </span>
+                            <div
+                                class="w-[82%] font-semibold bg-white border-b border-b-gray-400 px-2 py-2 text-gray-600 whitespace-pre-wrap break-words"
+                                style="max-width: 100%"
+                            >
+                                {{ action.observation }}
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Statut :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.statut
-                        }}</span>
+
+                    <div class="w-full mt-5">
+                        <div
+                            class="w-full border rounded px-4 py-2 text-xl font-semibold text-center"
+                            :class="{
+                                'bg-green-400 text-white':
+                                    action.statut === 'En cours',
+                                'bg-red-400 text-white':
+                                    action.statut === 'En retard',
+                                'bg-purple-400 text-white':
+                                    action.statut === 'Abandonné',
+                                'bg-gray-400 text-black':
+                                    action.statut === 'Clôturé',
+                            }"
+                        >
+                            {{ action.statut }}
+                        </div>
                     </div>
-                    <div class="flex w-full items-center mt-5">
-                        <span class="ml-4 text-lg font-semibold text-gray-800">
-                            Ajouté par :
-                        </span>
-                        <span class="ml-2 text-lg font-semibold">{{
-                            action.nom_utilisateur
-                        }}</span>
-                    </div>
-                    <div class="flex w-[61.6%] justify-center mt-5">
+
+                    <div class="flex w-full text-lg justify-end mt-8">
                         <router-link to="/admin/actions/auditinterne"
                             ><button
-                                class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
+                                class="w-auto transparent text-black font-semibold rounded-md px-4 py-2"
                             >
                                 Retour
                             </button></router-link

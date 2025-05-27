@@ -41,7 +41,7 @@ class SuiviController extends Controller
             'mot_de_passe' => 'required|string|min:8'
         ]);
 
-        Suivi::create([
+        $suivis = Suivi::create([
             'nom' => $validateData['nom'],
             'description' => $validateData['description'],
             'email' => $validateData['email'],
@@ -54,7 +54,8 @@ class SuiviController extends Controller
             'email' => $validateData['email'],
             'mot_de_passe' => bcrypt($validateData['mot_de_passe']),
             'role' => 'suivi',
-            'departement' => 'Suivi'
+            'departement' => 'Suivi',
+            'suivis_id' => $suivis->id
         ]);
 
         return response()->json([

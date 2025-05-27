@@ -1,142 +1,59 @@
-import axios from "../utils/axiosSetup";
+// emailService.js
+import axios from "axios";
+
+const API_BASE_URL = "/api/email"; // Ajustez selon votre configuration
 
 const emailService = {
-    /**
-     * Récupère la configuration email pour un utilisateur
-     * @param {number|string} userId - ID de l'utilisateur
-     * @returns {Promise<Object>} - Configuration email
-     */
-    async getConfig(userId) {
-        try {
-            const response = await axios.get(`/api/email-config/${userId}`);
-            return response.data;
-        } catch (error) {
-            console.error("Erreur getConfig:", error);
-            throw error.response?.data || error;
-        }
-    },
-
-    /**
-     * Sauvegarde la configuration email pour un utilisateur
-     * @param {Object} config - Configuration (host, port, username, password)
-     * @param {number|string} userId - ID de l'utilisateur
-     * @returns {Promise<Object>} - Réponse de l'API
-     */
-    async saveConfig(config, userId) {
-        try {
-            const response = await axios.post(
-                `/api/email-config/${userId}`,
-                config
-            );
-            return response.data;
-        } catch (error) {
-            console.error("Erreur saveConfig:", error);
-            throw error.response?.data || error;
-        }
-    },
-
-    /**
-     * Active ou désactive les notifications email pour un utilisateur
-     * @param {boolean} active - État d'activation des notifications
-     * @param {number|string} userId - ID de l'utilisateur
-     * @returns {Promise<Object>} - Réponse de l'API
-     */
     async toggleNotifications(active, userId) {
         try {
             const response = await axios.post(
-                `/api/email-notifications/${userId}/toggle`,
-                { active }
+                `${API_BASE_URL}/toggle-notifications`,
+                {
+                    active,
+                    user_id: userId,
+                }
             );
             return response.data;
         } catch (error) {
-            console.error("Erreur Notifications:", error);
+            console.error("Erreur toggle notifications:", error);
             throw error.response?.data || error;
         }
     },
 
-    /**
-     * Récupère la liste des membres email pour un utilisateur
-     * @param {number|string} userId - ID de l'utilisateur
-     * @returns {Promise<Array>} - Liste des emails
-     */
-    async getMembers(userId) {
+    async saveConfig(config, userId) {
         try {
-            const response = await axios.get(`/api/email-members/${userId}`);
+            const response = await axios.post(`${API_BASE_URL}/save-config`, {
+                ...config,
+                user_id: userId,
+            });
             return response.data;
         } catch (error) {
-            console.error("Erreur d'avoir les Membres:", error);
+            console.error("Erreur sauvegarde config:", error);
             throw error.response?.data || error;
         }
     },
 
-    /**
-     * Ajoute un membre à la liste des destinataires d'email
-     * @param {string} email - Email à ajouter
-     * @param {number|string} userId - ID de l'utilisateur
-     * @returns {Promise<Object>} - Réponse de l'API
-     */
-    async addMember(email, userId) {
+    async getConfig(userId) {
         try {
-            const response = await axios.post(
-                `/api/email-members/${userId}/add`,
-                { email }
-            );
-            return response.data;
+            const response = await axios.get(`${API_BASE_URL}/get-config`, {
+                params: { user_id: userId },
+            });
+            return response.data.config;
         } catch (error) {
-            console.error("Erreur d'ajout des Membres:", error);
+            console.error("Erreur récupération config:", error);
             throw error.response?.data || error;
         }
     },
 
-    /**
-     * Supprime un membre de la liste des destinataires d'email
-     * @param {string} email - Email à supprimer
-     * @param {number|string} userId - ID de l'utilisateur
-     * @returns {Promise<Object>} - Réponse de l'API
-     */
-    async removeMember(email, userId) {
-        try {
-            const response = await axios.post(
-                `/api/email-members/${userId}/remove`,
-                { email }
-            );
-            return response.data;
-        } catch (error) {
-            console.error("Erreur de suppression du Membre:", error);
-            throw error.response?.data || error;
-        }
-    },
-
-    /**
-     * Envoie une alerte par email
-     * @param {Object} alertData - Données de l'alerte
-     * @param {number|string} userId - ID de l'utilisateur
-     * @returns {Promise<Object>} - Réponse de l'API
-     */
     async sendAlert(alertData, userId) {
         try {
-            const response = await axios.post(
-                `/api/email-alert/${userId}`,
-                alertData
-            );
+            const response = await axios.post(`${API_BASE_URL}/send-alert`, {
+                ...alertData,
+                user_id: userId,
+            });
             return response.data;
         } catch (error) {
-            console.error("Erreur d'envoi d'Alert:", error);
-            throw error.response?.data || error;
-        }
-    },
-
-    /**
-     * Teste la configuration email
-     * @param {Object} config - Configuration email à tester
-     * @returns {Promise<Object>} - Résultat du test
-     */
-    async testConfig(config) {
-        try {
-            const response = await axios.post("/api/email-config/test", config);
-            return response.data;
-        } catch (error) {
-            console.error("Erreur du test de Configuration:", error);
+            console.error("Erreur envoi alerte:", error);
             throw error.response?.data || error;
         }
     },

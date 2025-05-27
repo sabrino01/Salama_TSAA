@@ -2,190 +2,215 @@
 
 namespace App\Services;
 
-use App\Models\Actions;
+use App\Models\EmailConfig;
 use App\Models\User;
-use Exception;
-use Illuminate\Support\Facades\Log;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception as PHPMailerException;
+use PHPMailer\PHPMailer\Exception;
+use Illuminate\Support\Facades\Log;
 
 class EmailService
 {
-    public function sendEmail($data)
-{
-    try {
-        Log::info('Début sendEmail', [
-            'subject' => $data['subject'],
-            'recipientsCount' => count($data['recipients']),
-            'host' => $data['config']['host'],
-            'port' => $data['config']['port']
-        ]);
-
-        $mail = new PHPMailer(true);
-
-        // Configuration du serveur
-        $mail->SMTPDebug = 2; // Activer le débogage SMTP (2 pour plus de détails)
-        $mail->Debugoutput = function($str, $level) {
-            Log::info("PHPMailer [$level]: $str");
-        };
-
-        $mail->isSMTP();
-        $mail->Host = $data['config']['host'];
-        $mail->SMTPAuth = true;
-        $mail->Username = $data['config']['username'];
-        $mail->Password = $data['config']['password'];
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = $data['config']['port'];
-        $mail->CharSet = 'UTF-8';
-
-        // Expéditeur
-        $mail->setFrom($data['config']['username'], 'Système d\'Alertes');
-
-        // Destinataires
-        foreach ($data['recipients'] as $recipient) {
-            $mail->addAddress($recipient);
-            Log::info('Destinataire ajouté', ['email' => $recipient]);
-        }
-
-        // Contenu
-        $mail->isHTML(true);
-        $mail->Subject = $data['subject'];
-
-        // Corps du message
-        $htmlContent = $this->generateEmailTemplate($data);
-        $mail->Body = $htmlContent;
-        $mail->AltBody = strip_tags($data['message']);
-
-        Log::info('Email prêt à être envoyé');
-        $mail->send();
-        Log::info('Email envoyé avec succès');
-        return true;
-    } catch (PHPMailerException $e) {
-        Log::error('Erreur PHPMailer détaillée', [
-            'errorInfo' => $mail->ErrorInfo,
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return false;
-    } catch (Exception $e) {
-        Log::error('Erreur exception standard lors de l\'envoi d\'email', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return false;
-    }
-}
-
-    /**
-     * Génère le template HTML pour l'email
-     *
-     */
-    private function generateEmailTemplate($data)
-    {
-        $itemId = $data['item']['id'] ?? null;
-        $itemName = 'Non spécifié';
-
-        if ($itemId) {
-            $action = Actions::find($itemId);
-
-            if ($action && $action->users_id) {
-                $utilisateur = User::find($action->users_id); // ou User::find(...)
-                $itemName = $utilisateur ? $utilisateur->nom_utilisateur : 'Non spécifié';
-            }
-        }
-        $type = $this->formatAlertType($data['type']);
-
-        return <<<HTML
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #4a86e8; color: white; padding: 15px; text-align: center; }
-                .content { padding: 20px; background-color: #f9f9f9; }
-                .item-info { background-color: #eee; padding: 10px; margin: 10px 0; }
-                .footer { text-align: center; font-size: 12px; color: #777; padding: 10px; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h2>Alerte - {$type}</h2>
-                </div>
-                <div class="content">
-                    <p>{$data['message']}</p>
-
-                    <div class="item-info">
-                        <p><strong>Élément concerné:</strong> {$itemName}</p>
-                        <p><strong>Identifiant:</strong> {$itemId}</p>
-                    </div>
-
-                    <p>Cette alerte a été générée automatiquement par l'application Salama_TSAA.</p>
-                </div>
-                <div class="footer">
-                    <p>© Système d'Alertes - Ne pas répondre à cet email</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        HTML;
-    }
-
-    /**
-     * Formate le type d'alerte pour affichage
-     *
-     * @param string $type
-     * @return string
-     */
-    private function formatAlertType($type)
-    {
-        switch ($type) {
-            case 'debut':
-                return 'Début d\'action';
-            case 'suivis':
-                return 'Suivi d\'action';
-            case 'fin':
-                return 'Fin d\'action';
-            default:
-                return 'Information';
-        }
-    }
-
-    /**
-     * Teste la configuration email
-     *
-     * @param array $config
-     * @return boolean
-     */
-    public function testConfig($config)
+    public function toggleNotifications(bool $active, int $userId): array
     {
         try {
-            $mail = new PHPMailer(true);
+            $emailConfig = EmailConfig::where('user_id', $userId)->first();
 
-            // Configuration du serveur
-            $mail->isSMTP();
-            $mail->Host = $config['host'];
-            $mail->SMTPAuth = true;
-            $mail->Username = $config['username'];
-            $mail->Password = $config['password'];
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port = $config['port'];
+            if (!$emailConfig) {
+                return [
+                    'success' => false,
+                    'message' => 'Configuration email non trouvée'
+                ];
+            }
 
-            // Test de connexion uniquement
-            $mail->SMTPDebug = SMTP::DEBUG_CONNECTION;
-            ob_start();
-            $connected = $mail->SmtpConnect();
-            ob_end_clean();
+            $emailConfig->update(['is_active' => $active]);
 
-            return $connected;
-        } catch (PHPMailerException $e) {
-            Log::error('Erreur test PHPMailer: ' . $e->getMessage());
-            return false;
-        } catch (Exception $e) {
-            Log::error('Erreur test config: ' . $e->getMessage());
-            return false;
+            return [
+                'success' => true,
+                'message' => 'Notifications ' . ($active ? 'activées' : 'désactivées')
+            ];
+        } catch (\Exception $e) {
+            Log::error('Erreur toggle notifications: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour des notifications'
+            ];
         }
     }
+
+    public function saveConfig(array $config, int $userId): array
+    {
+        try {
+            EmailConfig::updateOrCreate(
+                ['user_id' => $userId],
+                [
+                    'host' => $config['host'],
+                    'port' => $config['port'] ?? 587,
+                    'username' => $config['username'],
+                    'password' => $config['password'],
+                    'is_active' => true
+                ]
+            );
+
+            return [
+                'success' => true,
+                'message' => 'Configuration sauvegardée'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Erreur sauvegarde config: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Erreur lors de la sauvegarde'
+            ];
+        }
+    }
+
+    public function getConfig(int $userId): ?array
+    {
+        try {
+            $config = EmailConfig::where('user_id', $userId)->first();
+
+            if (!$config) {
+                return null;
+            }
+
+            return [
+                'host' => $config->host,
+                'port' => $config->port,
+                'username' => $config->username,
+                'password' => '', // Ne pas retourner le mot de passe
+                'is_active' => $config->is_active
+            ];
+        } catch (\Exception $e) {
+            Log::error('Erreur récupération config: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function sendAlert(array $alertData, int $userId): array
+    {
+        try {
+            // Récupérer la configuration email de l'utilisateur
+            $emailConfig = EmailConfig::where('user_id', $userId)->first();
+
+            if (!$emailConfig || !$emailConfig->is_active) {
+                return [
+                    'success' => false,
+                    'message' => 'Configuration email non active'
+                ];
+            }
+
+            // Récupérer l'email de l'utilisateur destinataire
+            $user = User::find($userId);
+            if (!$user || !$user->email) {
+                return [
+                    'success' => false,
+                    'message' => 'Email utilisateur non trouvé'
+                ];
+            }
+
+            return $this->sendEmail($emailConfig, $user->email, $alertData);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur envoi alerte: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Erreur lors de l\'envoi de l\'alerte'
+            ];
+        }
+    }
+
+    private function sendEmail(EmailConfig $config, string $recipientEmail, array $alertData): array
+    {
+        $mail = new PHPMailer(true);
+
+        try {
+            // Configuration SMTP
+            $mail->isSMTP();
+            $mail->Host = $config->host;
+            $mail->SMTPAuth = true;
+            $mail->Username = $config->username;
+            $mail->Password = $config->password;
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = $config->port;
+            $mail->CharSet = 'UTF-8';
+
+            // Expéditeur
+            $mail->setFrom($config->username, 'Système d\'alertes');
+
+            // Destinataire
+            $mail->addAddress($recipientEmail);
+
+            // Contenu
+            $mail->isHTML(true);
+            $mail->Subject = $alertData['sujet'];
+
+            // Corps du message HTML
+            $htmlBody = $this->formatHtmlMessage($alertData);
+            $mail->Body = $htmlBody;
+
+            // Version texte alternative
+            $mail->AltBody = strip_tags($alertData['message']);
+
+            $mail->send();
+
+            Log::info('Email envoyé avec succès à: ' . $recipientEmail);
+
+            return [
+                'success' => true,
+                'message' => 'Email envoyé avec succès'
+            ];
+
+        } catch (Exception $e) {
+            Log::error('Erreur PHPMailer: ' . $mail->ErrorInfo);
+            return [
+                'success' => false,
+                'message' => 'Erreur lors de l\'envoi: ' . $mail->ErrorInfo
+            ];
+        }
+    }
+
+    private function formatHtmlMessage(array $alertData): string
+{
+    // Simplification : utiliser directement les valeurs sans conversion complexe
+    $typeLabels = [
+        'debut' => 'début',
+        'suivi' => 'suivi',
+    ];
+
+    $type = $typeLabels[$alertData['type']] ?? $alertData['type'];
+    $description = $alertData['item']['description'] ?? 'Action';
+    $icon = $type === 'debut' ? '🔔' : ($type === 'suivi' ? '📊' : '⚠️');
+    return "
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='UTF-8'>
+        <title>Alerte {$type} d'action</title>
+    </head>
+    <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
+        <div style='max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <h2 style='color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;'>
+                {$icon} Alerte {$type} d'action
+            </h2>
+
+            <div style='background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+                <p style='margin: 0; font-size: 16px;'>
+                    <strong>Action :</strong> {$description}
+                </p>
+            </div>
+
+            <div style='background-color: #fef3c7; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b;'>
+                <p style='margin: 0;'>{$alertData['message']}</p>
+            </div>
+
+            <hr style='margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;'>
+
+            <p style='font-size: 12px; color: #6b7280; text-align: center; margin: 0;'>
+                Cet email a été envoyé automatiquement par votre système d'alertes du Salama_tsaa.
+            </p>
+        </div>
+    </body>
+    </html>";
+}
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Sanctum\HasApiTokens;
+use PhpParser\Node\Expr\FuncCall;
 
 class Actions extends Model
 {
@@ -25,8 +26,16 @@ class Actions extends Model
         'description',
         'observation',
         'mesure',
-        'statut'
+        'statut',
+        'actions_responsables',
+        'actions_suivis',
+        'observation_par_suivi'
     ];
+
+    // protected $casts = [
+    //     'responsables_id' => 'array',
+    //     'suivis_id' => 'array',
+    // ];
 
     public function getFrequenceAttribute($value)
     {
@@ -67,14 +76,16 @@ class Actions extends Model
         return $this->belongsTo(TypeActions::class, 'type_actions_id');
     }
 
-    public function responsables()
+    public function getResponsables()
     {
-        return $this->belongsTo(Responsable::class, 'responsables_id');
+        $ids = explode(',', $this->responsables_id);
+        return Responsable::whereIn('id', $ids)->get();
     }
 
-    public function suivis()
+    public function getSuivis()
     {
-        return $this->belongsTo(Suivi::class, 'suivis_id');
+        $ids = explode(',', $this->suivis_id);
+        return Suivi::whereIn('id', $ids)->get();
     }
 
     public function constat()
@@ -85,5 +96,22 @@ class Actions extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'users_id');
+    }
+
+    // Nouvelle relation avec ActionsResponsable
+    public function actionsResponsables()
+    {
+        return $this->hasMany(Actions_responsable::class, 'actions_id');
+    }
+
+    // Relation pour l'enregistrement principal actions_responsables
+    public function mainActionsResponsable()
+    {
+        return $this->belongsTo(Actions_responsable::class, 'actions_responsables_id');
+    }
+
+    public function actions_suivis()
+    {
+        return $this->belongsToMany(Actions_suivi::class, 'actions_suivis_id');
     }
 }
