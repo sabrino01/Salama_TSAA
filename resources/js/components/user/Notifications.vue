@@ -594,33 +594,150 @@ const userId = computed(() => user.value?.id);
 const handleEmailToggle = async () => {
     try {
         if (emailNotification.value) {
-            await emailService.toggleNotifications(true, userId.value);
+            // Pas de vérification de configuration pour les users
+            // Activer les notifications
+            const result = await emailService.toggleNotifications(
+                true,
+                userId.value
+            );
 
-            // Envoyer les alertes en attente
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            // Vérifier et envoyer les alertes
+            verifierToutesAlertesForEmail();
+
             if (alertQueue.value.length > 0) {
+                let successCount = 0;
+                let errorCount = 0;
+
                 for (const alert of alertQueue.value) {
-                    await emailService.sendAlert(
-                        {
-                            sujet: `Alerte ${
-                                alert.type === "debut" ? "début" : "suivi"
-                            } d'action`,
-                            message: formatAlertMessage(alert),
-                            type: alert.type,
-                            item: alert.item,
-                        },
-                        userId.value
+                    try {
+                        await emailService.sendAlert(
+                            {
+                                sujet: `Alerte ${
+                                    alert.type === "debut" ? "début" : "suivi"
+                                } d'action`,
+                                message: formatAlertMessage(alert),
+                                type:
+                                    alert.type === "suivis"
+                                        ? "suivi"
+                                        : alert.type,
+                                item: alert.item,
+                            },
+                            userId.value
+                        );
+                        successCount++;
+                    } catch (alertError) {
+                        console.error("Erreur envoi alerte:", alertError);
+                        errorCount++;
+                    }
+                }
+
+                if (successCount > 0) {
+                    toast.success(
+                        `${successCount} alerte(s) envoyée(s) par email`
                     );
                 }
+                if (errorCount > 0) {
+                    toast.error(
+                        `${errorCount} alerte(s) n'ont pas pu être envoyées`
+                    );
+                }
+            } else {
+                // Email de confirmation pour les users
+                await emailService.sendAlert(
+                    {
+                        sujet: "Notifications par email activées",
+                        message:
+                            "Vous recevrez désormais les alertes par email.",
+                        type: "test",
+                        item: { description: "Activation des notifications" },
+                    },
+                    userId.value
+                );
+                toast.success(
+                    "Notifications activées ! Un email de confirmation a été envoyé."
+                );
             }
         } else {
-            await emailService.toggleNotifications(false, userId.value);
+            // Désactiver les notifications
+            const result = await emailService.toggleNotifications(
+                false,
+                userId.value
+            );
+
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            toast.success("Notifications par email désactivées");
         }
 
-        localStorage.setItem("emailNotification", emailNotification.value);
+        localStorage.setItem(
+            "emailNotification",
+            emailNotification.value.toString()
+        );
     } catch (error) {
         console.error("Erreur lors du toggle des notifications:", error);
+        toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
         emailNotification.value = !emailNotification.value;
     }
+};
+
+// Nouvelle fonction pour vérifier les alertes uniquement pour l'email (sans afficher les modales)
+const verifierToutesAlertesForEmail = () => {
+    const alerts = [];
+
+    [...allDataEnCours.value, ...allDataEnRetard.value].forEach((item) => {
+        if (!item.frequence) return;
+
+        try {
+            const frequenceObj = parseFrequence(item.frequence);
+            const infosDebut = verifierAlerteDebut(frequenceObj);
+            const infosSuivis = verifierAlerteSuivis(frequenceObj);
+
+            if (infosDebut.doitAlerter) {
+                alerts.push({
+                    type: "debut",
+                    item,
+                    joursRestants: infosDebut.joursRestants,
+                });
+            }
+
+            if (infosSuivis.doitAlerter) {
+                alerts.push({
+                    type: "suivi",
+                    item,
+                    joursRestants: infosSuivis.joursRestants,
+                });
+            }
+        } catch (error) {
+            console.error("Erreur lors de la vérification des alertes:", error);
+        }
+    });
+
+    // Trier les alertes
+    alerts.sort((a, b) => {
+        if (a.joursRestants === 0) return -1;
+        if (b.joursRestants === 0) return 1;
+
+        const absA = Math.abs(a.joursRestants);
+        const absB = Math.abs(b.joursRestants);
+        if (absA === absB) {
+            return a.joursRestants > b.joursRestants ? -1 : 1;
+        }
+        return absA - absB;
+    });
+
+    // Mettre à jour la file d'attente des alertes (filtrer seulement les alertes <= 7 jours)
+    alertQueue.value = alerts.filter((alert) => {
+        const jours = Math.abs(alert.joursRestants);
+        return jours <= 7;
+    });
+
+    // Ne PAS appeler afficherProchaineAlerte() ici pour éviter l'ouverture des modales
 };
 
 // Formater le message d'alerte
@@ -720,7 +837,7 @@ const verifierToutesAlertes = () => {
 
             if (infosSuivis.doitAlerter) {
                 alerts.push({
-                    type: "suivis",
+                    type: "suivi",
                     item,
                     joursRestants: infosSuivis.joursRestants,
                 });
@@ -770,7 +887,7 @@ const afficherProchaineAlerte = () => {
             joursRestantsDebut.value = nextAlert.joursRestants;
             showDebutAlertModal.value = true;
             showSuivisAlertModal.value = false;
-        } else {
+        } else if (nextAlert.type === "suivi") {
             currentItem.value = nextAlert.item;
             joursRestantsSuivis.value = nextAlert.joursRestants;
             showSuivisAlertModal.value = true;
@@ -901,11 +1018,19 @@ const parseFrequence = (frequence) => {
 const calculerJoursRestants = (dateStr) => {
     if (!dateStr) return 0;
 
-    const date = new Date(dateStr);
-    const aujourdhui = new Date();
-    aujourdhui.setHours(0, 0, 0, 0);
+    const dateParts = dateStr.split("-");
+    if (dateParts.length < 3) return 0;
 
-    const diffTime = date - aujourdhui;
+    const inputDate = new Date(
+        parseInt(dateParts[0]),
+        parseInt(dateParts[1]) - 1,
+        parseInt(dateParts[2])
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = inputDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     return diffDays;
