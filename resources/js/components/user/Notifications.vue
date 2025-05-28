@@ -611,10 +611,11 @@ const handleEmailToggle = async () => {
             if (alertQueue.value.length > 0) {
                 let successCount = 0;
                 let errorCount = 0;
+                let totalResponsablesNotified = 0;
 
                 for (const alert of alertQueue.value) {
                     try {
-                        await emailService.sendAlert(
+                        const alertResult = await emailService.sendAlert(
                             {
                                 sujet: `Alerte ${
                                     alert.type === "debut" ? "début" : "suivi"
@@ -628,26 +629,67 @@ const handleEmailToggle = async () => {
                             },
                             userId.value
                         );
-                        successCount++;
+
+                        if (alertResult.success) {
+                            successCount++;
+                            // Compter les responsables notifiés pour cette alerte
+                            if (
+                                alertResult.details &&
+                                alertResult.details.responsables
+                            ) {
+                                totalResponsablesNotified +=
+                                    alertResult.details.responsables
+                                        .success_count;
+
+                                // Log des erreurs responsables si il y en a
+                                if (
+                                    alertResult.details.responsables
+                                        .error_count > 0
+                                ) {
+                                    console.warn(
+                                        `Erreurs envoi responsables pour alerte ${alert.type}:`,
+                                        alertResult.details.responsables.errors
+                                    );
+                                }
+                            }
+                        } else {
+                            errorCount++;
+                            // Log de l'erreur principale
+                            console.error(
+                                `Erreur envoi alerte ${alert.type}:`,
+                                alertResult.message
+                            );
+                        }
                     } catch (alertError) {
                         console.error("Erreur envoi alerte:", alertError);
                         errorCount++;
                     }
                 }
 
+                // Messages de succès détaillés
                 if (successCount > 0) {
-                    toast.success(
-                        `${successCount} alerte(s) envoyée(s) par email`
-                    );
+                    let message = `${successCount} alerte(s) envoyée(s) par email`;
+                    if (totalResponsablesNotified > 0) {
+                        message += ` + ${totalResponsablesNotified} responsable(s) notifié(s)`;
+                    }
+                    toast.success(message);
                 }
                 if (errorCount > 0) {
                     toast.error(
                         `${errorCount} alerte(s) n'ont pas pu être envoyées`
                     );
                 }
+
+                // Message informatif si des responsables ont été notifiés
+                if (totalResponsablesNotified > 0) {
+                    toast.info(
+                        `Les responsables désignés ont été automatiquement notifiés`,
+                        { duration: 4000 }
+                    );
+                }
             } else {
                 // Email de confirmation pour les users
-                await emailService.sendAlert(
+                const testResult = await emailService.sendAlert(
                     {
                         sujet: "Notifications par email activées",
                         message:
@@ -657,9 +699,35 @@ const handleEmailToggle = async () => {
                     },
                     userId.value
                 );
-                toast.success(
-                    "Notifications activées ! Un email de confirmation a été envoyé."
-                );
+
+                let confirmationMessage =
+                    "Notifications activées ! Un email de confirmation a été envoyé.";
+
+                // Vérifier si des responsables ont aussi reçu l'email de test
+                if (
+                    testResult.success &&
+                    testResult.details &&
+                    testResult.details.responsables
+                ) {
+                    const responsablesCount =
+                        testResult.details.responsables.success_count;
+                    if (responsablesCount > 0) {
+                        confirmationMessage += ` Vos responsables (${responsablesCount}) ont aussi été notifiés.`;
+                    }
+
+                    // Avertir s'il y a eu des erreurs avec les responsables
+                    if (testResult.details.responsables.error_count > 0) {
+                        console.warn(
+                            "Erreurs envoi responsables:",
+                            testResult.details.responsables.errors
+                        );
+                        toast.warning(
+                            `Attention: ${testResult.details.responsables.error_count} responsable(s) n'ont pas pu être notifiés`
+                        );
+                    }
+                }
+
+                toast.success(confirmationMessage);
             }
         } else {
             // Désactiver les notifications

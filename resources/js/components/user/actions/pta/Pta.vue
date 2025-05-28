@@ -177,10 +177,24 @@ const changerPage = (page) => {
     }
 };
 
+// Fonction utilitaire pour convertir dd/mm/yyyy en yyyy-mm-dd
+function convertDateToBackendFormat(str) {
+    // Vérifie si la chaîne correspond à un format date français
+    const match = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+        const [, day, month, year] = match;
+        return `${year}-${month}-${day}`;
+    }
+    return str;
+}
+
 // Fonction pour gérer la recherche
 const rechercherActions = () => {
     currentPage.value = 1; // Réinitialiser à la première page lors de la recherche
-    chargerActions(currentPage.value, searchQuery.value);
+    let search = searchQuery.value.trim();
+    // Si c'est une date au format dd/mm/yyyy, convertir pour le backend
+    search = convertDateToBackendFormat(search);
+    chargerActions(currentPage.value, search);
 };
 
 // Fonction pour supprimer une action
@@ -306,6 +320,48 @@ const formattedActions = computed(() => {
             newAction.frequenceWithDetails = newAction.frequence;
         }
 
+        // Décomposer observation_par_suivi (afficher les dates séparées par des virgules)
+        try {
+            if (newAction.observation_par_suivi) {
+                const normalizedObs = normalizeJsonString(
+                    newAction.observation_par_suivi
+                );
+                let obsArray = [];
+
+                if (Array.isArray(normalizedObs)) {
+                    obsArray = normalizedObs;
+                } else if (
+                    typeof normalizedObs === "string" &&
+                    normalizedObs.trim().startsWith("[")
+                ) {
+                    obsArray = JSON.parse(normalizedObs);
+                }
+
+                // Extraire et reformater les dates + observations
+                newAction.observationDates = obsArray
+                    .map((obs) => {
+                        if (obs.date) {
+                            // Support "2025-05-26 12:01:16" ou "2025-05-26T12:01:16"
+                            const [datePart] = obs.date.split(/[ T]/);
+                            const [year, month, day] = datePart.split("-");
+                            const dateStr = `${day}/${month}/${year}`;
+                            // Ajoute l'observation à côté de la date
+                            if (obs.observation) {
+                                return `${dateStr}: ${obs.observation}`;
+                            }
+                            return dateStr;
+                        }
+                        return null;
+                    })
+                    .filter(Boolean)
+                    .join("\n");
+            } else {
+                newAction.observationDates = "—";
+            }
+        } catch (e) {
+            newAction.observationDates = "—";
+        }
+
         return newAction;
     });
 });
@@ -389,6 +445,27 @@ const columns = [
                 tooltipContent,
             };
         },
+    },
+    {
+        label: "Responsables",
+        field: "responsables_libelle",
+        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
+        isExpandable: true, // Indique que cette colonne a un contenu extensible
+        render: (row) => row.responsables_libelle || "—",
+    },
+    {
+        label: "Suivis",
+        field: "suivis_noms",
+        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
+        isExpandable: true, // Indique que cette colonne a un contenu extensible
+        render: (row) => row.suivis_noms || "—",
+    },
+    {
+        label: "Date suivis",
+        field: "observation_par_suivi",
+        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
+        isExpandable: true, // Indique que cette colonne a un contenu extensible
+        render: (row) => row.observationDates || "—",
     },
     { label: "Statut", field: "statut" },
     { label: "Ajouter par", field: "nom_utilisateur" },
@@ -621,8 +698,8 @@ const generateExcelFile = async (
             date: row.date,
             source: row.source_libelle,
             type_action: row.type_action_libelle,
-            responsable: row.responsable_libelle,
-            suivi: row.suivi_nom,
+            responsable: row.responsables_libelle,
+            suivi: row.suivis_noms,
             description: row.description,
             constat_libelle: row.constat_libelle,
             frequenceWithDetails: row.frequenceWithDetails,
@@ -838,8 +915,8 @@ const importerFichier = async (event) => {
                     date: formattedDate,
                     source_libelle: sourceLibelle,
                     type_action_libelle: typeActionLibelle,
-                    responsable_libelle: responsableLibelle,
-                    suivi_nom: suiviNom,
+                    responsables_libelle: responsableLibelle,
+                    suivis_noms: suiviNom,
                     description: description,
                     constat_libelle: constatLibelle,
                     frequence: frequence,

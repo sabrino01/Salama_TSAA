@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActionsController;
 use App\Http\Controllers\ActionsResponsableController;
+use App\Http\Controllers\ActionsSuiviController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConstatController;
 use App\Http\Controllers\DashboardController;
@@ -125,15 +126,29 @@ Route::prefix('api')->group(function () {
     Route::get('/actions/pta', [DashboardController::class, 'getPTAActionsByStatus']);
 });
 
-// Route pour afficher toutes les actions responsables AI (fonction indexResponsablesAI)
+// Route pour afficher toutes les actions responsables AI et PTA
 Route::get('/actions-responsables-ai', [ActionsResponsableController::class, 'indexResponsablesAI']);
+Route::get('/actions-responsables-pta', [ActionsResponsableController::class, 'indexResponsablesPTA']);
 
 // Route pour récupérer une action responsable spécifique
 Route::get('/actions-responsables/{id}', [ActionsResponsableController::class, 'showActionResponsable']);
+Route::get('/actions-responsables/pta/{id}', [ActionsResponsableController::class, 'showActionResponsablePTA']);
 
 // Route pour mettre à jour une action responsable
 Route::put('/actions-responsables/{id}', [ActionsResponsableController::class, 'updateActionResponsable']);
+Route::put('/actions-responsables/pta/{id}', [ActionsResponsableController::class, 'updateActionResponsablePTA']);
 
+//Route pour afficher toutes les suivis AI et PTA
+Route::get('/suivis-ai', [ActionsSuiviController::class, 'indexSuiviAI']);
+Route::get('/suivis-pta', [ActionsSuiviController::class, 'indexSuiviPTA']);
+// Route pour récupérer un suivi spécifique
+Route::get('/suivis/{id}', [ActionsSuiviController::class, 'showSuivi']);
+Route::get('/suivis/pta/{id}', [ActionsSuiviController::class, 'showSuiviPTA']);
+// Route pour mettre à jour un suivi
+Route::put('/suivis/{id}', [ActionsSuiviController::class, 'updateSuivi']);
+Route::put('/suivis/pta/{id}', [ActionsSuiviController::class, 'updateSuiviPTA']);
+
+// Routes pour les alertes par email
 Route::prefix('email')->group(function () {
     Route::post('/toggle-notifications', [EmailConfigController::class, 'toggleNotifications']);
     Route::post('/save-config', [EmailConfigController::class, 'saveConfig']);

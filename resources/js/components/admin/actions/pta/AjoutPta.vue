@@ -16,6 +16,7 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { frequenceOptions } from "../../../../utils/frequenceOptions.js";
 import axios from "axios";
+import { Plus, Trash } from "lucide-vue-next";
 
 const router = useRouter();
 
@@ -37,8 +38,8 @@ const action = ref({
     num_actions: num_actions,
     sources_id: "",
     type_actions_id: "",
-    responsables_id: "",
-    suivis_id: "",
+    responsables_id: [""], // tableau pour plusieurs responsables
+    suivis_id: [""], // tableau pour plusieurs suivis
     constats_id: "",
     frequence: "",
     description: "",
@@ -46,6 +47,22 @@ const action = ref({
     observation: "",
     users_id: user?.id || null,
 });
+
+// Ajouter ou retirer un suivi
+const addSuivi = () => {
+    action.value.suivis_id.push("");
+};
+const removeSuivi = (index) => {
+    action.value.suivis_id.splice(index, 1);
+};
+
+// Ajouter ou retirer un responsable
+const addResponsable = () => {
+    action.value.responsables_id.push("");
+};
+const removeResponsable = (index) => {
+    action.value.responsables_id.splice(index, 1);
+};
 
 // Options pour le champ fréquence
 const options = frequenceOptions;
@@ -140,174 +157,212 @@ const enregistrerAction = async () => {
 
                 <!-- Formulaire d'ajout PTA -->
                 <div class="w-full mt-5">
-                    <div class="flex w-[40%] justify-center">
+                    <div class="flex w-[40%] justify-end">
                         <input
                             type="text"
-                            id="date"
+                            id="num_actions"
                             class="w-[16%] border rounded-md px-4 py-2 bg-gray-100"
                             :value="num_actions"
                             readonly
                         />
                     </div>
-                    <div class="flex w-[80%] mt-5">
-                        <label
-                            for="description"
-                            class="w-[24%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Description de la Non-Conformité :
-                        </label>
-                        <textarea
-                            id="description"
-                            class="w-[55%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="action.description"
-                        ></textarea>
+
+                    <div class="flex flex-wrap gap-x-8 gap-y-6 mt-5">
+                        <!-- Source -->
+                        <div class="flex items-center ml-4">
+                            <label
+                                for="source"
+                                class="text-lg font-semibold text-gray-800 w-20"
+                            >
+                                Source :
+                            </label>
+                            <select
+                                v-model="action.sources_id"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="source in sources"
+                                    :key="source.id"
+                                    :value="source.id"
+                                >
+                                    {{ source.code }} - {{ source.libelle }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Type d'actions -->
+                        <div class="flex items-center">
+                            <label
+                                for="typeactions"
+                                class="text-lg font-semibold text-gray-800 mr-2 w-30"
+                            >
+                                Type d'actions :
+                            </label>
+                            <select
+                                v-model="action.type_actions_id"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="type in typeActions"
+                                    :key="type.id"
+                                    :value="type.id"
+                                >
+                                    {{ type.code }} - {{ type.libelle }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Constat -->
+                        <div class="flex items-center">
+                            <label
+                                for="action"
+                                class="text-lg font-semibold text-gray-800 mr-2 w-20"
+                            >
+                                Constat :
+                            </label>
+                            <select
+                                v-model="action.constats_id"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="constat in constats"
+                                    :key="constat.id"
+                                    :value="constat.id"
+                                >
+                                    {{ constat.code }} - {{ constat.libelle }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="flex w-auto items-center mt-5">
+                    <!-- Suivis -->
+                    <div class="flex flex-wrap w-full ml-4 mt-5">
                         <label
-                            for="source"
-                            class="ml-4 text-lg font-semibold text-gray-800"
+                            class="text-lg font-semibold text-gray-800 mt-2 w-20"
+                            >Suivis :</label
                         >
-                            Source :
-                        </label>
-                        <select
-                            v-model="action.sources_id"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        <div
+                            v-for="(suivi, index) in action.suivis_id"
+                            :key="'suivi-' + index"
+                            class="flex items-center gap-2"
                         >
-                            <option value="" class="text-center">
-                                --- Options ---
-                            </option>
-                            <option
-                                v-for="source in sources"
-                                :key="source.id"
-                                :value="source.id"
+                            <select
+                                v-model="action.suivis_id[index]"
+                                class="border border-gray-400 rounded-md ml-2 mt-2 px-4 py-2 bg-transparent"
                             >
-                                {{ source.code }} - {{ source.libelle }}
-                            </option>
-                        </select>
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="s in suivis"
+                                    :key="s.id"
+                                    :value="s.id"
+                                >
+                                    {{ s.nom }}
+                                </option>
+                            </select>
+                            <button
+                                type="button"
+                                @click="removeSuivi(index)"
+                                class="text-red-600 mt-2 font-bold text-xl"
+                            >
+                                <Trash />
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            @click="addSuivi"
+                            class="text-green-600 mt-2 font-bold"
+                        >
+                            <Plus />
+                        </button>
                     </div>
 
-                    <div class="flex w-auto items-center mt-5">
+                    <!-- Responsables -->
+                    <div class="flex flex-wrap w-full ml-4 mt-5">
                         <label
-                            for="typeactions"
-                            class="ml-4 text-lg font-semibold text-gray-800"
+                            class="text-lg font-semibold text-gray-800 mt-2 mr-4 w-30"
+                            >Responsables :</label
                         >
-                            Type d'actions :
-                        </label>
-                        <select
-                            v-model="action.type_actions_id"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        <div
+                            v-for="(
+                                responsable, index
+                            ) in action.responsables_id"
+                            :key="'responsable-' + index"
+                            class="flex items-center gap-2"
                         >
-                            <option value="" class="text-center">
-                                --- Options ---
-                            </option>
-                            <option
-                                v-for="type in typeActions"
-                                :key="type.id"
-                                :value="type.id"
+                            <select
+                                v-model="action.responsables_id[index]"
+                                class="border border-gray-400 rounded-md ml-2 mt-2 px-4 py-2 bg-transparent"
                             >
-                                {{ type.code }} - {{ type.libelle }}
-                            </option>
-                        </select>
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="r in responsables"
+                                    :key="r.id"
+                                    :value="r.id"
+                                >
+                                    {{ r.code }} - {{ r.libelle }}
+                                </option>
+                            </select>
+                            <button
+                                type="button"
+                                @click="removeResponsable(index)"
+                                class="text-red-600 mt-2 font-bold text-xl"
+                            >
+                                <trash />
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            @click="addResponsable"
+                            class="text-green-600 mt-2 font-bold"
+                        >
+                            <Plus />
+                        </button>
                     </div>
 
-                    <div class="flex w-auto items-center mt-5">
-                        <label
-                            for="responsable"
-                            class="ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Responsable :
-                        </label>
-                        <select
-                            v-model="action.responsables_id"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" class="text-center">
-                                --- Options ---
-                            </option>
-                            <option
-                                v-for="responsable in responsables"
-                                :key="responsable.id"
-                                :value="responsable.id"
+                    <!-- Groupe Fréquence et Mesure -->
+                    <div class="flex flex-wrap gap-x-8 gap-y-6 mt-5">
+                        <!-- Fréquence -->
+                        <div class="flex items-center ml-4">
+                            <label
+                                for="frequence"
+                                class="text-lg font-semibold text-gray-800 mr-4 w-30"
                             >
-                                {{ responsable.code }} -
-                                {{ responsable.libelle }}
-                            </option>
-                        </select>
-                    </div>
+                                Fréquence :
+                            </label>
+                            <select
+                                v-model="selectedOption"
+                                @change="handleOptionChange"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="option in options"
+                                    :key="option"
+                                    :value="option"
+                                >
+                                    {{ option }}
+                                </option>
+                            </select>
+                        </div>
 
-                    <div class="flex w-auto items-center mt-5">
-                        <label
-                            for="suivi"
-                            class="ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Suivi :
-                        </label>
-                        <select
-                            v-model="action.suivis_id"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" class="text-center">
-                                --- Options ---
-                            </option>
-                            <option
-                                v-for="suivi in suivis"
-                                :key="suivi.id"
-                                :value="suivi.id"
+                        <!-- Mesure -->
+                        <div class="flex items-center">
+                            <label
+                                for="mesure"
+                                class="text-lg font-semibold text-gray-800 w-20"
                             >
-                                {{ suivi.nom }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <div class="flex w-auto items-center mt-5">
-                        <label
-                            for="action"
-                            class="ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Action :
-                        </label>
-                        <select
-                            v-model="action.constats_id"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" class="text-center">
-                                --- Options ---
-                            </option>
-                            <option
-                                v-for="constat in constats"
-                                :key="constat.id"
-                                :value="constat.id"
-                            >
-                                {{ constat.code }} - {{ constat.libelle }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <!-- Ajout du champ Fréquence -->
-                    <div class="flex w-auto items-center mt-5">
-                        <label
-                            for="frequence"
-                            class="ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Fréquence :
-                        </label>
-                        <select
-                            v-model="selectedOption"
-                            @change="handleOptionChange"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" class="text-center">
-                                --- Options ---
-                            </option>
-                            <option
-                                v-for="option in options"
-                                :key="option"
-                                :value="option"
-                            >
-                                {{ option }}
-                            </option>
-                        </select>
+                                Livrable :
+                            </label>
+                            <input
+                                type="text"
+                                id="mesure"
+                                v-model="action.mesure"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            />
+                        </div>
                     </div>
 
                     <!-- Composants dynamiques -->
@@ -361,40 +416,44 @@ const enregistrerAction = async () => {
                             v-model:showModal="showModal"
                             v-model="action.frequence"
                         />
-                        <!-- Vous pouvez ajouter d'autres composants ici si nécessaire -->
                     </div>
 
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="mesure"
-                            class="w-[16.5%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Mesure (Obsverif):
-                        </label>
-                        <input
-                            type="text"
-                            id="mesure"
-                            class="w-[40%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="action.mesure"
-                        />
+                    <!-- Groupe Action & Observation -->
+                    <div class="flex flex-wrap gap-x-6 gap-y-6 mt-6">
+                        <!-- Action -->
+                        <div class="flex items-start w-full md:w-[40%] ml-4">
+                            <label
+                                for="description"
+                                class="text-lg font-semibold text-gray-800 w-40"
+                            >
+                                Description de la non-conformité :
+                            </label>
+                            <textarea
+                                id="description"
+                                v-model="action.description"
+                                class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
+                                rows="3"
+                            ></textarea>
+                        </div>
+
+                        <!-- Observation -->
+                        <div class="flex items-start w-full md:w-[40%]">
+                            <label
+                                for="observation"
+                                class="text-lg font-semibold text-gray-800 mr-2 w-30"
+                            >
+                                Obsérvation :
+                            </label>
+                            <textarea
+                                id="observation"
+                                v-model="action.observation"
+                                class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
+                                rows="3"
+                            ></textarea>
+                        </div>
                     </div>
 
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="observation"
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Obsérvation :
-                        </label>
-                        <input
-                            type="text"
-                            id="observation"
-                            class="w-[40%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="action.observation"
-                        />
-                    </div>
-
-                    <div class="flex w-[80%] justify-end mt-5">
+                    <div class="flex w-[82.5%] justify-end mt-5">
                         <router-link to="/admin/actions/pta"
                             ><button
                                 class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"

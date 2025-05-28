@@ -16,25 +16,56 @@ import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import { frequenceOptions } from "../../../../utils/frequenceOptions.js";
+import { Plus, Trash } from "lucide-vue-next";
 
 // Router et route pour récupérer l'ID de l'action
 const router = useRouter();
 const route = useRoute();
 const actionId = route.params.id; // ID de l'action sélectionnée
+const nouvelleObservationSuivi = ref("");
+const dateObservationSuivi = ref(""); // Nouvelle ref pour la date
 
 // Données du formulaire
 const action = ref({
     description: "",
     sources_id: "",
     type_actions_id: "",
-    responsables_id: "",
-    suivis_id: "",
+    responsables_id: [""],
+    suivis_id: [""],
     constats_id: "",
     observation: "",
     frequence: "",
     mesure: "",
     statut: "",
 });
+
+const formatDateUpdate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+// Ajouter ou retirer un suivi
+const addSuivi = () => {
+    action.value.suivis_id.push("");
+};
+const removeSuivi = (index) => {
+    action.value.suivis_id.splice(index, 1);
+};
+
+// Ajouter ou retirer un responsable
+const addResponsable = () => {
+    action.value.responsables_id.push("");
+};
+const removeResponsable = (index) => {
+    action.value.responsables_id.splice(index, 1);
+};
 
 // Variable pour stocker la fréquence originale
 const originalFrequence = ref("");
@@ -101,40 +132,11 @@ const normalizeFrequence = (frequenceValue) => {
     return normalizedValue;
 };
 
-// Charger les données de l'action sélectionnée et les options
-onMounted(async () => {
-    try {
-        // Charger les options pour les champs select
-        const optionsResponse = await axios.get("/api/actions/createPTA");
-        sources.value = optionsResponse.data.sources;
-        typeActions.value = optionsResponse.data.typeActions;
-        responsables.value = optionsResponse.data.responsables;
-        suivis.value = optionsResponse.data.suivis;
-        constats.value = optionsResponse.data.constats;
+// Fonction pour obtenir la date actuelle au format YYYY-MM-DD
+const getCurrentDate = () => {
+    return new Date().toISOString().split("T")[0];
+};
 
-        // Charger les données de l'action sélectionnée
-        const actionResponse = await axios.get(`/api/actions/${actionId}`);
-        Object.assign(action.value, actionResponse.data);
-
-        // Normaliser et stocker la valeur originale de la fréquence
-        action.value.frequence = normalizeFrequence(action.value.frequence);
-        originalFrequence.value = action.value.frequence;
-
-        // Définir l'option sélectionnée en fonction de la fréquence existante
-        if (action.value.frequence) {
-            try {
-                const parsedFrequence = JSON.parse(action.value.frequence);
-                selectedOption.value =
-                    parsedFrequence.type || action.value.frequence;
-            } catch {
-                // Si la valeur brute ne peut pas être parsée, utilisez-la directement
-                selectedOption.value = action.value.frequence;
-            }
-        }
-    } catch (error) {
-        console.error("Erreur lors du chargement des données :", error);
-    }
-});
 // Gérer le changement d'option de fréquence
 const handleOptionChange = () => {
     frequenceModified.value = true; // Marquer que la fréquence a été modifiée
@@ -184,6 +186,119 @@ const modifierPTA = async () => {
         toast.error("Erreur lors de la modification de l'action PTA", error);
     }
 };
+
+// Ajouter une observation de suivi
+const ajouterObservationSuivi = async () => {
+    if (!nouvelleObservationSuivi.value.trim()) {
+        return;
+    }
+    try {
+        const response = await axios.put(`/api/actions/${route.params.id}`, {
+            ...action.value,
+            nouvelle_observation_suivi: nouvelleObservationSuivi.value,
+            date_observation_suivi: dateObservationSuivi.value, // Ajouter la date sélectionnée
+        });
+
+        // Mettre à jour les données locales
+        action.value = response.data.action;
+
+        // Réinitialiser les champs
+        nouvelleObservationSuivi.value = "";
+        dateObservationSuivi.value = getCurrentDate(); // Réinitialiser avec la date actuelle
+
+        // Notification de succès
+        toast.success("Observation de suivi ajoutée avec succès!");
+    } catch (error) {
+        console.error("Erreur lors de l'ajout de l'observation:", error);
+        if (error.response?.status === 400) {
+            toast.error(error.response.data.message);
+        } else {
+            toast.error("Erreur lors de l'ajout de l'observation");
+        }
+    }
+};
+
+// Fonction pour supprimer une observation de suivi
+const supprimerObservationSuivi = async (index) => {
+    try {
+        const response = await axios.put(`/api/actions/${route.params.id}`, {
+            ...action.value,
+            supprimer_observation_index: index,
+        });
+
+        // Mettre à jour les données locales
+        action.value = response.data.action;
+
+        // Notification de succès
+        toast.success("Observation de suivi supprimée avec succès!");
+    } catch (error) {
+        console.error("Erreur lors de la suppression de l'observation:", error);
+        if (error.response?.status === 400) {
+            toast.error(error.response.data.message);
+        } else {
+            toast.error("Erreur lors de la suppression de l'observation");
+        }
+    }
+};
+
+const formatDateSuivi = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+// Charger les données de l'action sélectionnée et les options
+onMounted(async () => {
+    try {
+        // Charger les options pour les champs select
+        const optionsResponse = await axios.get("/api/actions/createPTA");
+        sources.value = optionsResponse.data.sources;
+        typeActions.value = optionsResponse.data.typeActions;
+        responsables.value = optionsResponse.data.responsables;
+        suivis.value = optionsResponse.data.suivis;
+        constats.value = optionsResponse.data.constats;
+
+        // Charger les données de l'action sélectionnée
+        const actionResponse = await axios.get(`/api/actions/${actionId}`);
+        Object.assign(action.value, actionResponse.data);
+
+        if (action.value.responsables_id) {
+            action.value.responsables_id = action.value.responsables_id
+                .split(",")
+                .map(Number);
+        }
+
+        if (action.value.suivis_id) {
+            action.value.suivis_id = action.value.suivis_id
+                .split(",")
+                .map(Number);
+        }
+
+        // Normaliser et stocker la valeur originale de la fréquence
+        action.value.frequence = normalizeFrequence(action.value.frequence);
+        originalFrequence.value = action.value.frequence;
+
+        // Définir l'option sélectionnée en fonction de la fréquence existante
+        if (action.value.frequence) {
+            try {
+                const parsedFrequence = JSON.parse(action.value.frequence);
+                selectedOption.value =
+                    parsedFrequence.type || action.value.frequence;
+            } catch {
+                // Si la valeur brute ne peut pas être parsée, utilisez-la directement
+                selectedOption.value = action.value.frequence;
+            }
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement des données :", error);
+    }
+});
 </script>
 <template>
     <div class="flex h-screen">
@@ -219,6 +334,15 @@ const modifierPTA = async () => {
 
                 <!-- Formulaire de modification du PTA -->
                 <div class="w-full mt-5">
+                    <div class="flex w-[40%] justify-end">
+                        <input
+                            type="text"
+                            id="num_actions"
+                            class="w-[17%] border rounded-md px-4 py-2 bg-gray-100"
+                            v-model="action.num_actions"
+                        />
+                    </div>
+
                     <div class="flex w-[60%] items-center">
                         <label
                             for="date"
@@ -234,258 +358,302 @@ const modifierPTA = async () => {
                             v-model="action.date"
                         />
                     </div>
-                    <div class="flex w-[80%] mt-5">
-                        <label
-                            for="description"
-                            class="w-[23%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            description de la Non-conformité :
-                        </label>
-                        <textarea
-                            id="description"
-                            class="w-[56%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="action.description"
-                        ></textarea>
+
+                    <div class="flex flex-wrap gap-x-8 gap-y-6 mt-5">
+                        <!-- Source -->
+                        <div class="flex items-center ml-4">
+                            <label
+                                for="source"
+                                class="text-lg font-semibold text-gray-800 w-20"
+                            >
+                                Source :
+                            </label>
+                            <select
+                                v-model="action.sources_id"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="source in sources"
+                                    :key="source.id"
+                                    :value="source.id"
+                                >
+                                    {{ source.code }} - {{ source.libelle }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Type d'actions -->
+                        <div class="flex items-center">
+                            <label
+                                for="typeactions"
+                                class="text-lg font-semibold text-gray-800 mr-2 w-30"
+                            >
+                                Type d'actions :
+                            </label>
+                            <select
+                                v-model="action.type_actions_id"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="type in typeActions"
+                                    :key="type.id"
+                                    :value="type.id"
+                                >
+                                    {{ type.code }} - {{ type.libelle }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Constat -->
+                        <div class="flex items-center">
+                            <label
+                                for="action"
+                                class="text-lg font-semibold text-gray-800 mr-2 w-20"
+                            >
+                                Constat :
+                            </label>
+                            <select
+                                v-model="action.constats_id"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="constat in constats"
+                                    :key="constat.id"
+                                    :value="constat.id"
+                                >
+                                    {{ constat.code }} - {{ constat.libelle }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="flex w-auto items-center mt-5">
+
+                    <!-- Suivis -->
+                    <div class="flex flex-wrap w-full ml-4 mt-5">
                         <label
-                            for="source"
-                            class="ml-4 text-lg font-semibold text-gray-800"
+                            class="text-lg font-semibold text-gray-800 mt-2 w-20"
+                            >Suivis :</label
                         >
-                            Source :
-                        </label>
-                        <select
-                            v-model="action.sources_id"
-                            id="source"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        <div
+                            v-for="(suivi, index) in action.suivis_id"
+                            :key="'suivi-' + index"
+                            class="flex items-center gap-2"
                         >
-                            <option value="" disabled>--- Options ---</option>
-                            <option
-                                v-for="source in sources"
-                                :key="source.id"
-                                :value="source.id"
+                            <select
+                                v-model="action.suivis_id[index]"
+                                class="border border-gray-400 rounded-md ml-2 mt-2 px-4 py-2 bg-transparent"
                             >
-                                {{ source.code }} - {{ source.libelle }}
-                            </option>
-                        </select>
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="s in suivis"
+                                    :key="s.id"
+                                    :value="s.id"
+                                >
+                                    {{ s.nom }}
+                                </option>
+                            </select>
+                            <button
+                                type="button"
+                                @click="removeSuivi(index)"
+                                class="text-red-600 mt-2 font-bold text-xl"
+                            >
+                                <Trash />
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            @click="addSuivi"
+                            class="text-green-600 mt-2 font-bold"
+                        >
+                            <Plus />
+                        </button>
                     </div>
-                    <div class="flex w-auto items-center mt-5">
+
+                    <!-- Responsables -->
+                    <div class="flex flex-wrap w-full ml-4 mt-5">
                         <label
-                            for="typeactions"
-                            class="ml-4 text-lg font-semibold text-gray-800"
+                            class="text-lg font-semibold text-gray-800 mt-2 mr-4 w-30"
+                            >Responsables :</label
                         >
-                            Type d'actions :
-                        </label>
-                        <select
-                            v-model="action.type_actions_id"
-                            id="typeactions"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        <div
+                            v-for="(
+                                responsable, index
+                            ) in action.responsables_id"
+                            :key="'responsable-' + index"
+                            class="flex items-center gap-2"
                         >
-                            <option value="" disabled>--- Options ---</option>
-                            <option
-                                v-for="typeAction in typeActions"
-                                :key="typeAction.id"
-                                :value="typeAction.id"
+                            <select
+                                v-model="action.responsables_id[index]"
+                                class="border border-gray-400 rounded-md ml-2 mt-2 px-4 py-2 bg-transparent"
                             >
-                                {{ typeAction.code }} - {{ typeAction.libelle }}
-                            </option>
-                        </select>
+                                <option value="">--- Options ---</option>
+                                <option
+                                    v-for="r in responsables"
+                                    :key="r.id"
+                                    :value="r.id"
+                                >
+                                    {{ r.code }} - {{ r.libelle }}
+                                </option>
+                            </select>
+                            <button
+                                type="button"
+                                @click="removeResponsable(index)"
+                                class="text-red-600 mt-2 font-bold text-xl"
+                            >
+                                <trash />
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            @click="addResponsable"
+                            class="text-green-600 mt-2 font-bold"
+                        >
+                            <Plus />
+                        </button>
                     </div>
-                    <div class="flex w-auto items-center mt-5">
-                        <label
-                            for="responsable"
-                            class="ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Responsable :
-                        </label>
-                        <select
-                            v-model="action.responsables_id"
-                            id="responsable"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" disabled>--- Options ---</option>
-                            <option
-                                v-for="responsable in responsables"
-                                :key="responsable.id"
-                                :value="responsable.id"
+
+                    <!-- Groupe Fréquence et Mesure -->
+                    <div class="flex flex-wrap gap-x-8 gap-y-6 mt-6">
+                        <!-- Fréquence -->
+                        <div class="flex items-start ml-4">
+                            <label
+                                for="frequence"
+                                class="text-lg font-semibold text-gray-800 mr-4 w-30"
                             >
-                                {{ responsable.code }} -
-                                {{ responsable.libelle }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex w-auto items-center mt-5">
-                        <label
-                            for="suivi"
-                            class="ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Suivi :
-                        </label>
-                        <select
-                            v-model="action.suivis_id"
-                            id="suivi"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" disabled>--- Options ---</option>
-                            <option
-                                v-for="suivi in suivis"
-                                :key="suivi.id"
-                                :value="suivi.id"
+                                Fréquence :
+                            </label>
+                            <div class="ml-2 flex flex-col">
+                                <select
+                                    v-model="selectedOption"
+                                    @change="handleOptionChange"
+                                    class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                >
+                                    <option value="">--- Options ---</option>
+                                    <option
+                                        v-for="option in options"
+                                        :key="option"
+                                        :value="option"
+                                    >
+                                        {{ option }}
+                                    </option>
+                                </select>
+
+                                <div
+                                    class="mt-1 text-gray-900 font-poppins whitespace-pre-wrap text-sm"
+                                >
+                                    <FrequencePonctuel
+                                        v-if="selectedOption === 'Ponctuel'"
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceAnnuel
+                                        v-if="selectedOption === 'Annuel'"
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceQuotidien
+                                        v-if="selectedOption === 'Quotidien'"
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceToutAnnee
+                                        v-if="
+                                            selectedOption === 'Tout l\'année'
+                                        "
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceHebdomadaire
+                                        v-if="selectedOption === 'Hebdomadaire'"
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceMensuel
+                                        v-if="selectedOption === 'Mensuel'"
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceBimestriel
+                                        v-if="selectedOption === 'Bimestriel'"
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceTrimestriel
+                                        v-if="selectedOption === 'Trimestriel'"
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceQuadrimestriel
+                                        v-if="
+                                            selectedOption === 'Quadrimestriel'
+                                        "
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                    <FrequenceSemestriel
+                                        v-if="selectedOption === 'Semestriel'"
+                                        v-model:showModal="showModal"
+                                        v-model="action.frequence"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- livrable -->
+                        <div class="flex items-start">
+                            <label
+                                for="livrable"
+                                class="text-lg font-semibold text-gray-800 w-20"
                             >
-                                {{ suivi.nom }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex w-auto items-center mt-5">
-                        <label
-                            for="constat"
-                            class="ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Action :
-                        </label>
-                        <select
-                            v-model="action.constats_id"
-                            id="constat"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" disabled>--- Options ---</option>
-                            <option
-                                v-for="constat in constats"
-                                :key="constat.id"
-                                :value="constat.id"
-                            >
-                                {{ constat.code }} - {{ constat.libelle }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex w-auto items-center mt-5">
-                        <label
-                            for="frequence"
-                            class="ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Fréquence :
-                        </label>
-                        <select
-                            v-model="selectedOption"
-                            id="frequence"
-                            @change="handleOptionChange"
-                            class="ml-3 mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" class="text-center">
-                                --- Options ---
-                            </option>
-                            <option
-                                v-for="option in options"
-                                :key="option"
-                                :value="option"
-                            >
-                                {{ option }}
-                            </option>
-                            <!-- Ajouter une option pour afficher la valeur brute si elle ne correspond pas -->
-                            <option
-                                v-if="
-                                    !options.includes(selectedOption) &&
-                                    selectedOption
-                                "
-                                :value="selectedOption"
-                            >
-                                {{ selectedOption }}
-                            </option>
-                        </select>
+                                Livrable :
+                            </label>
+                            <input
+                                type="text"
+                                id="livrable"
+                                v-model="action.mesure"
+                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            />
+                        </div>
                     </div>
 
                     <!-- Composants dynamiques -->
-                    <div class="mt-5">
-                        <FrequencePonctuel
-                            v-if="selectedOption === 'Ponctuel'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceAnnuel
-                            v-if="selectedOption === 'Annuel'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceQuotidien
-                            v-if="selectedOption === 'Quotidien'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceToutAnnee
-                            v-if="selectedOption === 'Tout l\'année'"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceHebdomadaire
-                            v-if="selectedOption === 'Hebdomadaire'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceMensuel
-                            v-if="selectedOption === 'Mensuel'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceBimestriel
-                            v-if="selectedOption === 'Bimestriel'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceTrimestriel
-                            v-if="selectedOption === 'Trimestriel'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceQuadrimestriel
-                            v-if="selectedOption === 'Quadrimestriel'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
-                        <FrequenceSemestriel
-                            v-if="selectedOption === 'Semestriel'"
-                            v-model:showModal="showModal"
-                            v-model="action.frequence"
-                            @update:modelValue="frequenceModified = true"
-                        />
+
+                    <!-- Groupe Action & Observation -->
+                    <div class="flex flex-wrap gap-x-6 gap-y-6 mt-6">
+                        <!-- Action -->
+                        <div class="flex items-start w-full md:w-[40%] ml-4">
+                            <label
+                                for="description"
+                                class="text-lg font-semibold text-gray-800 w-20"
+                            >
+                                Action :
+                            </label>
+                            <textarea
+                                id="description"
+                                v-model="action.description"
+                                class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
+                                rows="3"
+                            ></textarea>
+                        </div>
+
+                        <!-- Observation -->
+                        <div class="flex items-start w-full md:w-[40%]">
+                            <label
+                                for="observation"
+                                class="text-lg font-semibold text-gray-800 mr-2 w-30"
+                            >
+                                Obsérvation :
+                            </label>
+                            <textarea
+                                id="observation"
+                                v-model="action.observation"
+                                class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
+                                rows="3"
+                            ></textarea>
+                        </div>
                     </div>
 
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="observation"
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Obsérvation :
-                        </label>
-                        <input
-                            type="text"
-                            id="observation"
-                            class="w-[48%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="action.observation"
-                        />
-                    </div>
-
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="mesure"
-                            class="w-[8%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Mesure :
-                        </label>
-                        <input
-                            type="text"
-                            id="mesure"
-                            class="w-[52%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="action.mesure"
-                        />
-                    </div>
                     <div class="flex w-[60%] items-center mt-5">
                         <label
                             for="statut"
@@ -506,17 +674,311 @@ const modifierPTA = async () => {
                         </select>
                     </div>
 
-                    <div class="flex w-[80%] justify-end mt-5">
+                    <!-- Section des mises à jour des responsables ET suivis -->
+                    <div
+                        class="bg-white shadow rounded-lg p-6 mt-8"
+                        v-if="action.has_updates"
+                    >
+                        <h3 class="text-xl font-bold mb-4">
+                            <i class="fas fa-eye mr-2"></i>
+                            Mises à jour des Responsables et Suivis
+                        </h3>
+
+                        <div
+                            class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4"
+                        >
+                            <p class="text-sm text-yellow-800">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Ces informations proviennent des responsables et
+                                suivis et ne peuvent pas être modifiées ici.
+                            </p>
+                        </div>
+
+                        <!-- Mises à jour des responsables -->
+                        <div
+                            v-if="action.has_responsables_updates"
+                            class="mb-6"
+                        >
+                            <h4
+                                class="text-lg font-semibold mb-3 text-blue-700"
+                            >
+                                <i class="fas fa-users mr-2"></i>
+                                Mises à jour des Responsables
+                            </h4>
+
+                            <div
+                                v-for="update in action.responsables_updates"
+                                :key="'resp-' + update.responsables_id"
+                                class="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50"
+                            >
+                                <div
+                                    class="flex items-center justify-between mb-2"
+                                >
+                                    <h5
+                                        class="font-semibold text-lg text-gray-700"
+                                    >
+                                        <i class="fas fa-user mr-2"></i>
+                                        {{ update.responsable_nom }}
+                                    </h5>
+                                    <span class="text-sm text-gray-500">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{
+                                            formatDateUpdate(update.date_update)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                >
+                                    <div>
+                                        <strong class="text-blue-600">
+                                            <i class="fas fa-flag mr-1"></i>
+                                            Statut:
+                                        </strong>
+                                        <div
+                                            class="mt-1 p-3 bg-blue-100 rounded border-l-4 border-blue-500"
+                                        >
+                                            <p class="text-blue-800">
+                                                {{ update.statut_resp }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <strong class="text-green-600">
+                                            <i class="fas fa-comment mr-1"></i>
+                                            Observation:
+                                        </strong>
+                                        <div
+                                            class="mt-1 p-3 bg-green-100 rounded border-l-4 border-green-500"
+                                        >
+                                            <p class="text-green-800">
+                                                {{ update.observation_resp }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mises à jour des suivis -->
+                        <div v-if="action.has_suivis_updates" class="mb-6">
+                            <h4
+                                class="text-lg font-semibold mb-3 text-purple-700"
+                            >
+                                <i class="fas fa-clipboard-check mr-2"></i>
+                                Mises à jour des Suivis
+                            </h4>
+
+                            <div
+                                v-for="update in action.suivis_updates"
+                                :key="'suivi-' + update.suivis_id"
+                                class="border border-purple-200 rounded-lg p-4 mb-4 bg-purple-50"
+                            >
+                                <div
+                                    class="flex items-center justify-between mb-2"
+                                >
+                                    <h5
+                                        class="font-semibold text-lg text-gray-700"
+                                    >
+                                        <i class="fas fa-clipboard mr-2"></i>
+                                        {{ update.suivi_nom }}
+                                    </h5>
+                                    <span class="text-sm text-gray-500">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{
+                                            formatDateUpdate(update.date_update)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                >
+                                    <div>
+                                        <strong class="text-purple-600">
+                                            <i class="fas fa-flag mr-1"></i>
+                                            Statut:
+                                        </strong>
+                                        <div
+                                            class="mt-1 p-3 bg-purple-100 rounded border-l-4 border-purple-500"
+                                        >
+                                            <p class="text-purple-800">
+                                                {{ update.statut_suivi }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <strong class="text-orange-600">
+                                            <i class="fas fa-comment mr-1"></i>
+                                            Observation:
+                                        </strong>
+                                        <div
+                                            class="mt-1 p-3 bg-orange-100 rounded border-l-4 border-orange-500"
+                                        >
+                                            <p class="text-orange-800">
+                                                {{ update.observation_suivi }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message si pas de mises à jour -->
+                    <div v-else class="bg-white shadow rounded-lg mt-8">
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-4"></i>
+                            <p>
+                                Aucune mise à jour des responsables ou suivis
+                                pour cette action.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Section Observation par Suivi -->
+                    <div
+                        v-if="action.has_updates"
+                        class="bg-white shadow rounded-lg p-6 mb-6 mt-8"
+                    >
+                        <h3 class="text-xl font-bold mb-4">
+                            <i
+                                class="fas fa-clipboard-list mr-2 text-purple-600"
+                            ></i>
+                            Observation par Suivi
+                        </h3>
+
+                        <div
+                            class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4"
+                        >
+                            <p class="text-sm text-purple-800">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Cette section permet d'ajouter des observations
+                                de suivi puisque des responsables ont mis à jour
+                                cette action.
+                            </p>
+                        </div>
+
+                        <!-- Formulaire pour ajouter une nouvelle observation -->
+                        <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                            <h4 class="font-semibold mb-3">
+                                <i class="fas fa-plus mr-2 text-green-600"></i>
+                                Ajouter une nouvelle observation par suivi
+                            </h4>
+
+                            <div>
+                                <div class="mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 mb-2"
+                                    >
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        Date de suivi
+                                    </label>
+                                    <input
+                                        type="date"
+                                        v-model="dateObservationSuivi"
+                                        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        :max="getCurrentDate()"
+                                    />
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Si aucune date n'est sélectionnée, la
+                                        date actuelle sera utilisée.
+                                    </p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 mb-2"
+                                    >
+                                        <i class="fas fa-edit mr-1"></i>
+                                        Observation
+                                    </label>
+                                    <textarea
+                                        v-model="nouvelleObservationSuivi"
+                                        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        rows="4"
+                                        placeholder="Entrez votre observation..."
+                                        required
+                                    ></textarea>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button
+                                        type="button"
+                                        @click="ajouterObservationSuivi"
+                                        :disabled="
+                                            !nouvelleObservationSuivi.trim()
+                                        "
+                                        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <Plus class="inline mr-1" />
+                                        Ajouter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Affichage des observations existantes -->
+                        <div v-if="action.has_observations_suivi">
+                            <h4 class="font-semibold mb-3">
+                                <i
+                                    class="fas fa-history mr-2 text-blue-600"
+                                ></i>
+                                Historique des observations par suivi
+                            </h4>
+
+                            <div
+                                v-for="(
+                                    observation, index
+                                ) in action.observations_suivi"
+                                :key="index"
+                                class="border border-blue-200 rounded-lg p-4 mb-3 bg-blue-50"
+                            >
+                                <div
+                                    class="flex justify-between items-start mb-2"
+                                >
+                                    <span class="text-sm text-blue-600">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{ formatDateSuivi(observation.date) }}
+                                    </span>
+                                    <button
+                                        @click="
+                                            supprimerObservationSuivi(index)
+                                        "
+                                        class="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 rounded transition-colors"
+                                        title="Supprimer cette observation"
+                                    >
+                                        <Trash />
+                                    </button>
+                                </div>
+                                <div
+                                    class="bg-white rounded p-3 border-l-4 border-blue-500"
+                                >
+                                    <p class="text-gray-800">
+                                        {{ observation.observation }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else class="text-center py-4 text-gray-500">
+                            <i class="fas fa-clipboard text-2xl mb-2"></i>
+                            <p>Aucune observation de suivi pour le moment.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex w-auto justify-end mt-6">
                         <router-link to="/user/actions/pta"
                             ><button
-                                class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
+                                class="w-auto transparent text-black font-semibold rounded-md px-4 py-2"
                             >
                                 Retour
                             </button></router-link
                         >
                         <button
                             @click="modifierPTA"
-                            class="w-[10%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
+                            class="w-auto bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
                         >
                             Modifier
                         </button>

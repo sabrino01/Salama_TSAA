@@ -681,14 +681,14 @@ onMounted(async () => {
                         </select>
                     </div>
 
-                    <!-- Section des mises à jour des responsables -->
+                    <!-- Section des mises à jour des responsables ET suivis -->
                     <div
                         class="bg-white shadow rounded-lg p-6 mt-8"
                         v-if="action.has_updates"
                     >
                         <h3 class="text-xl font-bold mb-4">
                             <i class="fas fa-eye mr-2"></i>
-                            Mises à jour des Responsables
+                            Mises à jour des Responsables et Suivis
                         </h3>
 
                         <div
@@ -697,51 +697,136 @@ onMounted(async () => {
                             <p class="text-sm text-yellow-800">
                                 <i class="fas fa-info-circle mr-1"></i>
                                 Ces informations proviennent des responsables et
-                                ne peuvent pas être modifiées ici.
+                                suivis et ne peuvent pas être modifiées ici.
                             </p>
                         </div>
 
+                        <!-- Mises à jour des responsables -->
                         <div
-                            v-for="update in action.responsables_updates"
-                            :key="update.responsables_id"
-                            class="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50"
+                            v-if="action.has_responsables_updates"
+                            class="mb-6"
                         >
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="font-semibold text-lg text-gray-700">
-                                    <i class="fas fa-user mr-2"></i>
-                                    {{ update.responsable_nom }}
-                                </h4>
-                                <span class="text-sm text-gray-500">
-                                    <i class="fas fa-calendar mr-1"></i>
-                                    {{ formatDateUpdate(update.date_update) }}
-                                </span>
-                            </div>
+                            <h4
+                                class="text-lg font-semibold mb-3 text-blue-700"
+                            >
+                                <i class="fas fa-users mr-2"></i>
+                                Mises à jour des Responsables
+                            </h4>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <strong class="text-blue-600">
-                                        <i class="fas fa-flag mr-1"></i>
-                                        Statut:
-                                    </strong>
-                                    <div
-                                        class="mt-1 p-3 bg-blue-100 rounded border-l-4 border-blue-500"
+                            <div
+                                v-for="update in action.responsables_updates"
+                                :key="'resp-' + update.responsables_id"
+                                class="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50"
+                            >
+                                <div
+                                    class="flex items-center justify-between mb-2"
+                                >
+                                    <h5
+                                        class="font-semibold text-lg text-gray-700"
                                     >
-                                        <p class="text-blue-800">
-                                            {{ update.statut_resp }}
-                                        </p>
+                                        <i class="fas fa-user mr-2"></i>
+                                        {{ update.responsable_nom }}
+                                    </h5>
+                                    <span class="text-sm text-gray-500">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{
+                                            formatDateUpdate(update.date_update)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                >
+                                    <div>
+                                        <strong class="text-blue-600">
+                                            <i class="fas fa-flag mr-1"></i>
+                                            Statut:
+                                        </strong>
+                                        <div
+                                            class="mt-1 p-3 bg-blue-100 rounded border-l-4 border-blue-500"
+                                        >
+                                            <p class="text-blue-800">
+                                                {{ update.statut_resp }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <strong class="text-green-600">
+                                            <i class="fas fa-comment mr-1"></i>
+                                            Observation:
+                                        </strong>
+                                        <div
+                                            class="mt-1 p-3 bg-green-100 rounded border-l-4 border-green-500"
+                                        >
+                                            <p class="text-green-800">
+                                                {{ update.observation_resp }}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div>
-                                    <strong class="text-green-600">
-                                        <i class="fas fa-comment mr-1"></i>
-                                        Observation:
-                                    </strong>
-                                    <div
-                                        class="mt-1 p-3 bg-green-100 rounded border-l-4 border-green-500"
+                            </div>
+                        </div>
+
+                        <!-- Mises à jour des suivis -->
+                        <div v-if="action.has_suivis_updates" class="mb-6">
+                            <h4
+                                class="text-lg font-semibold mb-3 text-purple-700"
+                            >
+                                <i class="fas fa-clipboard-check mr-2"></i>
+                                Mises à jour des Suivis
+                            </h4>
+
+                            <div
+                                v-for="update in action.suivis_updates"
+                                :key="'suivi-' + update.suivis_id"
+                                class="border border-purple-200 rounded-lg p-4 mb-4 bg-purple-50"
+                            >
+                                <div
+                                    class="flex items-center justify-between mb-2"
+                                >
+                                    <h5
+                                        class="font-semibold text-lg text-gray-700"
                                     >
-                                        <p class="text-green-800">
-                                            {{ update.observation_resp }}
-                                        </p>
+                                        <i class="fas fa-clipboard mr-2"></i>
+                                        {{ update.suivi_nom }}
+                                    </h5>
+                                    <span class="text-sm text-gray-500">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{
+                                            formatDateUpdate(update.date_update)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                >
+                                    <div>
+                                        <strong class="text-purple-600">
+                                            <i class="fas fa-flag mr-1"></i>
+                                            Statut:
+                                        </strong>
+                                        <div
+                                            class="mt-1 p-3 bg-purple-100 rounded border-l-4 border-purple-500"
+                                        >
+                                            <p class="text-purple-800">
+                                                {{ update.statut_suivi }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <strong class="text-orange-600">
+                                            <i class="fas fa-comment mr-1"></i>
+                                            Observation:
+                                        </strong>
+                                        <div
+                                            class="mt-1 p-3 bg-orange-100 rounded border-l-4 border-orange-500"
+                                        >
+                                            <p class="text-orange-800">
+                                                {{ update.observation_suivi }}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -753,8 +838,8 @@ onMounted(async () => {
                         <div class="text-center py-8 text-gray-500">
                             <i class="fas fa-inbox text-4xl mb-4"></i>
                             <p>
-                                Aucune mise à jour des responsables pour cette
-                                action.
+                                Aucune mise à jour des responsables ou suivis
+                                pour cette action.
                             </p>
                         </div>
                     </div>

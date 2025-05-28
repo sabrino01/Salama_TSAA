@@ -82,6 +82,26 @@ const chargerActionsResponsables = async (page = 1, search = "") => {
     }
 };
 
+// Fonction utilitaire pour convertir dd/mm/yyyy en yyyy-mm-dd
+function convertDateToBackendFormat(str) {
+    // Vérifie si la chaîne correspond à un format date français
+    const match = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+        const [, day, month, year] = match;
+        return `${year}-${month}-${day}`;
+    }
+    return str;
+}
+
+// Fonction pour gérer la recherche
+const rechercherActions = () => {
+    currentPage.value = 1; // Réinitialiser à la première page lors de la recherche
+    let search = searchQuery.value.trim();
+    // Si c'est une date au format dd/mm/yyyy, convertir pour le backend
+    search = convertDateToBackendFormat(search);
+    chargerActionsResponsables(currentPage.value, search);
+};
+
 // Ajoutez cette fonction pour basculer l'état de la pagination
 const togglePagination = () => {
     paginationEnabled.value = !paginationEnabled.value;
@@ -282,12 +302,6 @@ const changerPage = (page) => {
         currentPage.value = page;
         chargerActionsResponsables(page, searchQuery.value);
     }
-};
-
-// Fonction pour gérer la recherche
-const rechercherActions = () => {
-    currentPage.value = 1; // Réinitialiser à la première page lors de la recherche
-    chargerActionsResponsables(currentPage.value, searchQuery.value);
 };
 
 const editerAuditInterne = (id) => {

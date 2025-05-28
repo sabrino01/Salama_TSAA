@@ -529,6 +529,72 @@ onMounted(async () => {
                             </div>
                         </div>
 
+                        <!-- Section des mises à jour des suivis -->
+                        <div class="bg-white shadow rounded-lg p-6 mt-8">
+                            <h3 class="text-xl font-bold mb-4">
+                                Mises à jour des Suivis
+                            </h3>
+
+                            <div v-if="action.has_suivis_updates">
+                                <div
+                                    v-for="update in action.suivis_updates"
+                                    :key="update.suivis_id"
+                                    class="border border-orange-200 rounded-lg p-4 mb-4"
+                                >
+                                    <div
+                                        class="flex items-center justify-between mb-2"
+                                    >
+                                        <h4
+                                            class="font-semibold text-lg text-orange-800"
+                                        >
+                                            {{ update.suivi_nom }}
+                                        </h4>
+                                        <span
+                                            class="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded"
+                                        >
+                                            {{
+                                                formatDateUpdate(
+                                                    update.date_update
+                                                )
+                                            }}
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                    >
+                                        <div>
+                                            <strong class="text-orange-600"
+                                                >Statut:</strong
+                                            >
+                                            <p
+                                                class="mt-1 p-2 bg-orange-50 rounded"
+                                            >
+                                                {{ update.statut_suivi }}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <strong class="text-orange-700"
+                                                >Observation:</strong
+                                            >
+                                            <p
+                                                class="mt-1 p-2 bg-orange-50 rounded"
+                                            >
+                                                {{ update.observation_suivi }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-else class="text-center text-gray-500">
+                                <p>
+                                    Aucune mise à jour des suivis pour cette
+                                    action.
+                                </p>
+                            </div>
+                        </div>
+
                         <div
                             v-if="
                                 action.has_updates &&

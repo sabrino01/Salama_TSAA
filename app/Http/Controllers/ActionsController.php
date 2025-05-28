@@ -38,6 +38,7 @@ class ActionsController extends Controller
                         ->orWhere('type_actions.libelle', 'like', "%$search%")
                       ->orWhere('actions.statut', 'like', "%$search%")
                       ->orWhere('actions.frequence', 'like', "%$search%")
+                      ->orWhere('actions.observation_par_suivi', 'like', "%$search%")
                       ->orWhere('users.nom_utilisateur', 'like', "%$search%")
                       ->orWhere('constats.libelle', 'like', "%$search%")
                        // Recherche dans les responsables
@@ -95,9 +96,7 @@ class ActionsController extends Controller
             ->join('constats', 'actions.constats_id', '=', 'constats.id')
             ->join('sources', 'actions.sources_id', '=', 'sources.id')
             ->join('type_actions', 'actions.type_actions_id', '=', 'type_actions.id')
-            ->join('responsables', 'actions.responsables_id', '=', 'responsables.id')
-            ->join('suivis', 'actions.suivis_id', '=', 'suivis.id')
-            ->where('actions.num_actions', 'like', 'PTA-%') // Filtrer uniquement les num_actions commençant par PTA-
+            ->where('actions.num_actions', 'like', 'PTA-%') // Filtrer uniquement les num_actions commençant par AI-
             ->where(function ($query) use ($search) {
                 $query->where('actions.num_actions', 'like', "%$search%")
                       ->orWhere('actions.date', 'like', "%$search%")
@@ -106,251 +105,328 @@ class ActionsController extends Controller
                         ->orWhere('actions.mesure', 'like', "%$search%")
                         ->orWhere('sources.libelle', 'like', "%$search%")
                         ->orWhere('type_actions.libelle', 'like', "%$search%")
-                        ->orWhere('responsables.libelle', 'like', "%$search%")
-                        ->orWhere('suivis.nom', 'like', "%$search%")
                       ->orWhere('actions.statut', 'like', "%$search%")
                       ->orWhere('actions.frequence', 'like', "%$search%")
+                      ->orWhere('actions.observation_par_suivi', 'like', "%$search%")
                       ->orWhere('users.nom_utilisateur', 'like', "%$search%")
-                      ->orWhere('constats.libelle', 'like', "%$search%");
+                      ->orWhere('constats.libelle', 'like', "%$search%")
+                       // Recherche dans les responsables
+                    ->orWhereExists(function ($subquery) use ($search) {
+                        $subquery->select(DB::raw(1))
+                                ->from('responsables')
+                                ->whereRaw("CHARINDEX(CAST(responsables.id AS VARCHAR), actions.responsables_id) > 0")
+                                ->where('responsables.libelle', 'like', "%$search%");
+                    })
+                    // Recherche dans les suivis
+                    ->orWhereExists(function ($subquery) use ($search) {
+                        $subquery->select(DB::raw(1))
+                                ->from('suivis')
+                                ->whereRaw("CHARINDEX(CAST(suivis.id AS VARCHAR), actions.suivis_id) > 0")
+                                ->where('suivis.nom', 'like', "%$search%");
+                    });
             })
             ->select(
                 'actions.*',
                 'users.nom_utilisateur as nom_utilisateur',
                 'constats.libelle as constat_libelle',
                 'sources.libelle as source_libelle',
-                'type_actions.libelle as type_action_libelle',
-                'responsables.libelle as responsable_libelle',
-                'suivis.nom as suivi_nom'
+                'type_actions.libelle as type_action_libelle'
             )
             ->orderBy('actions.id', 'desc') // Trier par ordre décroissant
             ->paginate($perPage);
 
-    //         $actionsForLog = $actionsAI->toArray();
+          // Enrichir les résultats avec les noms des responsables et suivis
+            $actionsPTA->getCollection()->transform(function ($action) {
+                $responsablesIds = array_filter(explode(',', $action->responsables_id));
+                $suivisIds = array_filter(explode(',', $action->suivis_id));
 
-    //   FacadesLog::info('Actions AI:',$actionsForLog);
+                $responsables = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->toArray();
+                $suivis = Suivi::whereIn('id', $suivisIds)->pluck('nom')->toArray();
+
+                $action->responsables_libelle = implode(', ', $responsables);
+                $action->suivis_noms = implode(', ', $suivis);
+
+                return $action;
+            });
+
+    //         $actionsForLog = $actionsPTA->toArray();
+
+    //   FacadesLog::info('Actions PTA:',$actionsForLog);
 
         return response()->json($actionsPTA);
     }
 
-    public function show($id)
-    {
-        $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
+   public function show($id)
+{
+    $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
 
-        if (!$action) {
-            return response()->json(['message' => 'Action non trouvée'], 404);
-        }
-
-        // Traitement des responsables
-        $responsablesIds = explode(',', $action->responsables_id);
-        $responsables = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
-
-        // Traitement des suivis
-        $suivisIds = explode(',', $action->suivis_id);
-        $suivis = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
-
-        // On peut aussi renommer les libellés si nécessaire
-        $action->responsable_libelle = $responsables;
-        $action->suivi_nom = $suivis;
-        $action->constat_libelle = $action->constat->libelle ?? null;
-        $action->source_libelle = $action->sources->libelle ?? null;
-        $action->type_action_libelle = $action->type_actions->libelle ?? null;
-        $action->nom_utilisateur = $action->user->nom_utilisateur ?? null;
-
-        // Récupérer les responsables qui ont mis à jour leur statut et observations
-        $responsablesUpdates = DB::table('actions_responsables')
-            ->join('responsables', 'actions_responsables.responsables_id', '=', 'responsables.id')
-            ->where('actions_responsables.actions_id', $id)
-            ->whereNotNull('actions_responsables.statut_resp')
-            ->whereNotNull('actions_responsables.observation_resp')
-            ->where('actions_responsables.statut_resp', '!=', '')
-            ->where('actions_responsables.observation_resp', '!=', '')
-            ->select(
-                'actions_responsables.responsables_id',
-                'actions_responsables.statut_resp',
-                'actions_responsables.observation_resp',
-                'responsables.libelle as responsable_nom',
-                'actions_responsables.updated_at as date_update'
-            )
-            ->get();
-
-        // Ajouter les données des responsables updates directement à l'action
-        $action->responsables_updates = $responsablesUpdates;
-        $action->has_updates = $responsablesUpdates->count() > 0;
-
-         // Traiter les observations par suivi pour l'affichage (seulement si il y a des mises à jour de responsables)
-        if ($action->has_updates && $action->observation_par_suivi) {
-            $action->observations_suivi = json_decode($action->observation_par_suivi, true);
-            $action->has_observations_suivi = count($action->observations_suivi) > 0;
-        } else {
-            $action->observations_suivi = [];
-            $action->has_observations_suivi = false;
-        }
-
-        return response()->json($action);
+    if (!$action) {
+        return response()->json(['message' => 'Action non trouvée'], 404);
     }
+
+    // Traitement des responsables
+    $responsablesIds = explode(',', $action->responsables_id);
+    $responsables = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
+
+    // Traitement des suivis
+    $suivisIds = explode(',', $action->suivis_id);
+    $suivis = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
+
+    // On peut aussi renommer les libellés si nécessaire
+    $action->responsable_libelle = $responsables;
+    $action->suivi_nom = $suivis;
+    $action->constat_libelle = $action->constat->libelle ?? null;
+    $action->source_libelle = $action->sources->libelle ?? null;
+    $action->type_action_libelle = $action->type_actions->libelle ?? null;
+    $action->nom_utilisateur = $action->user->nom_utilisateur ?? null;
+
+    // Récupérer les responsables qui ont mis à jour leur statut et observations
+    $responsablesUpdates = DB::table('actions_responsables')
+        ->join('responsables', 'actions_responsables.responsables_id', '=', 'responsables.id')
+        ->where('actions_responsables.actions_id', $id)
+        ->whereNotNull('actions_responsables.statut_resp')
+        ->whereNotNull('actions_responsables.observation_resp')
+        ->where('actions_responsables.statut_resp', '!=', '')
+        ->where('actions_responsables.observation_resp', '!=', '')
+        ->select(
+            'actions_responsables.responsables_id',
+            'actions_responsables.statut_resp',
+            'actions_responsables.observation_resp',
+            'responsables.libelle as responsable_nom',
+            'actions_responsables.updated_at as date_update'
+        )
+        ->get();
+
+    // Ajouter les données des responsables updates directement à l'action
+    $action->responsables_updates = $responsablesUpdates;
+    $action->has_responsables_updates = $responsablesUpdates->count() > 0;
+
+    // Récupérer les suivis qui ont mis à jour leur statut et observations
+    $suivisUpdates = DB::table('actions_suivis')
+        ->join('suivis', 'actions_suivis.suivis_id', '=', 'suivis.id')
+        ->where('actions_suivis.actions_id', $id)
+        ->whereNotNull('actions_suivis.statut_suivi')
+        ->whereNotNull('actions_suivis.observation_suivi')
+        ->where('actions_suivis.statut_suivi', '!=', '')
+        ->where('actions_suivis.observation_suivi', '!=', '')
+        ->select(
+            'actions_suivis.suivis_id',
+            'actions_suivis.statut_suivi',
+            'actions_suivis.observation_suivi',
+            'suivis.nom as suivi_nom',
+            'actions_suivis.updated_at as date_update'
+        )
+        ->get();
+
+    // Ajouter les données des suivis updates directement à l'action
+    $action->suivis_updates = $suivisUpdates;
+    $action->has_suivis_updates = $suivisUpdates->count() > 0;
+
+    // Variable globale pour savoir s'il y a des mises à jour (responsables OU suivis)
+    $action->has_updates = $action->has_responsables_updates || $action->has_suivis_updates;
+
+    // Traiter les observations par suivi pour l'affichage (seulement si il y a des mises à jour)
+    if ($action->has_updates && $action->observation_par_suivi) {
+        $action->observations_suivi = json_decode($action->observation_par_suivi, true);
+        $action->has_observations_suivi = count($action->observations_suivi) > 0;
+    } else {
+        $action->observations_suivi = [];
+        $action->has_observations_suivi = false;
+    }
+
+    return response()->json($action);
+}
 
     public function update(Request $request, $id)
-    {
-        $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
+{
+    $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
 
-        if (!$action) {
+    if (!$action) {
+        return response()->json([
+            'message' => 'Action non trouvée'
+        ], 404);
+    }
+
+    // Vérifie si les champs sont envoyés comme tableau et les transforme en chaîne
+    $responsables = is_array($request->responsables_id)
+        ? implode(',', $request->responsables_id)
+        : $request->responsables_id;
+
+    $suivis = is_array($request->suivis_id)
+        ? implode(',', $request->suivis_id)
+        : $request->suivis_id;
+
+    // Gérer observation_par_suivi (nouveau champ JSON)
+    $observationParSuivi = $action->observation_par_suivi;
+
+    // Gestion de la suppression d'une observation
+    if ($request->has('supprimer_observation_index') && $request->supprimer_observation_index !== null) {
+        $indexToDelete = (int) $request->supprimer_observation_index;
+
+        // Décoder le JSON existant
+        $observations = $observationParSuivi ? json_decode($observationParSuivi, true) : [];
+
+        // Vérifier si l'index existe
+        if (isset($observations[$indexToDelete])) {
+            // Supprimer l'observation à l'index spécifié
+            array_splice($observations, $indexToDelete, 1);
+
+            // Réencoder en JSON
+            $observationParSuivi = empty($observations) ? null : json_encode($observations);
+        } else {
             return response()->json([
-                'message' => 'Action non trouvée'
-            ], 404);
+                'message' => 'Index d\'observation invalide'
+            ], 400);
         }
+    }
+    // Si une nouvelle observation de suivi est envoyée
+    elseif ($request->has('nouvelle_observation_suivi') && $request->nouvelle_observation_suivi) {
+        // Vérifier s'il y a des mises à jour de responsables OU de suivis
+        $hasResponsableUpdates = DB::table('actions_responsables')
+            ->where('actions_id', $id)
+            ->whereNotNull('statut_resp')
+            ->whereNotNull('observation_resp')
+            ->where('statut_resp', '!=', '')
+            ->where('observation_resp', '!=', '')
+            ->exists();
 
-        // Vérifie si les champs sont envoyés comme tableau et les transforme en chaîne
-        $responsables = is_array($request->responsables_id)
-            ? implode(',', $request->responsables_id)
-            : $request->responsables_id;
+        $hasSuivisUpdates = DB::table('actions_suivis')
+            ->where('actions_id', $id)
+            ->whereNotNull('statut_suivi')
+            ->whereNotNull('observation_suivi')
+            ->where('statut_suivi', '!=', '')
+            ->where('observation_suivi', '!=', '')
+            ->exists();
 
-        $suivis = is_array($request->suivis_id)
-            ? implode(',', $request->suivis_id)
-            : $request->suivis_id;
-
-        // Gérer observation_par_suivi (nouveau champ JSON)
-        $observationParSuivi = $action->observation_par_suivi;
-
-        // Gestion de la suppression d'une observation
-        if ($request->has('supprimer_observation_index') && $request->supprimer_observation_index !== null) {
-            $indexToDelete = (int) $request->supprimer_observation_index;
-
-            // Décoder le JSON existant
+        if ($hasResponsableUpdates || $hasSuivisUpdates) {
+            // Décoder le JSON existant ou créer un nouveau tableau
             $observations = $observationParSuivi ? json_decode($observationParSuivi, true) : [];
 
-            // Vérifier si l'index existe
-            if (isset($observations[$indexToDelete])) {
-                // Supprimer l'observation à l'index spécifié
-                array_splice($observations, $indexToDelete, 1);
+            // Validation de la date envoyée depuis le frontend
+            $dateObservation = $request->date_observation_suivi;
 
-                // Réencoder en JSON
-                $observationParSuivi = empty($observations) ? null : json_encode($observations);
+            // Si aucune date n'est fournie, utiliser la date actuelle
+            if (!$dateObservation) {
+                $dateObservation = now()->format('Y-m-d H:i:s');
             } else {
-                return response()->json([
-                    'message' => 'Index d\'observation invalide'
-                ], 400);
-            }
-        }
-        // Si une nouvelle observation de suivi est envoyée
-        elseif ($request->has('nouvelle_observation_suivi') && $request->nouvelle_observation_suivi) {
-            // Vérifier s'il y a des mises à jour de responsables
-            $hasResponsableUpdates = DB::table('actions_responsables')
-                ->where('actions_id', $id)
-                ->whereNotNull('statut_resp')
-                ->whereNotNull('observation_resp')
-                ->where('statut_resp', '!=', '')
-                ->where('observation_resp', '!=', '')
-                ->exists();
-
-            if ($hasResponsableUpdates) {
-                // Décoder le JSON existant ou créer un nouveau tableau
-                $observations = $observationParSuivi ? json_decode($observationParSuivi, true) : [];
-
-                // Validation de la date envoyée depuis le frontend
-                $dateObservation = $request->date_observation_suivi;
-
-                // Si aucune date n'est fournie, utiliser la date actuelle
-                if (!$dateObservation) {
-                    $dateObservation = now()->format('Y-m-d H:i:s');
-                } else {
-                    // Valider et formater la date reçue
+                // Valider et formater la date reçue
+                try {
+                    $dateObservation = Carbon::createFromFormat('Y-m-d', $dateObservation)->format('Y-m-d H:i:s');
+                } catch (\Exception $e) {
+                    // Si le format n'est pas valide, essayer avec d'autres formats
                     try {
-                        $dateObservation = Carbon::createFromFormat('Y-m-d', $dateObservation)->format('Y-m-d H:i:s');
+                        $dateObservation = Carbon::parse($dateObservation)->format('Y-m-d H:i:s');
                     } catch (\Exception $e) {
-                        // Si le format n'est pas valide, essayer avec d'autres formats
-                        try {
-                            $dateObservation = Carbon::parse($dateObservation)->format('Y-m-d H:i:s');
-                        } catch (\Exception $e) {
-                            return response()->json([
-                                'message' => 'Format de date invalide. Utilisez le format YYYY-MM-DD.'
-                            ], 400);
-                        }
+                        return response()->json([
+                            'message' => 'Format de date invalide. Utilisez le format YYYY-MM-DD.'
+                        ], 400);
                     }
                 }
-
-                // Ajouter la nouvelle observation avec la date choisie
-                $nouvelleObservation = [
-                    'date' => $dateObservation,
-                    'observation' => $request->nouvelle_observation_suivi,
-                ];
-
-                $observations[] = $nouvelleObservation;
-                $observationParSuivi = json_encode($observations);
-            } else {
-                return response()->json([
-                    'message' => 'Impossible d\'ajouter une observation de suivi. Aucune mise à jour de responsable trouvée.'
-                ], 400);
             }
-        }
 
-        $action->update([
-            'sources_id' => $request->sources_id,
-            'type_actions_id' => $request->type_actions_id,
-            'responsables_id' => $responsables,
-            'suivis_id' => $suivis,
-            'constats_id' => $request->constats_id,
-            'frequence' => $request->frequence,
-            'description' => $request->description,
-            'observation' => $request->observation,
-            'mesure' => $request->mesure,
-            'statut' => $request->statut,
-            'observation_par_suivi' => $observationParSuivi
-        ]);
+            // Ajouter la nouvelle observation avec la date choisie
+            $nouvelleObservation = [
+                'date' => $dateObservation,
+                'observation' => $request->nouvelle_observation_suivi,
+            ];
 
-        // Recharger l'action avec les relations pour avoir les données fraîches
-        $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
-
-        // Traitement des responsables (comme dans show)
-        $responsablesIds = explode(',', $action->responsables_id);
-        $responsables = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
-
-        // Traitement des suivis (comme dans show)
-        $suivisIds = explode(',', $action->suivis_id);
-        $suivis = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
-
-        // Ajouter les libellés
-        $action->responsable_libelle = $responsables;
-        $action->suivi_nom = $suivis;
-        $action->constat_libelle = $action->constat->libelle ?? null;
-        $action->source_libelle = $action->sources->libelle ?? null;
-        $action->type_action_libelle = $action->type_actions->libelle ?? null;
-        $action->nom_utilisateur = $action->user->nom_utilisateur ?? null;
-
-        // Récupérer les responsables qui ont mis à jour leur statut et observations
-        $responsablesUpdates = DB::table('actions_responsables')
-            ->join('responsables', 'actions_responsables.responsables_id', '=', 'responsables.id')
-            ->where('actions_responsables.actions_id', $id)
-            ->whereNotNull('actions_responsables.statut_resp')
-            ->whereNotNull('actions_responsables.observation_resp')
-            ->where('actions_responsables.statut_resp', '!=', '')
-            ->where('actions_responsables.observation_resp', '!=', '')
-            ->select(
-                'actions_responsables.responsables_id',
-                'actions_responsables.statut_resp',
-                'actions_responsables.observation_resp',
-                'responsables.libelle as responsable_nom',
-                'actions_responsables.updated_at as date_update'
-            )
-            ->get();
-
-        // Ajouter les données des responsables updates à l'action
-        $action->responsables_updates = $responsablesUpdates;
-        $action->has_updates = $responsablesUpdates->count() > 0;
-
-        // Traiter les observations par suivi pour l'affichage
-        if ($action->observation_par_suivi) {
-            $action->observations_suivi = json_decode($action->observation_par_suivi, true);
-            $action->has_observations_suivi = count($action->observations_suivi) > 0;
+            $observations[] = $nouvelleObservation;
+            $observationParSuivi = json_encode($observations);
         } else {
-            $action->observations_suivi = [];
-            $action->has_observations_suivi = false;
+            return response()->json([
+                'message' => 'Impossible d\'ajouter une observation de suivi. Aucune mise à jour de responsable ou de suivi trouvée.'
+            ], 400);
         }
-
-        return response()->json([
-            'message' => 'Action mise à jour avec succès',
-            'action' => $action
-        ]);
     }
+
+    $action->update([
+        'sources_id' => $request->sources_id,
+        'type_actions_id' => $request->type_actions_id,
+        'responsables_id' => $responsables,
+        'suivis_id' => $suivis,
+        'constats_id' => $request->constats_id,
+        'frequence' => $request->frequence,
+        'description' => $request->description,
+        'observation' => $request->observation,
+        'mesure' => $request->mesure,
+        'statut' => $request->statut,
+        'observation_par_suivi' => $observationParSuivi
+    ]);
+
+    // Recharger l'action avec les relations pour avoir les données fraîches
+    $action = Actions::with('user', 'constat', 'sources', 'type_actions')->find($id);
+
+    // Traitement des responsables (comme dans show)
+    $responsablesIds = explode(',', $action->responsables_id);
+    $responsables = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
+
+    // Traitement des suivis (comme dans show)
+    $suivisIds = explode(',', $action->suivis_id);
+    $suivis = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
+
+    // Ajouter les libellés
+    $action->responsable_libelle = $responsables;
+    $action->suivi_nom = $suivis;
+    $action->constat_libelle = $action->constat->libelle ?? null;
+    $action->source_libelle = $action->sources->libelle ?? null;
+    $action->type_action_libelle = $action->type_actions->libelle ?? null;
+    $action->nom_utilisateur = $action->user->nom_utilisateur ?? null;
+
+    // Récupérer les responsables qui ont mis à jour leur statut et observations
+    $responsablesUpdates = DB::table('actions_responsables')
+        ->join('responsables', 'actions_responsables.responsables_id', '=', 'responsables.id')
+        ->where('actions_responsables.actions_id', $id)
+        ->whereNotNull('actions_responsables.statut_resp')
+        ->whereNotNull('actions_responsables.observation_resp')
+        ->where('actions_responsables.statut_resp', '!=', '')
+        ->where('actions_responsables.observation_resp', '!=', '')
+        ->select(
+            'actions_responsables.responsables_id',
+            'actions_responsables.statut_resp',
+            'actions_responsables.observation_resp',
+            'responsables.libelle as responsable_nom',
+            'actions_responsables.updated_at as date_update'
+        )
+        ->get();
+
+    // Récupérer les suivis qui ont mis à jour leur statut et observations
+    $suivisUpdates = DB::table('actions_suivis')
+        ->join('suivis', 'actions_suivis.suivis_id', '=', 'suivis.id')
+        ->where('actions_suivis.actions_id', $id)
+        ->whereNotNull('actions_suivis.statut_suivi')
+        ->whereNotNull('actions_suivis.observation_suivi')
+        ->where('actions_suivis.statut_suivi', '!=', '')
+        ->where('actions_suivis.observation_suivi', '!=', '')
+        ->select(
+            'actions_suivis.suivis_id',
+            'actions_suivis.statut_suivi',
+            'actions_suivis.observation_suivi',
+            'suivis.nom as suivi_nom',
+            'actions_suivis.updated_at as date_update'
+        )
+        ->get();
+
+    // Ajouter les données des responsables et suivis updates à l'action
+    $action->responsables_updates = $responsablesUpdates;
+    $action->suivis_updates = $suivisUpdates;
+    $action->has_responsables_updates = $responsablesUpdates->count() > 0;
+    $action->has_suivis_updates = $suivisUpdates->count() > 0;
+    $action->has_updates = $action->has_responsables_updates || $action->has_suivis_updates;
+
+    // Traiter les observations par suivi pour l'affichage
+    if ($action->observation_par_suivi) {
+        $action->observations_suivi = json_decode($action->observation_par_suivi, true);
+        $action->has_observations_suivi = count($action->observations_suivi) > 0;
+    } else {
+        $action->observations_suivi = [];
+        $action->has_observations_suivi = false;
+    }
+
+    return response()->json([
+        'message' => 'Action mise à jour avec succès',
+        'action' => $action
+    ]);
+}
 
     public function destroy($id)
     {
