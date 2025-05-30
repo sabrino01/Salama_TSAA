@@ -31,7 +31,54 @@
                     </p>
                 </div>
 
-                <div class="border bg-gray-400 mt-6"></div>
+                <div
+                    class="w-full bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 mt-8"
+                >
+                    <h3 class="text-lg font-bold text-blue-800 mb-2">
+                        Paramètres de Notifications
+                    </h3>
+                    <div class="flex flex-col justify-start space-y-4">
+                        <!-- Toggle pour l'envoi d'email -->
+                        <div class="flex items-center space-x-2">
+                            <label
+                                for="emailNotification"
+                                class="text-gray-700 font-medium"
+                            >
+                                Notification par Email
+                            </label>
+                            <input
+                                id="emailNotification"
+                                type="checkbox"
+                                v-model="emailNotification"
+                                @change="handleEmailToggle"
+                                class="form-toggle h-5 w-10 rounded-full bg-gray-300 focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                                @click="showEmailConfig = true"
+                                class="p-1 hover:bg-gray-100 rounded-full"
+                            >
+                                <Settings class="w-6 h-6 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <!-- Toggle pour l'alerte dans l'application -->
+                        <div class="flex items-center space-x-2">
+                            <label
+                                for="appAlert"
+                                class="text-gray-700 font-medium"
+                            >
+                                Alerte dans l'application
+                            </label>
+                            <input
+                                id="appAlert"
+                                type="checkbox"
+                                v-model="appAlert"
+                                @change="onAlertToggle"
+                                class="form-toggle h-5 w-10 rounded-full bg-gray-300 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                    </div>
+                </div>
 
                 <div class="w-full text-gray-900 mt-5">
                     <div class="indent-4 text-2xl font-bold underline">
@@ -61,10 +108,28 @@
                         </select>
                     </div>
 
-                    <!-- Colonne centrale -->
-                    <div class="w-3/4">
-                        <div class="text-lg font-bold mb-4">
-                            Résultats : {{ totalEnCours }}
+                    <!-- Colonne droite -->
+                    <div class="w-4/5">
+                        <!-- Ligne avec Résultats à gauche et Pagination à droite -->
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="text-lg font-bold">
+                                Résultats : {{ totalEnCours }}
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label
+                                    for="paginationToggle"
+                                    class="text-gray-700 font-medium"
+                                >
+                                    Pagination
+                                </label>
+                                <input
+                                    id="paginationToggle"
+                                    type="checkbox"
+                                    v-model="paginationEnabled"
+                                    @change="onPaginationToggle"
+                                    class="form-toggle h-5 w-10 rounded-full bg-gray-300 focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
                         </div>
                         <table class="table-fixed w-full">
                             <thead class="bg-gray-200 text-lg">
@@ -82,7 +147,7 @@
                                 <tr
                                     v-for="(
                                         item, index
-                                    ) in paginatedDataEnCours"
+                                    ) in displayedDataEnCours"
                                     :key="index"
                                     @click="navigateToDetails(item.id)"
                                     class="cursor-pointer border-b-4 border-green-500 bg-white text-black hover:bg-gray-100 shadow-md rounded-md transform transition-transform duration-200 hover:scale-105 mb-2"
@@ -107,7 +172,8 @@
                                         />
                                     </td>
                                 </tr>
-                                <tr v-if="paginatedDataEnCours.length === 0">
+
+                                <tr v-if="displayedDataEnCours.length === 0">
                                     <td
                                         colspan="3"
                                         class="px-4 py-2 text-center"
@@ -117,7 +183,10 @@
                                 </tr>
                             </tbody>
                         </table>
-                        <div class="flex justify-between items-center mt-4">
+                        <div
+                            v-if="paginationEnabled"
+                            class="flex justify-between items-center mt-4"
+                        >
                             <button
                                 @click="prevPageEnCours"
                                 :disabled="currentPageEnCours === 1"
@@ -147,44 +216,6 @@
                             >
                                 <ChevronRight class="w-5 h-5" />
                             </button>
-                        </div>
-                    </div>
-
-                    <!-- Colonne droite -->
-                    <div class="w-1/6 pl-4 mr-2">
-                        <div class="flex flex-col space-y-4">
-                            <!-- Toggle pour l'envoi d'email -->
-                            <div class="flex items-center space-x-2">
-                                <label
-                                    for="emailNotification"
-                                    class="text-gray-700 font-medium"
-                                >
-                                    Notification par Email
-                                </label>
-                                <input
-                                    id="emailNotification"
-                                    type="checkbox"
-                                    v-model="emailNotification"
-                                    @change="handleEmailToggle"
-                                    class="form-toggle h-5 w-10 rounded-full bg-gray-300 focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-
-                            <!-- Toggle pour l'alerte dans l'application -->
-                            <div class="flex items-center space-x-2">
-                                <label
-                                    for="appAlert"
-                                    class="text-gray-700 font-medium"
-                                >
-                                    Alerte dans l'application
-                                </label>
-                                <input
-                                    id="appAlert"
-                                    type="checkbox"
-                                    v-model="appAlert"
-                                    class="form-toggle h-5 w-10 rounded-full bg-gray-300 focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -219,10 +250,28 @@
                         </select>
                     </div>
 
-                    <!-- Colonne centrale -->
-                    <div class="w-2/3">
-                        <div class="text-lg font-bold mb-4">
-                            Résultats : {{ totalEnRetard }}
+                    <!-- Colonne droite -->
+                    <div class="w-4/5">
+                        <!-- Ligne avec Résultats à gauche et Pagination à droite -->
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="text-lg font-bold">
+                                Résultats : {{ totalEnRetard }}
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label
+                                    for="paginationToggle"
+                                    class="text-gray-700 font-medium"
+                                >
+                                    Pagination
+                                </label>
+                                <input
+                                    id="paginationToggle"
+                                    type="checkbox"
+                                    v-model="paginationEnabled"
+                                    @change="onPaginationToggle"
+                                    class="form-toggle h-5 w-10 rounded-full bg-gray-300 focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
                         </div>
                         <table class="table-fixed w-full">
                             <thead class="bg-gray-200 text-lg">
@@ -240,7 +289,7 @@
                                 <tr
                                     v-for="(
                                         item, index
-                                    ) in paginatedDataEnRetard"
+                                    ) in displayedDataEnRetard"
                                     :key="index"
                                     @click="navigateToDetails(item.id)"
                                     class="cursor-pointer border-b-4 border-red-500 bg-white text-black hover:bg-gray-100 shadow-md rounded-md transform transition-transform duration-200 hover:scale-105 mb-2"
@@ -261,11 +310,11 @@
                                     >
                                         <FrequenceInformations
                                             :frequence="item.frequence"
-                                            ref="frequenceInfo"
+                                            ref="frequenceInfoRetard"
                                         />
                                     </td>
                                 </tr>
-                                <tr v-if="paginatedDataEnRetard.length === 0">
+                                <tr v-if="displayedDataEnRetard.length === 0">
                                     <td
                                         colspan="3"
                                         class="px-4 py-2 text-center"
@@ -275,7 +324,10 @@
                                 </tr>
                             </tbody>
                         </table>
-                        <div class="flex justify-between items-center mt-4">
+                        <div
+                            v-if="paginationEnabled"
+                            class="flex justify-between items-center mt-4"
+                        >
                             <button
                                 @click="prevPageEnRetard"
                                 :disabled="currentPageEnRetard === 1"
@@ -545,14 +597,17 @@ const emailNotification = ref(
     localStorage.getItem("emailNotification") === "true"
 );
 const appAlert = ref(localStorage.getItem("appAlert") === "true");
+const paginationEnabled = ref(true); // État de la pagination
+const displayedDataEnCours = ref([]); // Données affichées (paginées ou complètes)
+const displayedDataEnRetard = ref([]); // Données affichées (paginées ou complètes)
+const allDataEnCours = ref([]);
+const allDataEnRetard = ref([]);
 const currentPageEnCours = ref(1);
 const currentPageEnRetard = ref(1);
 const totalPagesEnCours = ref(1);
 const totalPagesEnRetard = ref(1);
 const totalEnCours = ref(0);
 const totalEnRetard = ref(0);
-const paginatedDataEnCours = ref([]);
-const paginatedDataEnRetard = ref([]);
 const selectedFilterEnCours = ref("all");
 const selectedFilterEnRetard = ref("all");
 const showDebutAlertModal = ref(false);
@@ -563,8 +618,6 @@ const currentItem = ref(null);
 const alertQueue = ref([]); // File d'attente des alertes
 const currentAlert = ref(null); // Alerte actuellement affichée
 const isInitialLoad = ref(true);
-const allDataEnCours = ref([]);
-const allDataEnRetard = ref([]);
 
 // Données pour la gestion des fréquences
 const joursMap = {
@@ -826,59 +879,88 @@ const formatAlertMessage = (alert) => {
 // Nouvelle fonction pour récupérer toutes les données
 const fetchAllData = async (checkAlerts = false) => {
     try {
+        const withPagination = paginationEnabled.value ? "true" : "false";
         const response = await fetch(
-            `/api/notifications/all?filter_en_cours=${selectedFilterEnCours.value}&filter_en_retard=${selectedFilterEnRetard.value}&user_id=${userId.value}`
-        );
-        const data = await response.json();
-
-        allDataEnCours.value = data.en_cours;
-        allDataEnRetard.value = data.en_retard;
-
-        // Ne vérifier les alertes que si checkAlerts est true
-        if (checkAlerts) {
-            verifierToutesAlertes();
-        }
-    } catch (error) {
-        console.error(
-            "Erreur lors de la récupération des données complètes:",
-            error
-        );
-    }
-};
-
-// Fonction pour récupérer les données filtrées
-const fetchFilteredData = async () => {
-    try {
-        const response = await fetch(
-            `/api/notifications?filter_en_cours=${selectedFilterEnCours.value}&filter_en_retard=${selectedFilterEnRetard.value}&per_page=10&page_en_cours=${currentPageEnCours.value}&page_en_retard=${currentPageEnRetard.value}&user_id=${userId.value}`
+            `/api/notifications?filter_en_cours=${selectedFilterEnCours.value}&filter_en_retard=${selectedFilterEnRetard.value}&per_page=10&page_en_cours=${currentPageEnCours.value}&page_en_retard=${currentPageEnRetard.value}&user_id=${userId.value}&with_pagination=${withPagination}`
         );
         const data = await response.json();
 
         // Données pour "En cours"
-        paginatedDataEnCours.value = data.en_cours.data;
+        displayedDataEnCours.value = data.en_cours.data;
         totalEnCours.value = data.en_cours.total;
         totalPagesEnCours.value = data.en_cours.last_page;
         currentPageEnCours.value = data.en_cours.current_page;
 
         // Données pour "En retard"
-        paginatedDataEnRetard.value = data.en_retard.data;
+        displayedDataEnRetard.value = data.en_retard.data;
         totalEnRetard.value = data.en_retard.total;
         totalPagesEnRetard.value = data.en_retard.last_page;
         currentPageEnRetard.value = data.en_retard.current_page;
 
-        // Vérifier les alertes uniquement au chargement initial
-        if (isInitialLoad.value) {
-            // Préparer les alertes même si le toggle est désactivé
+        // Si pagination désactivée, les données affichées sont toutes les données
+        if (!paginationEnabled.value) {
+            allDataEnCours.value = data.en_cours.data;
+            allDataEnRetard.value = data.en_retard.data;
+        } else if (appAlert.value) {
+            // Si pagination activée mais alerte activée, récupérer toutes les données séparément
+            await fetchAllDataForAlerts();
+        }
+
+        // Vérifier les alertes si nécessaire
+        if (checkAlerts && appAlert.value) {
             verifierToutesAlertes();
-            // Mais ne les afficher que si le toggle est activé
-            if (!appAlert.value) {
-                showDebutAlertModal.value = false;
-                showSuivisAlertModal.value = false;
-            }
-            isInitialLoad.value = false;
         }
     } catch (error) {
         console.error("Erreur lors de la récupération des données :", error);
+    }
+};
+
+// Fonction pour récupérer toutes les données pour les alertes
+const fetchAllDataForAlerts = async () => {
+    try {
+        const response = await fetch(
+            `/api/notifications?filter_en_cours=${selectedFilterEnCours.value}&filter_en_retard=${selectedFilterEnRetard.value}&user_id=${userId.value}&with_pagination=false`
+        );
+        const data = await response.json();
+
+        allDataEnCours.value = data.en_cours.data;
+        allDataEnRetard.value = data.en_retard.data;
+    } catch (error) {
+        console.error(
+            "Erreur lors de la récupération des données complètes pour les alertes:",
+            error
+        );
+    }
+};
+
+// Gestionnaire du toggle pagination
+const onPaginationToggle = () => {
+    // Réinitialiser à la première page
+    currentPageEnCours.value = 1;
+    currentPageEnRetard.value = 1;
+
+    // Recharger les données
+    fetchAllData(false);
+};
+
+// Gestionnaire du toggle alerte
+const onAlertToggle = () => {
+    if (appAlert.value) {
+        // Si alerte activée, vérifier les alertes
+        if (!paginationEnabled.value) {
+            // Si pagination désactivée, utiliser les données déjà chargées
+            verifierToutesAlertes();
+        } else {
+            // Si pagination activée, récupérer toutes les données puis vérifier
+            fetchAllDataForAlerts().then(() => {
+                verifierToutesAlertes();
+            });
+        }
+    } else {
+        // Si alerte désactivée, fermer les modales d'alerte
+        showDebutAlertModal.value = false;
+        showSuivisAlertModal.value = false;
+        alertQueue.value = [];
     }
 };
 
@@ -975,7 +1057,6 @@ const filterChanged = async () => {
 
     // Recharger les données sans vérifier les alertes
     await fetchAllData(false);
-    await fetchFilteredData();
 };
 
 // Fonction pour naviguer vers les détails d'une action
@@ -1019,14 +1100,14 @@ const navigateToDetails = (id) => {
 const prevPageEnCours = () => {
     if (currentPageEnCours.value > 1) {
         currentPageEnCours.value--;
-        fetchFilteredData(false); // Ne pas vérifier les alertes lors de la pagination
+        fetchAllData(false); // Ne pas vérifier les alertes lors de la pagination
     }
 };
 
 const nextPageEnCours = () => {
     if (currentPageEnCours.value < totalPagesEnCours.value) {
         currentPageEnCours.value++;
-        fetchFilteredData(false); // Ne pas vérifier les alertes lors de la pagination
+        fetchAllData(false); // Ne pas vérifier les alertes lors de la pagination
     }
 };
 
@@ -1034,14 +1115,14 @@ const nextPageEnCours = () => {
 const prevPageEnRetard = () => {
     if (currentPageEnRetard.value > 1) {
         currentPageEnRetard.value--;
-        fetchFilteredData(false); // Ne pas vérifier les alertes lors de la pagination
+        fetchAllData(false); // Ne pas vérifier les alertes lors de la pagination
     }
 };
 
 const nextPageEnRetard = () => {
     if (currentPageEnRetard.value < totalPagesEnRetard.value) {
         currentPageEnRetard.value++;
-        fetchFilteredData(false); // Ne pas vérifier les alertes lors de la pagination
+        fetchAllData(false); // Ne pas vérifier les alertes lors de la pagination
     }
 };
 
@@ -1202,6 +1283,14 @@ const getFrequenceBorderClass = (frequence) => {
     return null;
 };
 
+// 🔁 Fonction utilitaire pour obtenir le jour le plus proche
+const getJoursRestantsLePlusProche = (jours, type = null) => {
+    return jours.reduce((min, jour) => {
+        const joursRestants = calculerJoursRestantsParJour(jour, 4, type);
+        return Math.abs(joursRestants) < Math.abs(min) ? joursRestants : min;
+    }, Number.MAX_SAFE_INTEGER);
+};
+
 const verifierAlerteDebut = (frequenceObj) => {
     if (typeof frequenceObj === "string") return { doitAlerter: false };
 
@@ -1210,6 +1299,7 @@ const verifierAlerteDebut = (frequenceObj) => {
 
     switch (frequenceObj.type) {
         case "Ponctuel":
+            if (!frequenceObj.debut) return { doitAlerter: false };
             joursRestants = calculerJoursRestants(frequenceObj.debut);
             doitAlerter = joursRestants >= -7 && joursRestants <= 7;
             break;
@@ -1219,27 +1309,18 @@ const verifierAlerteDebut = (frequenceObj) => {
                 frequenceObj.mode === "dateHeure" &&
                 frequenceObj.dateHeure?.blocs
             ) {
-                let minJours = Number.MAX_SAFE_INTEGER;
-                frequenceObj.dateHeure.blocs.forEach((bloc) => {
-                    const jours = calculerJoursRestants(bloc.debut);
-                    if (Math.abs(jours) < Math.abs(minJours)) {
-                        minJours = jours;
-                    }
-                });
-                joursRestants = minJours;
-                doitAlerter = joursRestants >= -7 && joursRestants <= 7;
+                const joursList = frequenceObj.dateHeure.blocs.map(
+                    (bloc) => bloc.debut
+                );
+                joursRestants = getJoursRestantsLePlusProche(joursList);
+                doitAlerter = joursRestants >= -4 && joursRestants <= 4;
             } else if (
                 frequenceObj.mode === "joursHeure" &&
-                frequenceObj.joursHeure
+                frequenceObj.joursHeure?.jours
             ) {
-                let minJours = Number.MAX_SAFE_INTEGER;
-                frequenceObj.joursHeure.jours.forEach((jour) => {
-                    const jours = calculerJoursRestantsParJour(jour);
-                    if (Math.abs(jours) < Math.abs(minJours)) {
-                        minJours = jours;
-                    }
-                });
-                joursRestants = minJours;
+                joursRestants = getJoursRestantsLePlusProche(
+                    frequenceObj.joursHeure.jours
+                );
                 doitAlerter = joursRestants >= -4 && joursRestants <= 4;
             }
             break;
@@ -1251,39 +1332,37 @@ const verifierAlerteDebut = (frequenceObj) => {
         case "Semestriel":
         case "Annuel":
             const plagesAlerte = {
-                Mensuel: 5, // ±5 jours
-                Bimestriel: 7, // ±7 jours
-                Trimestriel: 10, // ±10 jours
-                Quadrimestriel: 10, // ±10 jours
-                Semestriel: 14, // ±14 jours
-                Annuel: 21, // ±21 jours
+                Mensuel: 5,
+                Bimestriel: 7,
+                Trimestriel: 10,
+                Quadrimestriel: 10,
+                Semestriel: 14,
+                Annuel: 21,
             };
+            const plage = plagesAlerte[frequenceObj.type] || 7;
 
-            if (frequenceObj.mode === "dateHeure" && frequenceObj.dateHeure) {
+            if (
+                frequenceObj.mode === "dateHeure" &&
+                frequenceObj.dateHeure?.debut
+            ) {
                 joursRestants = calculerJoursRestants(
                     frequenceObj.dateHeure.debut
                 );
-                const plage = plagesAlerte[frequenceObj.type] || 7;
                 doitAlerter = joursRestants >= -plage && joursRestants <= plage;
             } else if (
                 frequenceObj.mode === "joursHeure" &&
-                frequenceObj.joursHeure
+                frequenceObj.joursHeure?.jours
             ) {
-                let minJours = Number.MAX_SAFE_INTEGER;
-                frequenceObj.joursHeure.jours.forEach((jour) => {
-                    const jours = calculerJoursRestantsParJour(
-                        jour,
-                        4,
-                        frequenceObj.type
-                    );
-                    if (Math.abs(jours) < Math.abs(minJours)) {
-                        minJours = jours;
-                    }
-                });
-                joursRestants = minJours;
-                const plage = plagesAlerte[frequenceObj.type] || 7;
+                joursRestants = getJoursRestantsLePlusProche(
+                    frequenceObj.joursHeure.jours,
+                    frequenceObj.type
+                );
                 doitAlerter = joursRestants >= -plage && joursRestants <= plage;
             }
+            break;
+
+        default:
+            doitAlerter = false;
             break;
     }
 
@@ -1296,11 +1375,24 @@ const verifierAlerteSuivis = (frequenceObj) => {
     let doitAlerter = false;
     let joursRestants = 0;
 
+    const plagesAlerte = {
+        Ponctuel: 4,
+        Hebdomadaire: 2,
+        Mensuel: 3,
+        Bimestriel: 5,
+        Trimestriel: 7,
+        Quadrimestriel: 7,
+        Semestriel: 10,
+        Annuel: 14,
+    };
+
+    const plage = plagesAlerte[frequenceObj.type] || 7;
+
     switch (frequenceObj.type) {
         case "Ponctuel":
             if (frequenceObj.suivis?.length > 0) {
                 joursRestants = calculerJoursRestants(frequenceObj.suivis[0]);
-                doitAlerter = joursRestants >= -4 && joursRestants <= 4;
+                doitAlerter = Math.abs(joursRestants) <= plage;
             }
             break;
 
@@ -1312,22 +1404,15 @@ const verifierAlerteSuivis = (frequenceObj) => {
                 joursRestants = calculerJoursRestants(
                     frequenceObj.dateHeure.suivis[0]
                 );
-                doitAlerter = joursRestants >= -4 && joursRestants <= 4;
+                doitAlerter = Math.abs(joursRestants) <= plage;
             } else if (
                 frequenceObj.mode === "joursHeure" &&
                 frequenceObj.joursHeure?.suivis?.length > 0
             ) {
-                const premierSuivi = frequenceObj.joursHeure.suivis[0];
-                if (premierSuivi.jours?.length > 0) {
-                    let minJours = Number.MAX_SAFE_INTEGER;
-                    premierSuivi.jours.forEach((jour) => {
-                        const jours = calculerJoursRestantsParJour(jour, 2);
-                        if (Math.abs(jours) < Math.abs(minJours)) {
-                            minJours = jours;
-                        }
-                    });
-                    joursRestants = minJours;
-                    doitAlerter = joursRestants >= -2 && joursRestants <= 2;
+                const jours = frequenceObj.joursHeure.suivis[0]?.jours || [];
+                if (jours.length > 0) {
+                    joursRestants = getJoursRestantsLePlusProche(jours);
+                    doitAlerter = Math.abs(joursRestants) <= plage;
                 }
             }
             break;
@@ -1345,47 +1430,18 @@ const verifierAlerteSuivis = (frequenceObj) => {
                 joursRestants = calculerJoursRestants(
                     frequenceObj.dateHeure.suivis[0]
                 );
-                // Plages d'alerte selon le type
-                const plagesAlerte = {
-                    Mensuel: 3, // ±3 jours
-                    Bimestriel: 5, // ±5 jours
-                    Trimestriel: 7, // ±7 jours
-                    Quadrimestriel: 7, // ±7 jours
-                    Semestriel: 10, // ±10 jours
-                    Annuel: 14, // ±14 jours
-                };
-                const plage = plagesAlerte[frequenceObj.type] || 7;
-                doitAlerter = joursRestants >= -plage && joursRestants <= plage;
+                doitAlerter = Math.abs(joursRestants) <= plage;
             } else if (
                 frequenceObj.mode === "joursHeure" &&
                 frequenceObj.joursHeure?.suivis?.length > 0
             ) {
-                const premierSuivi = frequenceObj.joursHeure.suivis[0];
-                if (premierSuivi.jours?.length > 0) {
-                    let minJours = Number.MAX_SAFE_INTEGER;
-                    premierSuivi.jours.forEach((jour) => {
-                        const jours = calculerJoursRestantsParJour(
-                            jour,
-                            2,
-                            frequenceObj.type
-                        );
-                        if (Math.abs(jours) < Math.abs(minJours)) {
-                            minJours = jours;
-                        }
-                    });
-                    joursRestants = minJours;
-                    // Même plages d'alerte que ci-dessus
-                    const plagesAlerte = {
-                        Mensuel: 3,
-                        Bimestriel: 5,
-                        Trimestriel: 7,
-                        Quadrimestriel: 7,
-                        Semestriel: 10,
-                        Annuel: 14,
-                    };
-                    const plage = plagesAlerte[frequenceObj.type] || 7;
-                    doitAlerter =
-                        joursRestants >= -plage && joursRestants <= plage;
+                const jours = frequenceObj.joursHeure.suivis[0]?.jours || [];
+                if (jours.length > 0) {
+                    joursRestants = getJoursRestantsLePlusProche(
+                        jours,
+                        frequenceObj.type
+                    );
+                    doitAlerter = Math.abs(joursRestants) <= plage;
                 }
             }
             break;
@@ -1417,9 +1473,7 @@ watch(emailNotification, (newValue) => {
 onMounted(async () => {
     if (userId.value) {
         isInitialLoad.value = true;
-        // Charger les données et vérifier les alertes seulement au chargement initial
-        await fetchAllData(true);
-        await fetchFilteredData();
+        await fetchAllData(true); // Charger les données et vérifier les alertes
     } else {
         console.error("Utilisateur non connecté");
     }

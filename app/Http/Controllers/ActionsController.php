@@ -687,65 +687,68 @@ class ActionsController extends Controller
     }
 
     public function notifications(Request $request)
-    {
-        $filterEnCours = $request->query('filter_en_cours', 'all');
-        $filterEnRetard = $request->query('filter_en_retard', 'all');
-        $perPage = $request->query('per_page', 10);
-        $pageEnCours = $request->query('page_en_cours', 1);
-        $pageEnRetard = $request->query('page_en_retard', 1);
-        $userId = $request->query('user_id'); // Récupérer l'userId depuis la requête
+{
+    $filterEnCours = $request->query('filter_en_cours', 'all');
+    $filterEnRetard = $request->query('filter_en_retard', 'all');
+    $perPage = $request->query('per_page', 10);
+    $pageEnCours = $request->query('page_en_cours', 1);
+    $pageEnRetard = $request->query('page_en_retard', 1);
+    $userId = $request->query('user_id');
+    $withPagination = $request->query('with_pagination', 'true') === 'true'; // Nouveau paramètre
 
-        // Query pour "En cours"
-        $queryEnCours = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
+    // Query pour "En cours"
+    $queryEnCours = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
         ->join('users', 'actions.users_id', '=', 'users.id')
         ->where('actions.statut', 'En cours');
 
-        // Query pour "En retard"
-        $queryEnRetard = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
+    // Query pour "En retard"
+    $queryEnRetard = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
         ->join('users', 'actions.users_id', '=', 'users.id')
         ->where('actions.statut', 'En retard');
 
-        // Filtrer par userId si disponible
-        if ($userId) {
-            $queryEnCours->where('actions.users_id', $userId);
-            $queryEnRetard->where('actions.users_id', $userId);
-        }
+    // Filtrer par userId si disponible
+    if ($userId) {
+        $queryEnCours->where('actions.users_id', $userId);
+        $queryEnRetard->where('actions.users_id', $userId);
+    }
 
-        // Sélection des colonnes
-        $queryEnCours->select(
-            'actions.id',
-            'actions.num_actions',
-            'actions.description',
-            'actions.frequence',
-            'actions.statut',
-            'sources.libelle as source_libelle',
-            'users.id as users_id'
-         )->orderBy('actions.id', 'desc');
+    // Sélection des colonnes
+    $queryEnCours->select(
+        'actions.id',
+        'actions.num_actions',
+        'actions.description',
+        'actions.frequence',
+        'actions.statut',
+        'sources.libelle as source_libelle',
+        'users.id as users_id'
+    )->orderBy('actions.id', 'desc');
 
-        $queryEnRetard->select(
-            'actions.id',
-            'actions.num_actions',
-            'actions.description',
-            'actions.frequence',
-            'actions.statut',
-            'sources.libelle as source_libelle',
-            'users.id as users_id'
-         )->orderBy('actions.id', 'desc');
+    $queryEnRetard->select(
+        'actions.id',
+        'actions.num_actions',
+        'actions.description',
+        'actions.frequence',
+        'actions.statut',
+        'sources.libelle as source_libelle',
+        'users.id as users_id'
+    )->orderBy('actions.id', 'desc');
 
-        // Appliquer les filtres
-        if ($filterEnCours === 'AI') {
-            $queryEnCours->where('actions.num_actions', 'like', 'AI-%');
-        } elseif ($filterEnCours === 'PTA') {
-            $queryEnCours->where('actions.num_actions', 'like', 'PTA-%');
-        }
+    // Appliquer les filtres
+    if ($filterEnCours === 'AI') {
+        $queryEnCours->where('actions.num_actions', 'like', 'AI-%');
+    } elseif ($filterEnCours === 'PTA') {
+        $queryEnCours->where('actions.num_actions', 'like', 'PTA-%');
+    }
 
-        if ($filterEnRetard === 'AI') {
-            $queryEnRetard->where('actions.num_actions', 'like', 'AI-%');
-        } elseif ($filterEnRetard === 'PTA') {
-            $queryEnRetard->where('actions.num_actions', 'like', 'PTA-%');
-        }
+    if ($filterEnRetard === 'AI') {
+        $queryEnRetard->where('actions.num_actions', 'like', 'AI-%');
+    } elseif ($filterEnRetard === 'PTA') {
+        $queryEnRetard->where('actions.num_actions', 'like', 'PTA-%');
+    }
 
-        // Paginer les résultats
+    // Condition pour pagination ou récupération complète
+    if ($withPagination) {
+        // Avec pagination
         $totalEnCours = $queryEnCours->paginate($perPage, ['*'], 'page_en_cours', $pageEnCours);
         $totalEnRetard = $queryEnRetard->paginate($perPage, ['*'], 'page_en_retard', $pageEnRetard);
 
@@ -762,71 +765,28 @@ class ActionsController extends Controller
                 'last_page' => $totalEnRetard->lastPage(),
                 'current_page' => $totalEnRetard->currentPage(),
             ],
+            'with_pagination' => true,
         ]);
-    }
-
-    public function getAllNotifications(Request $request)
-    {
-        $filterEnCours = $request->query('filter_en_cours', 'all');
-        $filterEnRetard = $request->query('filter_en_retard', 'all');
-        $userId = $request->query('user_id');
-
-        // Query pour "En cours" sans pagination
-        $queryEnCours = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
-            ->join('users', 'actions.users_id', '=', 'users.id')
-            ->where('actions.statut', 'En cours');
-
-        // Query pour "En retard" sans pagination
-        $queryEnRetard = Actions::join('sources', 'actions.sources_id', '=', 'sources.id')
-            ->join('users', 'actions.users_id', '=', 'users.id')
-            ->where('actions.statut', 'En retard');
-
-        if ($userId) {
-            $queryEnCours->where('actions.users_id', $userId);
-            $queryEnRetard->where('actions.users_id', $userId);
-        }
-
-        // Sélection des colonnes
-        $queryEnCours->select(
-            'actions.id',
-            'actions.num_actions',
-            'actions.description',
-            'actions.frequence',
-            'actions.statut',
-            'sources.libelle as source_libelle',
-            'users.id as users_id'
-        )->orderBy('actions.id', 'desc');
-
-        $queryEnRetard->select(
-            'actions.id',
-            'actions.num_actions',
-            'actions.description',
-            'actions.frequence',
-            'actions.statut',
-            'sources.libelle as source_libelle',
-            'users.id as users_id'
-        )->orderBy('actions.id', 'desc');
-
-        // Appliquer les filtres
-        if ($filterEnCours === 'AI') {
-            $queryEnCours->where('actions.num_actions', 'like', 'AI-%');
-        } elseif ($filterEnCours === 'PTA') {
-            $queryEnCours->where('actions.num_actions', 'like', 'PTA-%');
-        }
-
-        if ($filterEnRetard === 'AI') {
-            $queryEnRetard->where('actions.num_actions', 'like', 'AI-%');
-        } elseif ($filterEnRetard === 'PTA') {
-            $queryEnRetard->where('actions.num_actions', 'like', 'PTA-%');
-        }
-
-        // Récupérer toutes les données sans pagination
+    } else {
+        // Sans pagination - toutes les données
         $enCours = $queryEnCours->get();
         $enRetard = $queryEnRetard->get();
 
         return response()->json([
-            'en_cours' => $enCours,
-            'en_retard' => $enRetard
+            'en_cours' => [
+                'data' => $enCours,
+                'total' => $enCours->count(),
+                'last_page' => 1,
+                'current_page' => 1,
+            ],
+            'en_retard' => [
+                'data' => $enRetard,
+                'total' => $enRetard->count(),
+                'last_page' => 1,
+                'current_page' => 1,
+            ],
+            'with_pagination' => false,
         ]);
     }
+}
 }
