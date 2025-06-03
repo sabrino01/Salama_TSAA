@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EmailSuivi;
+use App\Models\Responsable;
+use App\Models\Suivi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ActionsSuiviController extends Controller
 {
-     public function indexSuiviAI(Request $request)
+    public function indexSuiviAI(Request $request)
     {
         $search = $request->query('search', '');
         $perPage = $request->query('per_page', 10); // affichage 10 résultats par page
@@ -27,13 +31,13 @@ class ActionsSuiviController extends Controller
             ->when($search, function ($query, $search) {
                 return $query->where(function ($q) use ($search) {
                     $q->where('actions.num_actions', 'like', "%{$search}%")
-                    ->orWhere('actions.date', 'like', "%{$search}%")
-                    ->orWhere('actions.frequence', 'like', "%{$search}%")
-                    ->orWhere('actions.description', 'like', "%{$search}%")
-                    ->orWhere('sources.libelle', 'like', "%{$search}%")
-                    ->orWhere('type_actions.libelle', 'like', "%{$search}%")
-                    ->orWhere('constats.libelle', 'like', "%{$search}%")
-                    ->orWhere('users.nom_utilisateur', 'like', "%{$search}%");
+                        ->orWhere('actions.date', 'like', "%{$search}%")
+                        ->orWhere('actions.frequence', 'like', "%{$search}%")
+                        ->orWhere('actions.description', 'like', "%{$search}%")
+                        ->orWhere('sources.libelle', 'like', "%{$search}%")
+                        ->orWhere('type_actions.libelle', 'like', "%{$search}%")
+                        ->orWhere('constats.libelle', 'like', "%{$search}%")
+                        ->orWhere('users.nom_utilisateur', 'like', "%{$search}%");
                 });
             })
             ->select(
@@ -72,13 +76,13 @@ class ActionsSuiviController extends Controller
             ->when($search, function ($query, $search) {
                 return $query->where(function ($q) use ($search) {
                     $q->where('actions.num_actions', 'like', "%{$search}%")
-                    ->orWhere('actions.date', 'like', "%{$search}%")
-                    ->orWhere('actions.frequence', 'like', "%{$search}%")
-                    ->orWhere('actions.description', 'like', "%{$search}%")
-                    ->orWhere('sources.libelle', 'like', "%{$search}%")
-                    ->orWhere('type_actions.libelle', 'like', "%{$search}%")
-                    ->orWhere('constats.libelle', 'like', "%{$search}%")
-                    ->orWhere('users.nom_utilisateur', 'like', "%{$search}%");
+                        ->orWhere('actions.date', 'like', "%{$search}%")
+                        ->orWhere('actions.frequence', 'like', "%{$search}%")
+                        ->orWhere('actions.description', 'like', "%{$search}%")
+                        ->orWhere('sources.libelle', 'like', "%{$search}%")
+                        ->orWhere('type_actions.libelle', 'like', "%{$search}%")
+                        ->orWhere('constats.libelle', 'like', "%{$search}%")
+                        ->orWhere('users.nom_utilisateur', 'like', "%{$search}%");
                 });
             })
             ->select(
@@ -97,7 +101,7 @@ class ActionsSuiviController extends Controller
         return response()->json($actionsSuivisPTA);
     }
 
-     public function showSuivi(Request $request, $id)
+    public function showSuivi(Request $request, $id)
     {
         $suiviId = $request->query('suivi_id'); // ID du suivis connecté
 
@@ -130,6 +134,24 @@ class ActionsSuiviController extends Controller
                 'message' => 'Action non trouvée ou accès non autorisé'
             ], 404);
         }
+
+        // Traitement des champs multiples : responsables_id et suivis_id
+        $responsablesLibelle = null;
+        $suivisLibelle = null;
+
+        if ($actionSuivi->responsables_id) {
+            $responsablesIds = explode(',', $actionSuivi->responsables_id);
+            $responsablesLibelle = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
+        }
+
+        if ($actionSuivi->suivis_id ?? false) {
+            $suivisIds = explode(',', $actionSuivi->suivis_id);
+            $suivisLibelle = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
+        }
+
+        // Ajout des champs traités à la réponse
+        $actionSuivi->responsable_libelle = $responsablesLibelle;
+        $actionSuivi->suivi_nom = $suivisLibelle;
 
         return response()->json($actionSuivi);
     }
@@ -168,6 +190,24 @@ class ActionsSuiviController extends Controller
             ], 404);
         }
 
+        // Traitement des champs multiples : responsables_id et suivis_id
+        $responsablesLibelle = null;
+        $suivisLibelle = null;
+
+        if ($actionSuivi->responsables_id) {
+            $responsablesIds = explode(',', $actionSuivi->responsables_id);
+            $responsablesLibelle = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
+        }
+
+        if ($actionSuivi->suivis_id ?? false) {
+            $suivisIds = explode(',', $actionSuivi->suivis_id);
+            $suivisLibelle = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
+        }
+
+        // Ajout des champs traités à la réponse
+        $actionSuivi->responsable_libelle = $responsablesLibelle;
+        $actionSuivi->suivi_nom = $suivisLibelle;
+
         return response()->json($actionSuivi);
     }
 
@@ -190,25 +230,34 @@ class ActionsSuiviController extends Controller
         }
 
         try {
-            // Vérifier que l'action existe et que le suivi y a accès
-            $actionExists = DB::table('actions_suivis')
+            // Récupérer les informations de l'action et vérifier l'accès
+            $actionInfo = DB::table('actions_suivis')
                 ->join('actions', 'actions_suivis.actions_id', '=', 'actions.id')
+                ->join('users', 'actions.users_id', '=', 'users.id')
+                ->join('suivis', 'actions_suivis.suivis_id', '=', 'suivis.id')
                 ->where('actions.id', $id)
                 ->where('actions.num_actions', 'like', 'AI-%')
                 ->where('actions_suivis.suivis_id', $suiviId)
-                ->exists();
+                ->select(
+                    'actions.id as action_id',
+                    'actions.num_actions',
+                    'actions.description as action_libelle',
+                    'suivis.nom as suivi_libelle',
+                    'suivis.email as suivi_email',
+                    'users.email as user_email'
+                )
+                ->first();
 
-            if (!$actionExists) {
+            if (!$actionInfo) {
                 return response()->json([
                     'message' => 'Action non trouvée ou accès non autorisé'
                 ], 404);
             }
 
             // Mettre à jour les données dans actions_suivis
-            // CORRECTION : Filtrer par actions_id ET suivis_id
             $updated = DB::table('actions_suivis')
                 ->where('actions_id', $id)
-                ->where('suivis_id', $suiviId) // AJOUT de cette condition
+                ->where('suivis_id', $suiviId)
                 ->update([
                     'statut_suivi' => $request->statut_suivi,
                     'observation_suivi' => $request->observation_suivi,
@@ -216,9 +265,32 @@ class ActionsSuiviController extends Controller
                 ]);
 
             if ($updated) {
-                return response()->json([
-                    'message' => 'Suivi mise à jour avec succès'
-                ]);
+                // Récupérer l'ID de l'utilisateur lié à ce suivi
+                $suiviUser = DB::table('users')
+                    ->where('suivis_id', $suiviId)
+                    ->select('id')
+                    ->first();
+
+                // Envoyer l'email via le service
+                $emailService = new EmailSuivi();
+                $emailEnvoye = $emailService->envoyerNotificationMiseAJourSuivi(
+                    $actionInfo,
+                    $request->statut_suivi,
+                    $request->observation_suivi,
+                    $suiviUser ? $suiviUser->id : null
+                );
+
+                $message = 'Suivi mise à jour avec succès';
+                $response = ['message' => $message];
+
+                if (!$emailEnvoye) {
+                    $response['warning'] = 'Email de notification non envoyé';
+                } else {
+                    $response['message'] .= ' et notification envoyée';
+                }
+
+                return response()->json($response);
+
             } else {
                 return response()->json([
                     'message' => 'Aucune modification effectuée'
@@ -251,25 +323,34 @@ class ActionsSuiviController extends Controller
         }
 
         try {
-            // Vérifier que l'action existe et que le suivi y a accès
-            $actionExists = DB::table('actions_suivis')
+            // Récupérer les informations de l'action et vérifier l'accès
+            $actionInfo = DB::table('actions_suivis')
                 ->join('actions', 'actions_suivis.actions_id', '=', 'actions.id')
+                ->join('users', 'actions.users_id', '=', 'users.id')
+                ->join('suivis', 'actions_suivis.suivis_id', '=', 'suivis.id')
                 ->where('actions.id', $id)
                 ->where('actions.num_actions', 'like', 'PTA-%')
                 ->where('actions_suivis.suivis_id', $suiviId)
-                ->exists();
+                ->select(
+                    'actions.id as action_id',
+                    'actions.num_actions',
+                    'actions.description as action_libelle',
+                    'suivis.nom as suivi_libelle',
+                    'suivis.email as suivi_email',
+                    'users.email as user_email'
+                )
+                ->first();
 
-            if (!$actionExists) {
+            if (!$actionInfo) {
                 return response()->json([
                     'message' => 'Action non trouvée ou accès non autorisé'
                 ], 404);
             }
 
             // Mettre à jour les données dans actions_suivis
-            // CORRECTION : Filtrer par actions_id ET suivis_id
             $updated = DB::table('actions_suivis')
                 ->where('actions_id', $id)
-                ->where('suivis_id', $suiviId) // AJOUT de cette condition
+                ->where('suivis_id', $suiviId)
                 ->update([
                     'statut_suivi' => $request->statut_suivi,
                     'observation_suivi' => $request->observation_suivi,
@@ -277,9 +358,32 @@ class ActionsSuiviController extends Controller
                 ]);
 
             if ($updated) {
-                return response()->json([
-                    'message' => 'Suivi mise à jour avec succès'
-                ]);
+                // Récupérer l'ID de l'utilisateur lié à ce suivi
+                $suiviUser = DB::table('users')
+                    ->where('suivis_id', $suiviId)
+                    ->select('id')
+                    ->first();
+
+                // Envoyer l'email via le service
+                $emailService = new EmailSuivi();
+                $emailEnvoye = $emailService->envoyerNotificationMiseAJourSuivi(
+                    $actionInfo,
+                    $request->statut_suivi,
+                    $request->observation_suivi,
+                    $suiviUser ? $suiviUser->id : null
+                );
+
+                $message = 'Suivi mise à jour avec succès';
+                $response = ['message' => $message];
+
+                if (!$emailEnvoye) {
+                    $response['warning'] = 'Email de notification non envoyé';
+                } else {
+                    $response['message'] .= ' et notification envoyée';
+                }
+
+                return response()->json($response);
+
             } else {
                 return response()->json([
                     'message' => 'Aucune modification effectuée'

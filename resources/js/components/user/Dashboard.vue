@@ -316,7 +316,7 @@
                                         ) in resultatsRechercheAI"
                                         :key="index"
                                     >
-                                        <td>{{ resultat.code }}</td>
+                                        <td>{{ resultat.libelle }}</td>
                                         <td>{{ resultat.nombre }}</td>
                                         <td>
                                             {{
@@ -620,7 +620,7 @@
                                         ) in resultatsRecherchePTA"
                                         :key="index"
                                     >
-                                        <td>{{ resultat.code }}</td>
+                                        <td>{{ resultat.libelle }}</td>
                                         <td>{{ resultat.nombre }}</td>
                                         <td>
                                             {{
@@ -872,7 +872,7 @@ const chartDataAI = computed(() => {
     }
 
     return {
-        labels: resultatsRechercheAI.value.map((r) => r.code),
+        labels: resultatsRechercheAI.value.map((r) => r.libelle),
         datasets: [
             {
                 label: "Constats AI",
@@ -953,7 +953,7 @@ const chartDataPTA = computed(() => {
     }
 
     return {
-        labels: resultatsRecherchePTA.value.map((r) => r.code),
+        labels: resultatsRecherchePTA.value.map((r) => r.libelle),
         datasets: [
             {
                 label: "Constats PTA",

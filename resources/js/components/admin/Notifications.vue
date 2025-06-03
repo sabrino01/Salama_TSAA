@@ -790,15 +790,14 @@ const handleEmailToggle = async () => {
                 true,
                 userId.value
             );
-
             if (!result.success) {
                 throw new Error(result.message);
             }
 
-            // IMPORTANT : Vérifier toutes les alertes avant d'essayer de les envoyer
+            // Vérifier toutes les alertes avant d'essayer de les envoyer
             verifierToutesAlertesForEmail();
 
-            // Envoyer les alertes en attente si il y en a
+            // Envoyer les alertes en attente
             if (alertQueue.value.length > 0) {
                 let successCount = 0;
                 let errorCount = 0;
@@ -821,91 +820,22 @@ const handleEmailToggle = async () => {
                             userId.value
                         );
 
-                        // DEBUG: Log complet de la réponse
-                        console.log(
-                            "DEBUG - Réponse complète sendAlert:",
-                            alertResult
-                        );
-
                         if (alertResult.success) {
                             successCount++;
-
-                            // DEBUG: Détails sur les responsables
-                            if (alertResult.details) {
-                                console.log(
-                                    "DEBUG - Détails de l'envoi:",
-                                    alertResult.details
-                                );
-
-                                if (alertResult.details.responsables) {
-                                    const respData =
-                                        alertResult.details.responsables;
-                                    console.log(
-                                        "DEBUG - Données responsables:",
-                                        {
-                                            success_count:
-                                                respData.success_count,
-                                            error_count: respData.error_count,
-                                            message: respData.message,
-                                            debug_info: respData.debug_info,
-                                        }
-                                    );
-
-                                    // DEBUG: Emails envoyés (si disponible)
-                                    if (
-                                        respData.debug_info &&
-                                        respData.debug_info.sent_emails
-                                    ) {
-                                        console.log(
-                                            "DEBUG - Emails responsables envoyés:",
-                                            respData.debug_info.sent_emails
-                                        );
-                                    }
-
-                                    totalResponsablesNotified +=
-                                        respData.success_count;
-
-                                    // Log des erreurs responsables si il y en a
-                                    if (respData.error_count > 0) {
-                                        console.warn(
-                                            `DEBUG - Erreurs responsables pour alerte ${alert.type}:`,
-                                            respData.errors
-                                        );
-                                    }
-                                } else {
-                                    console.log(
-                                        "DEBUG - Pas de données responsables dans la réponse"
-                                    );
-                                }
-                            } else {
-                                console.log(
-                                    "DEBUG - Pas de détails dans la réponse"
-                                );
+                            if (alertResult.details?.responsables) {
+                                totalResponsablesNotified +=
+                                    alertResult.details.responsables
+                                        .success_count;
                             }
                         } else {
                             errorCount++;
-                            console.error(
-                                `DEBUG - Erreur envoi alerte ${alert.type}:`,
-                                alertResult.message
-                            );
                         }
                     } catch (alertError) {
-                        console.error(
-                            "DEBUG - Exception envoi alerte:",
-                            alertError
-                        );
                         errorCount++;
                     }
                 }
 
-                // DEBUG: Résumé final
-                console.log("DEBUG - Résumé final:", {
-                    successCount,
-                    errorCount,
-                    totalResponsablesNotified,
-                });
-
-                // Messages de succès détaillés
+                // Messages de résultat
                 if (successCount > 0) {
                     let message = `${successCount} alerte(s) envoyée(s) par email`;
                     if (totalResponsablesNotified > 0) {
@@ -918,18 +848,14 @@ const handleEmailToggle = async () => {
                         `${errorCount} alerte(s) n'ont pas pu être envoyées`
                     );
                 }
-
-                // Message informatif si des responsables ont été notifiés
                 if (totalResponsablesNotified > 0) {
-                    toast.info(
-                        `Les responsables désignés ont été automatiquement notifiés`,
+                    toast.success(
+                        "Les responsables désignés ont été automatiquement notifiés",
                         { duration: 4000 }
                     );
                 }
             } else {
-                // Email de confirmation pour les users
-                console.log("DEBUG - Envoi email de test");
-
+                // Email de confirmation
                 const testResult = await emailService.sendAlert(
                     {
                         sujet: "Notifications par email activées",
@@ -941,35 +867,16 @@ const handleEmailToggle = async () => {
                     userId.value
                 );
 
-                // DEBUG: Résultat du test
-                console.log("DEBUG - Résultat email de test:", testResult);
-
                 let confirmationMessage =
                     "Notifications activées ! Un email de confirmation a été envoyé.";
 
-                // Vérifier si des responsables ont aussi reçu l'email de test
-                if (
-                    testResult.success &&
-                    testResult.details &&
-                    testResult.details.responsables
-                ) {
+                if (testResult.success && testResult.details?.responsables) {
                     const responsablesCount =
                         testResult.details.responsables.success_count;
-                    console.log("DEBUG - Responsables notifiés lors du test:", {
-                        count: responsablesCount,
-                        details: testResult.details.responsables,
-                    });
-
                     if (responsablesCount > 0) {
                         confirmationMessage += ` Vos responsables (${responsablesCount}) ont aussi été notifiés.`;
                     }
-
-                    // Avertir s'il y a eu des erreurs avec les responsables
                     if (testResult.details.responsables.error_count > 0) {
-                        console.warn(
-                            "DEBUG - Erreurs envoi responsables:",
-                            testResult.details.responsables.errors
-                        );
                         toast.error(
                             `Attention: ${testResult.details.responsables.error_count} responsable(s) n'ont pas pu être notifiés`
                         );
@@ -984,11 +891,9 @@ const handleEmailToggle = async () => {
                 false,
                 userId.value
             );
-
             if (!result.success) {
                 throw new Error(result.message);
             }
-
             toast.success("Notifications par email désactivées");
         }
 
@@ -997,10 +902,6 @@ const handleEmailToggle = async () => {
             emailNotification.value.toString()
         );
     } catch (error) {
-        console.error(
-            "DEBUG - Erreur lors du toggle des notifications:",
-            error
-        );
         toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
         emailNotification.value = !emailNotification.value;
     }

@@ -647,20 +647,27 @@ const userId = computed(() => user.value?.id);
 const handleEmailToggle = async () => {
     try {
         if (emailNotification.value) {
-            // Pas de vérification de configuration pour les users
+            // Vérifier si la configuration existe
+            if (!emailConfig.value.host || !emailConfig.value.username) {
+                showEmailConfig.value = true;
+                activeTab.value = "serveur";
+                emailNotification.value = false;
+                return;
+            }
+
             // Activer les notifications
             const result = await emailService.toggleNotifications(
                 true,
                 userId.value
             );
-
             if (!result.success) {
                 throw new Error(result.message);
             }
 
-            // Vérifier et envoyer les alertes
+            // Vérifier toutes les alertes avant d'essayer de les envoyer
             verifierToutesAlertesForEmail();
 
+            // Envoyer les alertes en attente
             if (alertQueue.value.length > 0) {
                 let successCount = 0;
                 let errorCount = 0;
@@ -685,41 +692,20 @@ const handleEmailToggle = async () => {
 
                         if (alertResult.success) {
                             successCount++;
-                            // Compter les responsables notifiés pour cette alerte
-                            if (
-                                alertResult.details &&
-                                alertResult.details.responsables
-                            ) {
+                            if (alertResult.details?.responsables) {
                                 totalResponsablesNotified +=
                                     alertResult.details.responsables
                                         .success_count;
-
-                                // Log des erreurs responsables si il y en a
-                                if (
-                                    alertResult.details.responsables
-                                        .error_count > 0
-                                ) {
-                                    console.warn(
-                                        `Erreurs envoi responsables pour alerte ${alert.type}:`,
-                                        alertResult.details.responsables.errors
-                                    );
-                                }
                             }
                         } else {
                             errorCount++;
-                            // Log de l'erreur principale
-                            console.error(
-                                `Erreur envoi alerte ${alert.type}:`,
-                                alertResult.message
-                            );
                         }
                     } catch (alertError) {
-                        console.error("Erreur envoi alerte:", alertError);
                         errorCount++;
                     }
                 }
 
-                // Messages de succès détaillés
+                // Messages de résultat
                 if (successCount > 0) {
                     let message = `${successCount} alerte(s) envoyée(s) par email`;
                     if (totalResponsablesNotified > 0) {
@@ -732,16 +718,14 @@ const handleEmailToggle = async () => {
                         `${errorCount} alerte(s) n'ont pas pu être envoyées`
                     );
                 }
-
-                // Message informatif si des responsables ont été notifiés
                 if (totalResponsablesNotified > 0) {
-                    toast.info(
-                        `Les responsables désignés ont été automatiquement notifiés`,
+                    toast.success(
+                        "Les responsables désignés ont été automatiquement notifiés",
                         { duration: 4000 }
                     );
                 }
             } else {
-                // Email de confirmation pour les users
+                // Email de confirmation
                 const testResult = await emailService.sendAlert(
                     {
                         sujet: "Notifications par email activées",
@@ -756,25 +740,14 @@ const handleEmailToggle = async () => {
                 let confirmationMessage =
                     "Notifications activées ! Un email de confirmation a été envoyé.";
 
-                // Vérifier si des responsables ont aussi reçu l'email de test
-                if (
-                    testResult.success &&
-                    testResult.details &&
-                    testResult.details.responsables
-                ) {
+                if (testResult.success && testResult.details?.responsables) {
                     const responsablesCount =
                         testResult.details.responsables.success_count;
                     if (responsablesCount > 0) {
                         confirmationMessage += ` Vos responsables (${responsablesCount}) ont aussi été notifiés.`;
                     }
-
-                    // Avertir s'il y a eu des erreurs avec les responsables
                     if (testResult.details.responsables.error_count > 0) {
-                        console.warn(
-                            "Erreurs envoi responsables:",
-                            testResult.details.responsables.errors
-                        );
-                        toast.warning(
+                        toast.error(
                             `Attention: ${testResult.details.responsables.error_count} responsable(s) n'ont pas pu être notifiés`
                         );
                     }
@@ -788,11 +761,9 @@ const handleEmailToggle = async () => {
                 false,
                 userId.value
             );
-
             if (!result.success) {
                 throw new Error(result.message);
             }
-
             toast.success("Notifications par email désactivées");
         }
 
@@ -801,7 +772,6 @@ const handleEmailToggle = async () => {
             emailNotification.value.toString()
         );
     } catch (error) {
-        console.error("Erreur lors du toggle des notifications:", error);
         toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
         emailNotification.value = !emailNotification.value;
     }

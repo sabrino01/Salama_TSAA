@@ -77,20 +77,20 @@ class DashboardController extends Controller
 
         // Obtenir les résultats groupés par type de constat
         $resultats = $query->join('constats', 'actions.constats_id', '=', 'constats.id')
-            ->select('constats.code', DB::raw('count(*) as nombre'))
-            ->groupBy('constats.code')
+            ->select('constats.libelle', DB::raw('count(*) as nombre'))
+            ->groupBy('constats.libelle')
             ->get();
 
         // Calculer le total pour les pourcentages
         $total = $resultats->sum('nombre');
 
         // Calculer les pourcentages pour chaque type de constat
-        $statistiques = $resultats->map(function($item) use ($total) {
+        $statistiques = $resultats->map(function ($item) use ($total) {
             $pourcentage = $total > 0 ? ($item->nombre / $total) * 100 : 0;
 
             return [
-                'code' => $item->code,
-                'nombre' => (int)$item->nombre,
+                'libelle' => $item->libelle,
+                'nombre' => (int) $item->nombre,
                 'pourcentage' => $pourcentage
             ];
         });
@@ -165,20 +165,20 @@ class DashboardController extends Controller
 
         // Obtenir les résultats groupés par type de constat
         $resultats = $query->join('constats', 'actions.constats_id', '=', 'constats.id')
-            ->select('constats.code', DB::raw('count(*) as nombre'))
-            ->groupBy('constats.code')
+            ->select('constats.libelle', DB::raw('count(*) as nombre'))
+            ->groupBy('constats.libelle')
             ->get();
 
         // Calculer le total pour les pourcentages
         $total = $resultats->sum('nombre');
 
         // Calculer les pourcentages pour chaque type de constat
-        $statistiques = $resultats->map(function($item) use ($total) {
+        $statistiques = $resultats->map(function ($item) use ($total) {
             $pourcentage = $total > 0 ? ($item->nombre / $total) * 100 : 0;
 
             return [
-                'code' => $item->code,
-                'nombre' => (int)$item->nombre,
+                'libelle' => $item->libelle,
+                'nombre' => (int) $item->nombre,
                 'pourcentage' => $pourcentage
             ];
         });
@@ -199,23 +199,23 @@ class DashboardController extends Controller
         return response()->json($users);
     }
 
-     public function getStats(Request $request)
+    public function getStats(Request $request)
     {
         $prefix = $request->prefix ?? 'AI'; // AI par défaut
 
         $stats = [
             'en_cours' => Actions::where('statut', 'En cours')
-                                ->where('num_actions', 'like', $prefix . '-%')
-                                ->count(),
+                ->where('num_actions', 'like', $prefix . '-%')
+                ->count(),
             'en_retard' => Actions::where('statut', 'En retard')
-                                 ->where('num_actions', 'like', $prefix . '-%')
-                                 ->count(),
+                ->where('num_actions', 'like', $prefix . '-%')
+                ->count(),
             'cloture' => Actions::where('statut', 'Clôturé')
-                               ->where('num_actions', 'like', $prefix . '-%')
-                               ->count(),
+                ->where('num_actions', 'like', $prefix . '-%')
+                ->count(),
             'abandonne' => Actions::where('statut', 'Abandonné')
-                                 ->where('num_actions', 'like', $prefix . '-%')
-                                 ->count(),
+                ->where('num_actions', 'like', $prefix . '-%')
+                ->count(),
         ];
 
         return response()->json($stats);
@@ -227,7 +227,7 @@ class DashboardController extends Controller
 
         $query = Actions::where('statut', $statut)
             ->where('num_actions', 'like', 'AI-%')
-            ->select('id', 'description', 'num_actions', 'statut','users_id')
+            ->select('id', 'description', 'num_actions', 'statut', 'users_id')
             ->orderBy('id', 'desc');
 
         $actions = $query->get();
@@ -235,8 +235,8 @@ class DashboardController extends Controller
         return response()->json([
             'actions' => $actions,
             'total' => Actions::where('statut', $statut)
-                            ->where('num_actions', 'like', 'AI-%')
-                            ->count()
+                ->where('num_actions', 'like', 'AI-%')
+                ->count()
         ]);
     }
 
@@ -246,7 +246,7 @@ class DashboardController extends Controller
 
         $query = Actions::where('statut', $statut)
             ->where('num_actions', 'like', 'PTA-%')
-            ->select('id', 'description', 'num_actions', 'statut','users_id')
+            ->select('id', 'description', 'num_actions', 'statut', 'users_id')
             ->orderBy('id', 'desc');
 
         $actions = $query->get();
@@ -254,8 +254,8 @@ class DashboardController extends Controller
         return response()->json([
             'actions' => $actions,
             'total' => Actions::where('statut', $statut)
-                            ->where('num_actions', 'like', 'PTA-%')
-                            ->count()
+                ->where('num_actions', 'like', 'PTA-%')
+                ->count()
         ]);
     }
 

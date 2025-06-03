@@ -33,6 +33,8 @@ const action = ref({
     constat_libelle: "",
     source_libelle: "",
     type_action_libelle: "",
+    responsable_libelle: "",
+    suivi_nom: "",
     nom_utilisateur: "",
     date: "",
     mesure: "",

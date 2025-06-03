@@ -2,15 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EmailResponsable;
 use Illuminate\Http\Request;
-use App\Models\Actions;
-use App\Models\Actions_responsable;
 use App\Models\Responsable;
 use App\Models\Suivi;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class ActionsResponsableController extends Controller
 {
@@ -34,13 +30,13 @@ class ActionsResponsableController extends Controller
             ->when($search, function ($query, $search) {
                 return $query->where(function ($q) use ($search) {
                     $q->where('actions.num_actions', 'like', "%{$search}%")
-                    ->orWhere('actions.date', 'like', "%{$search}%")
-                    ->orWhere('actions.frequence', 'like', "%{$search}%")
-                    ->orWhere('actions.description', 'like', "%{$search}%")
-                    ->orWhere('sources.libelle', 'like', "%{$search}%")
-                    ->orWhere('type_actions.libelle', 'like', "%{$search}%")
-                    ->orWhere('constats.libelle', 'like', "%{$search}%")
-                    ->orWhere('users.nom_utilisateur', 'like', "%{$search}%");
+                        ->orWhere('actions.date', 'like', "%{$search}%")
+                        ->orWhere('actions.frequence', 'like', "%{$search}%")
+                        ->orWhere('actions.description', 'like', "%{$search}%")
+                        ->orWhere('sources.libelle', 'like', "%{$search}%")
+                        ->orWhere('type_actions.libelle', 'like', "%{$search}%")
+                        ->orWhere('constats.libelle', 'like', "%{$search}%")
+                        ->orWhere('users.nom_utilisateur', 'like', "%{$search}%");
                 });
             })
             ->select(
@@ -79,13 +75,13 @@ class ActionsResponsableController extends Controller
             ->when($search, function ($query, $search) {
                 return $query->where(function ($q) use ($search) {
                     $q->where('actions.num_actions', 'like', "%{$search}%")
-                    ->orWhere('actions.date', 'like', "%{$search}%")
-                    ->orWhere('actions.frequence', 'like', "%{$search}%")
-                    ->orWhere('actions.description', 'like', "%{$search}%")
-                    ->orWhere('sources.libelle', 'like', "%{$search}%")
-                    ->orWhere('type_actions.libelle', 'like', "%{$search}%")
-                    ->orWhere('constats.libelle', 'like', "%{$search}%")
-                    ->orWhere('users.nom_utilisateur', 'like', "%{$search}%");
+                        ->orWhere('actions.date', 'like', "%{$search}%")
+                        ->orWhere('actions.frequence', 'like', "%{$search}%")
+                        ->orWhere('actions.description', 'like', "%{$search}%")
+                        ->orWhere('sources.libelle', 'like', "%{$search}%")
+                        ->orWhere('type_actions.libelle', 'like', "%{$search}%")
+                        ->orWhere('constats.libelle', 'like', "%{$search}%")
+                        ->orWhere('users.nom_utilisateur', 'like', "%{$search}%");
                 });
             })
             ->select(
@@ -129,7 +125,7 @@ class ActionsResponsableController extends Controller
                 'users.nom_utilisateur as nom_utilisateur',
                 'constats.libelle as constat_libelle',
                 'sources.libelle as source_libelle',
-                'type_actions.libelle as type_action_libelle'
+                'type_actions.libelle as type_action_libelle',
             )
             ->first();
 
@@ -138,6 +134,24 @@ class ActionsResponsableController extends Controller
                 'message' => 'Action non trouvée ou accès non autorisé'
             ], 404);
         }
+
+        // Traitement des champs multiples : responsables_id et suivis_id
+        $responsablesLibelle = null;
+        $suivisLibelle = null;
+
+        if ($actionResponsable->responsables_id) {
+            $responsablesIds = explode(',', $actionResponsable->responsables_id);
+            $responsablesLibelle = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
+        }
+
+        if ($actionResponsable->suivis_id ?? false) {
+            $suivisIds = explode(',', $actionResponsable->suivis_id);
+            $suivisLibelle = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
+        }
+
+        // Ajout des champs traités à la réponse
+        $actionResponsable->responsable_libelle = $responsablesLibelle;
+        $actionResponsable->suivi_nom = $suivisLibelle;
 
         return response()->json($actionResponsable);
     }
@@ -176,6 +190,24 @@ class ActionsResponsableController extends Controller
             ], 404);
         }
 
+        // Traitement des champs multiples : responsables_id et suivis_id
+        $responsablesLibelle = null;
+        $suivisLibelle = null;
+
+        if ($actionResponsable->responsables_id) {
+            $responsablesIds = explode(',', $actionResponsable->responsables_id);
+            $responsablesLibelle = Responsable::whereIn('id', $responsablesIds)->pluck('libelle')->implode(', ');
+        }
+
+        if ($actionResponsable->suivis_id ?? false) {
+            $suivisIds = explode(',', $actionResponsable->suivis_id);
+            $suivisLibelle = Suivi::whereIn('id', $suivisIds)->pluck('nom')->implode(', ');
+        }
+
+        // Ajout des champs traités à la réponse
+        $actionResponsable->responsable_libelle = $responsablesLibelle;
+        $actionResponsable->suivi_nom = $suivisLibelle;
+
         return response()->json($actionResponsable);
     }
 
@@ -188,7 +220,7 @@ class ActionsResponsableController extends Controller
             'observation_resp' => 'nullable|string|max:1000'
         ]);
 
-        $responsableId = $request->query('responsable_id'); // ID du responsable connecté
+        $responsableId = $request->query('responsable_id');
 
         // Vérifier que l'ID du responsable est fourni
         if (!$responsableId) {
@@ -198,25 +230,34 @@ class ActionsResponsableController extends Controller
         }
 
         try {
-            // Vérifier que l'action existe et que le responsable y a accès
-            $actionExists = DB::table('actions_responsables')
+            $actionInfo = DB::table('actions_responsables')
                 ->join('actions', 'actions_responsables.actions_id', '=', 'actions.id')
+                ->join('users', 'actions.users_id', '=', 'users.id')
+                ->join('responsables', 'actions_responsables.responsables_id', '=', 'responsables.id')
                 ->where('actions.id', $id)
                 ->where('actions.num_actions', 'like', 'AI-%')
                 ->where('actions_responsables.responsables_id', $responsableId)
-                ->exists();
+                ->select(
+                    'actions.id as action_id',
+                    'actions.num_actions',
+                    'actions.description as action_libelle',
+                    'responsables.libelle as responsable_libelle',
+                    'responsables.email as responsable_email',
+                    'users.email as user_email'
+                )
+                ->first();
 
-            if (!$actionExists) {
+
+            if (!$actionInfo) {
                 return response()->json([
                     'message' => 'Action non trouvée ou accès non autorisé'
                 ], 404);
             }
 
             // Mettre à jour les données dans actions_responsables
-            // CORRECTION : Filtrer par actions_id ET responsables_id
             $updated = DB::table('actions_responsables')
                 ->where('actions_id', $id)
-                ->where('responsables_id', $responsableId) // AJOUT de cette condition
+                ->where('responsables_id', $responsableId)
                 ->update([
                     'statut_resp' => $request->statut_resp,
                     'observation_resp' => $request->observation_resp,
@@ -224,9 +265,32 @@ class ActionsResponsableController extends Controller
                 ]);
 
             if ($updated) {
-                return response()->json([
-                    'message' => 'Action responsable mise à jour avec succès'
-                ]);
+                // Récupérer l'ID de l'utilisateur lié à ce responsable
+                $responsableUser = DB::table('users')
+                    ->where('responsables_id', $responsableId)
+                    ->select('id')
+                    ->first();
+
+                // Envoyer l'email via le service
+                $emailService = new EmailResponsable();
+                $emailEnvoye = $emailService->envoyerNotificationMiseAJour(
+                    $actionInfo,
+                    $request->statut_resp,
+                    $request->observation_resp,
+                    $responsableUser ? $responsableUser->id : null
+                );
+
+                $message = 'Action responsable mise à jour avec succès';
+                $response = ['message' => $message];
+
+                if (!$emailEnvoye) {
+                    $response['warning'] = 'Email de notification non envoyé';
+                } else {
+                    $response['message'] .= ' et notification envoyée';
+                }
+
+                return response()->json($response);
+
             } else {
                 return response()->json([
                     'message' => 'Aucune modification effectuée'
@@ -259,25 +323,34 @@ class ActionsResponsableController extends Controller
         }
 
         try {
-            // Vérifier que l'action existe et que le responsable y a accès
-            $actionExists = DB::table('actions_responsables')
+            $actionInfo = DB::table('actions_responsables')
                 ->join('actions', 'actions_responsables.actions_id', '=', 'actions.id')
+                ->join('users', 'actions.users_id', '=', 'users.id')
+                ->join('responsables', 'actions_responsables.responsables_id', '=', 'responsables.id')
                 ->where('actions.id', $id)
                 ->where('actions.num_actions', 'like', 'PTA-%')
                 ->where('actions_responsables.responsables_id', $responsableId)
-                ->exists();
+                ->select(
+                    'actions.id as action_id',
+                    'actions.num_actions',
+                    'actions.description as action_libelle',
+                    'responsables.libelle as responsable_libelle',
+                    'responsables.email as responsable_email',
+                    'users.email as user_email'
+                )
+                ->first();
 
-            if (!$actionExists) {
+
+            if (!$actionInfo) {
                 return response()->json([
                     'message' => 'Action non trouvée ou accès non autorisé'
                 ], 404);
             }
 
             // Mettre à jour les données dans actions_responsables
-            // CORRECTION : Filtrer par actions_id ET responsables_id
             $updated = DB::table('actions_responsables')
                 ->where('actions_id', $id)
-                ->where('responsables_id', $responsableId) // AJOUT de cette condition
+                ->where('responsables_id', $responsableId)
                 ->update([
                     'statut_resp' => $request->statut_resp,
                     'observation_resp' => $request->observation_resp,
@@ -285,9 +358,32 @@ class ActionsResponsableController extends Controller
                 ]);
 
             if ($updated) {
-                return response()->json([
-                    'message' => 'Action responsable mise à jour avec succès'
-                ]);
+                // Récupérer l'ID de l'utilisateur lié à ce responsable
+                $responsableUser = DB::table('users')
+                    ->where('responsables_id', $responsableId)
+                    ->select('id')
+                    ->first();
+
+                // Envoyer l'email via le service
+                $emailService = new EmailResponsable();
+                $emailEnvoye = $emailService->envoyerNotificationMiseAJour(
+                    $actionInfo,
+                    $request->statut_resp,
+                    $request->observation_resp,
+                    $responsableUser ? $responsableUser->id : null
+                );
+
+                $message = 'Action responsable mise à jour avec succès';
+                $response = ['message' => $message];
+
+                if (!$emailEnvoye) {
+                    $response['warning'] = 'Email de notification non envoyé';
+                } else {
+                    $response['message'] .= ' et notification envoyée';
+                }
+
+                return response()->json($response);
+
             } else {
                 return response()->json([
                     'message' => 'Aucune modification effectuée'

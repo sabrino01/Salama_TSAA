@@ -33,6 +33,8 @@ const action = ref({
     constat_libelle: "",
     source_libelle: "",
     type_action_libelle: "",
+    responsable_libelle: "",
+    suivi_nom: "",
     nom_utilisateur: "",
     date: "",
     mesure: "",
@@ -325,7 +327,7 @@ const modifierResponsablesPTA = async () => {
                         <input
                             type="text"
                             id="num_actions"
-                            class="w-[14%] border rounded-md px-4 py-2 bg-gray-100"
+                            class="w-[16%] border rounded-md px-4 py-2 bg-gray-100"
                             v-model="action.num_actions"
                         />
                     </div>
