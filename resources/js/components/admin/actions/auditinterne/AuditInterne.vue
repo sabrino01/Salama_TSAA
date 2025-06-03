@@ -7,6 +7,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { frequenceOptions } from "../../../../utils/frequenceOptions";
+import { useStatusManager } from "../../../../utils/usesStatusManager";
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
@@ -30,6 +31,8 @@ const tableRef = ref(null); // Référence vers le composant TableActions.vue
 // Ajoutez cette nouvelle référence pour suivre l'état de la pagination
 const paginationEnabled = ref(true);
 const allActions = ref([]); // Pour stocker toutes les actions quand la pagination est désactivée
+
+const { checkAllActionsStatus } = useStatusManager();
 
 // Modifiez la fonction chargerActions pour gérer les deux cas
 const chargerActions = async (page = 1, search = "") => {
@@ -61,6 +64,23 @@ const chargerActions = async (page = 1, search = "") => {
             "Erreur lors du chargement de l'audit interne ou de l'action",
             error
         );
+    }
+};
+
+const verifierTousLesStatuts = async () => {
+    const result = await checkAllActionsStatus();
+
+    // Stockage des résultats
+    actionsAI.value.statut = result;
+
+    if (result.success) {
+        // toast.success(
+        //     `${result.updated_count} actions mises à jour sur ${result.total_checked}`
+        // );
+        // Recharger la liste pour voir les changements
+        await chargerActions(currentPage.value, searchQuery.value);
+    } else {
+        toast.error(result.message);
     }
 };
 
@@ -997,8 +1017,9 @@ const importerFichier = async (event) => {
 };
 
 // Fonction pour charger les actions au démarrage
-onMounted(() => {
+onMounted(async () => {
     chargerActions(currentPage.value, searchQuery.value);
+    await verifierTousLesStatuts();
 });
 </script>
 
@@ -1144,6 +1165,57 @@ onMounted(() => {
                                 paginationEnabled
                                     ? "Désactiver Pagination"
                                     : "Activer Pagination"
+                            }}
+                        </button>
+                    </div>
+
+                    <!-- Vérification du status s'il y a des actions qui doit être en retard -->
+                    <div class="relative ml-4">
+                        <button
+                            @click="verifierTousLesStatuts"
+                            :disabled="isCheckingStatus"
+                            class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            <!-- Icône de chargement -->
+                            <svg
+                                v-if="isCheckingStatus"
+                                class="animate-spin h-4 w-4"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                    fill="none"
+                                ></circle>
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                            </svg>
+                            <!-- Icône de vérification -->
+                            <svg
+                                v-else
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                ></path>
+                            </svg>
+                            {{
+                                isCheckingStatus
+                                    ? "Vérification en cours..."
+                                    : "Vérifier tous les statuts"
                             }}
                         </button>
                     </div>

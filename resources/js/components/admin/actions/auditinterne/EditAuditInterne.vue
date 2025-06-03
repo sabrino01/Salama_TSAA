@@ -16,6 +16,7 @@ import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
 import { frequenceOptions } from "../../../../utils/frequenceOptions.js";
+import { useStatusManager } from "../../../../utils/usesStatusManager.js";
 import { Plus, Trash } from "lucide-vue-next";
 
 // Router et route pour récupérer l'ID de l'action
@@ -38,6 +39,44 @@ const action = ref({
     mesure: "",
     statut: "",
 });
+
+// Initialisez le composable
+const { isCheckingStatus, statusMessage, checkSingleActionStatus } =
+    useStatusManager();
+
+// Fonction pour vérifier le statut manuellement
+const verifierStatut = async () => {
+    if (!actionId) {
+        toast.error("ID d'action manquant");
+        return;
+    }
+
+    const result = await checkSingleActionStatus(actionId);
+
+    if (result.success) {
+        if (result.updated) {
+            // Le statut a été mis à jour
+            action.value.statut = result.newStatus;
+            toast.success(result.message);
+        } else {
+            toast.info(result.message);
+        }
+    } else {
+        toast.error(result.message);
+    }
+};
+
+// Fonction pour vérifier automatiquement au chargement
+const verifierStatutAutomatique = async () => {
+    if (!actionId) return;
+
+    const result = await checkSingleActionStatus(actionId);
+
+    if (result.success && result.updated) {
+        action.value.statut = result.newStatus;
+        console.log("Statut mis à jour automatiquement:", result.newStatus);
+    }
+};
 
 const formatDateUpdate = (dateString) => {
     if (!dateString) return "N/A";
@@ -164,6 +203,9 @@ const handleOptionChange = () => {
 // Fonction pour enregistrer les modifications
 const modifierAI = async () => {
     try {
+        // Vérifier le statut avant la modification
+        await verifierStatutAutomatique();
+
         // Préparation des données à envoyer
         const dataToSend = { ...action.value };
 
@@ -179,7 +221,18 @@ const modifierAI = async () => {
                 dataToSend.frequence = normalizeFrequence(dataToSend.frequence);
             }
         }
-        await axios.put(`/api/actions/${actionId}`, action.value);
+
+        // Envoyer la mise à jour
+        const response = await axios.put(
+            `/api/actions/${actionId}`,
+            dataToSend
+        );
+
+        // Vérifier si le backend a aussi mis à jour le statut
+        if (response.data.status_check && response.data.status_check.updated) {
+            action.value.statut = response.data.status_check.status;
+        }
+
         router.push("/admin/actions/auditinterne");
         toast.success("Action Audit Interne modifiée avec succès !");
     } catch (error) {
@@ -298,6 +351,9 @@ onMounted(async () => {
                 selectedOption.value = action.value.frequence;
             }
         }
+        // Vérifier automatiquement le statut après le chargement
+        await verifierStatutAutomatique();
+
         // Initialiser la date avec la date actuelle
         dateObservationSuivi.value = getCurrentDate();
     } catch (error) {
@@ -670,8 +726,12 @@ onMounted(async () => {
                         </label>
                         <select
                             v-model="action.statut"
-                            id="suivi"
+                            id="statut"
                             class="mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            :class="{
+                                'border-red-500 bg-red-50':
+                                    action.statut === 'En retard',
+                            }"
                         >
                             <option value="" disabled>--- Options ---</option>
                             <option value="En cours">En cours</option>
@@ -679,6 +739,46 @@ onMounted(async () => {
                             <option value="Clôturé">Clôturé</option>
                             <option value="Abandonné">Abandonné</option>
                         </select>
+
+                        <!-- Bouton de vérification du statut -->
+                        <button
+                            @click="verifierStatut"
+                            :disabled="isCheckingStatus"
+                            class="px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {{
+                                isCheckingStatus
+                                    ? "Vérification..."
+                                    : "Vérifier Statut"
+                            }}
+                        </button>
+                    </div>
+                    <!-- Indicateur visuel pour les actions en retard -->
+                    <div
+                        v-if="action.statut === 'En retard'"
+                        class="flex items-center gap-2 mt-2 p-3 ml-4 bg-red-50 border border-red-200 rounded-md"
+                    >
+                        <svg
+                            class="w-5 h-5 text-red-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path
+                                fill-rule="evenodd"
+                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                            />
+                        </svg>
+                        <span class="text-red-800 font-medium"
+                            >Cette action est en retard selon sa fréquence</span
+                        >
+                    </div>
+
+                    <!-- Affichage du message de statut -->
+                    <div
+                        v-if="statusMessage"
+                        class="mt-2 p-2 ml-4 bg-blue-50 border border-blue-200 rounded text-blue-800 text-sm"
+                    >
+                        {{ statusMessage }}
                     </div>
 
                     <!-- Section des mises à jour des responsables ET suivis -->

@@ -13,9 +13,17 @@ class Kernel extends ConsoleKernel
      * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
      * @return void
      */
+
+    protected $commands = [
+        Commands\CheckActionStatuses::class,
+    ];
+
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Vérifier les statuts toutes les heures
+        $schedule->command('actions:check-statuses')
+                 ->hourly()
+                 ->withoutOverlapping();
     }
 
     /**

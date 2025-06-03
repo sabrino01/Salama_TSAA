@@ -89,6 +89,11 @@ Route::get('/actions/pta', [ActionsController::class, 'indexPTA']);
 Route::post('/actions', [ActionsController::class, 'store']);
 Route::get('/actions/{id}', [ActionsController::class, 'show']);
 Route::put('/actions/{id}', [ActionsController::class, 'update']);
+// Nouvelles routes pour la gestion des statuts
+Route::get('/actions/{id}/check-status', [ActionsController::class, 'checkStatus']);
+Route::post('/actions/check-all-statuses', [ActionsController::class, 'checkAllStatuses']);
+Route::get('/actions/active', [ActionsController::class, 'getActiveActions']);
+
 Route::delete('/actions/{id}', [ActionsController::class, 'destroy']);
 Route::post('/actions/import', [ActionsController::class, 'import']);
 Route::post('/actions/check-num-actions', [ActionsController::class, 'checkExistingNumActions']);
