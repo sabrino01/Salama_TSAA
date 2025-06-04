@@ -195,7 +195,10 @@ class DashboardController extends Controller
      */
     public function getUsers()
     {
-        $users = User::select('id', 'nom_utilisateur')->get();
+        $users = User::select('id', 'nom_utilisateur')
+            ->where('role', '!=', 'responsable') // Exclure les responsables
+            ->where('role', '!=', 'suivi') // Exclure les responsables
+            ->get();
         return response()->json($users);
     }
 

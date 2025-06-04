@@ -6,7 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Sanctum\HasApiTokens;
-
+use Illuminate\Support\Facades\Log;
 class Actions extends Model
 {
     use HasFactory, HasApiTokens;
@@ -67,7 +67,7 @@ class Actions extends Model
         }
     }
 
-     // Méthode pour parser la fréquence JSON stockée comme TEXT
+    // Méthode pour parser la fréquence JSON stockée comme TEXT
     public function getFrequenceObjectAttribute()
     {
         if (empty($this->frequence)) {
@@ -139,7 +139,7 @@ class Actions extends Model
         return false;
     }
 
-   private function checkHebdomadaireOverdue($frequenceObj, $now)
+    private function checkHebdomadaireOverdue($frequenceObj, $now)
     {
         if (!isset($frequenceObj['mode'])) {
             return false;
@@ -147,8 +147,9 @@ class Actions extends Model
 
         switch ($frequenceObj['mode']) {
             case 'dateHeure':
-                if (isset($frequenceObj['blocs']) && is_array($frequenceObj['blocs'])) {
-                    foreach ($frequenceObj['blocs'] as $bloc) {
+                // Vérifier dans dateHeure->blocs
+                if (isset($frequenceObj['dateHeure']['blocs']) && is_array($frequenceObj['dateHeure']['blocs'])) {
+                    foreach ($frequenceObj['dateHeure']['blocs'] as $bloc) {
                         if (isset($bloc['debut'])) {
                             $dateDebut = Carbon::parse($bloc['debut']);
                             if ($now->gt($dateDebut)) {
@@ -160,22 +161,48 @@ class Actions extends Model
                 break;
 
             case 'joursHeure':
-                if (isset($frequenceObj['jours']) && is_array($frequenceObj['jours'])) {
+                // Vérifier dans joursHeure
+                if (isset($frequenceObj['joursHeure'])) {
+                    $joursHeure = $frequenceObj['joursHeure'];
+
+                    // Mapping des jours - attention aux numéros Carbon (0=Dimanche, 1=Lundi, etc.)
                     $joursMapping = [
-                        'Lundi' => 1, 'Mardi' => 2, 'Mercredi' => 3, 'Jeudi' => 4,
-                        'Vendredi' => 5, 'Samedi' => 6, 'Dimanche' => 0
+                        'Dimanche' => 0,  // Dimanche = 0 dans Carbon
+                        'Lundi' => 1,
+                        'Mardi' => 2,
+                        'Mercredi' => 3,
+                        'Jeudi' => 4,
+                        'Vendredi' => 5,
+                        'Samedi' => 6
                     ];
 
-                    foreach ($frequenceObj['jours'] as $jour => $config) {
-                        if (isset($config['heureDebut']) && isset($joursMapping[$jour])) {
-                            $jourSemaine = $joursMapping[$jour];
-                            $aujourd_hui = $now->dayOfWeek;
+                    // Obtenir le nom du jour actuel avec debug
+                    $aujourd_hui = $now->dayOfWeek;
+                    $jourNomActuel = array_search($aujourd_hui, $joursMapping);
 
-                            if ($aujourd_hui == $jourSemaine) {
-                                $heure = explode(':', $config['heureDebut']);
-                                $heureAttendue = $now->copy()->hour($heure[0])->minute($heure[1]);
-                                if ($now->gt($heureAttendue)) {
-                                    return true;
+                    // Vérifier les jours principaux
+                    if (isset($joursHeure['jours']) && isset($joursHeure['heureDebut'])) {
+                        // Vérifier si le jour actuel est dans la liste des jours programmés
+                        if ($jourNomActuel && in_array($jourNomActuel, $joursHeure['jours'])) {
+                            $heure = explode(':', $joursHeure['heureDebut']);
+                            $heureAttendue = $now->copy()->setTime((int) $heure[0], (int) $heure[1], 0);
+                            if ($now->gt($heureAttendue)) {
+                                return true;
+                            }
+                        }
+                    }
+
+                    // Vérifier les suivis s'ils existent
+                    if (isset($joursHeure['suivis']) && is_array($joursHeure['suivis'])) {
+                        foreach ($joursHeure['suivis'] as $suivi) {
+                            if (isset($suivi['jours']) && isset($suivi['heureDebut'])) {
+                                // Vérifier si le jour actuel est dans la liste des jours de ce suivi
+                                if ($jourNomActuel && in_array($jourNomActuel, $suivi['jours'])) {
+                                    $heure = explode(':', $suivi['heureDebut']);
+                                    $heureAttendue = $now->copy()->setTime((int) $heure[0], (int) $heure[1], 0);
+                                    if ($now->gt($heureAttendue)) {
+                                        return true;
+                                    }
                                 }
                             }
                         }
@@ -186,7 +213,6 @@ class Actions extends Model
 
         return false;
     }
-
     private function checkQuotidienOverdue($frequenceObj, $now)
     {
         if (isset($frequenceObj['heuresPrincipales']['debut'])) {
@@ -197,8 +223,13 @@ class Actions extends Model
             // Vérifier si on a des jours spécifiques configurés
             if (isset($frequenceObj['jours']) && is_array($frequenceObj['jours'])) {
                 $joursMapping = [
-                    'Lundi' => 1, 'Mardi' => 2, 'Mercredi' => 3, 'Jeudi' => 4,
-                    'Vendredi' => 5, 'Samedi' => 6, 'Dimanche' => 0
+                    'Lundi' => 1,
+                    'Mardi' => 2,
+                    'Mercredi' => 3,
+                    'Jeudi' => 4,
+                    'Vendredi' => 5,
+                    'Samedi' => 6,
+                    'Dimanche' => 0
                 ];
 
                 $aujourd_hui = $now->dayOfWeek;
@@ -228,25 +259,53 @@ class Actions extends Model
 
     private function checkPeriodiqueOverdue($frequenceObj, $now)
     {
-        if (!isset($frequenceObj['joursHeure']['jours']) || !is_array($frequenceObj['joursHeure']['jours'])) {
+        if (!isset($frequenceObj['joursHeure']) || !isset($frequenceObj['periode'])) {
             return false;
         }
 
+        // Vérifier si on est dans la bonne période
+        if (!$this->isInCorrectPeriode($frequenceObj['periode'], $now)) {
+            return false;
+        }
+
+        $joursHeure = $frequenceObj['joursHeure'];
         $joursMapping = [
-            'Lundi' => 1, 'Mardi' => 2, 'Mercredi' => 3, 'Jeudi' => 4,
-            'Vendredi' => 5, 'Samedi' => 6, 'Dimanche' => 0
+            'Lundi' => 1,
+            'Mardi' => 2,
+            'Mercredi' => 3,
+            'Jeudi' => 4,
+            'Vendredi' => 5,
+            'Samedi' => 6,
+            'Dimanche' => 0
         ];
 
-        foreach ($frequenceObj['joursHeure']['jours'] as $jour => $config) {
-            if (isset($config['heureDebut']) && isset($joursMapping[$jour])) {
-                $jourSemaine = $joursMapping[$jour];
-                $aujourd_hui = $now->dayOfWeek;
+        // Vérifier les jours principaux
+        if (isset($joursHeure['jours']) && isset($joursHeure['heureDebut'])) {
+            $aujourd_hui = $now->dayOfWeek;
+            $jourNom = array_search($aujourd_hui, $joursMapping);
 
-                if ($aujourd_hui == $jourSemaine) {
-                    $heure = explode(':', $config['heureDebut']);
-                    $heureAttendue = $now->copy()->hour($heure[0])->minute($heure[1]);
-                    if ($now->gt($heureAttendue)) {
-                        return true;
+            if ($jourNom && in_array($jourNom, $joursHeure['jours'])) {
+                $heure = explode(':', $joursHeure['heureDebut']);
+                $heureAttendue = $now->copy()->hour($heure[0])->minute($heure[1]);
+                if ($now->gt($heureAttendue)) {
+                    return true;
+                }
+            }
+        }
+
+        // Vérifier les suivis s'ils existent
+        if (isset($joursHeure['suivis']) && is_array($joursHeure['suivis'])) {
+            foreach ($joursHeure['suivis'] as $suivi) {
+                if (isset($suivi['jours']) && isset($suivi['heureDebut'])) {
+                    $aujourd_hui = $now->dayOfWeek;
+                    $jourNom = array_search($aujourd_hui, $joursMapping);
+
+                    if ($jourNom && in_array($jourNom, $suivi['jours'])) {
+                        $heure = explode(':', $suivi['heureDebut']);
+                        $heureAttendue = $now->copy()->hour($heure[0])->minute($heure[1]);
+                        if ($now->gt($heureAttendue)) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -255,31 +314,103 @@ class Actions extends Model
         return false;
     }
 
+    private function isInCorrectPeriode($periode, $now)
+    {
+        switch ($periode) {
+            case 'cetteSemaine':
+                // La tâche doit être exécutée cette semaine
+                return true;
+
+            case 'semaineProchaine':
+                // La tâche doit être exécutée la semaine prochaine
+                // On considère qu'elle est en retard seulement si on est déjà dans la semaine prochaine
+                $semaineProchaine = $now->copy()->addWeek()->startOfWeek();
+                $finSemaineProchaine = $semaineProchaine->copy()->endOfWeek();
+                return $now->between($semaineProchaine, $finSemaineProchaine);
+
+            case 'moisProchain':
+                // La tâche doit être exécutée le mois prochain
+                // On considère qu'elle est en retard seulement si on est déjà dans le mois prochain
+                $moisProchain = $now->copy()->addMonth()->startOfMonth();
+                $finMoisProchain = $moisProchain->copy()->endOfMonth();
+                return $now->between($moisProchain, $finMoisProchain);
+
+            default:
+                return false;
+        }
+    }
+
+
     private function checkAnnuelOverdue($frequenceObj, $now)
     {
-        if (isset($frequenceObj['mode'])) {
-            switch ($frequenceObj['mode']) {
-                case 'dateHeure':
-                    if (isset($frequenceObj['debut'])) {
-                        $dateDebut = Carbon::parse($frequenceObj['debut']);
-                        return $now->gt($dateDebut);
+        if (!isset($frequenceObj['mode'])) {
+            return false;
+        }
+
+        switch ($frequenceObj['mode']) {
+            case 'dateHeure':
+                // Vérifier dans dateHeure->debut
+                if (isset($frequenceObj['dateHeure']['debut'])) {
+                    $dateDebut = Carbon::parse($frequenceObj['dateHeure']['debut'], 'Indian/Antananarivo');
+                    if ($now->gt($dateDebut)) {
+                        return true;
                     }
-                    break;
+                }
 
-                case 'joursHeure':
-                    if (isset($frequenceObj['jours']) && is_array($frequenceObj['jours'])) {
-                        $joursMapping = [
-                            'Lundi' => 1, 'Mardi' => 2, 'Mercredi' => 3, 'Jeudi' => 4,
-                            'Vendredi' => 5, 'Samedi' => 6, 'Dimanche' => 0
-                        ];
+                // Vérifier les suivis dans dateHeure->suivis
+                if (isset($frequenceObj['dateHeure']['suivis']) && is_array($frequenceObj['dateHeure']['suivis'])) {
+                    foreach ($frequenceObj['dateHeure']['suivis'] as $suivi) {
+                        $dateSuivi = Carbon::parse($suivi, 'Indian/Antananarivo');
+                        if ($now->gt($dateSuivi)) {
+                            return true;
+                        }
+                    }
+                }
+                break;
 
-                        foreach ($frequenceObj['jours'] as $jour => $config) {
-                            if (isset($config['heureDebut']) && isset($joursMapping[$jour])) {
-                                $jourSemaine = $joursMapping[$jour];
+            case 'joursHeure':
+                // Vérifier dans joursHeure avec periodeMois et frequence
+                if (isset($frequenceObj['joursHeure'])) {
+                    $joursHeure = $frequenceObj['joursHeure'];
+
+                    // Vérifier si on est dans la bonne période
+                    if (!$this->isInCorrectAnnuelPeriode($joursHeure, $now)) {
+                        return false;
+                    }
+
+                    $joursMapping = [
+                        'Lundi' => 1,
+                        'Mardi' => 2,
+                        'Mercredi' => 3,
+                        'Jeudi' => 4,
+                        'Vendredi' => 5,
+                        'Samedi' => 6,
+                        'Dimanche' => 0
+                    ];
+
+                    // Vérifier les jours principaux
+                    if (isset($joursHeure['jours']) && isset($joursHeure['heureDebut'])) {
+                        $aujourd_hui = $now->dayOfWeek;
+                        $jourNom = array_search($aujourd_hui, $joursMapping);
+
+                        if ($jourNom && in_array($jourNom, $joursHeure['jours'])) {
+                            $heure = explode(':', $joursHeure['heureDebut']);
+                            $heureAttendue = $now->copy()->hour($heure[0])->minute($heure[1]);
+                            if ($now->gt($heureAttendue)) {
+                                return true;
+                            }
+                        }
+                    }
+
+                    // Vérifier les suivis s'ils existent
+                    if (isset($joursHeure['suivis']) && is_array($joursHeure['suivis'])) {
+                        foreach ($joursHeure['suivis'] as $suivi) {
+                            if (isset($suivi['jours']) && isset($suivi['heureDebut'])) {
                                 $aujourd_hui = $now->dayOfWeek;
+                                $jourNom = array_search($aujourd_hui, $joursMapping);
 
-                                if ($aujourd_hui == $jourSemaine) {
-                                    $heure = explode(':', $config['heureDebut']);
+                                if ($jourNom && in_array($jourNom, $suivi['jours'])) {
+                                    $heure = explode(':', $suivi['heureDebut']);
                                     $heureAttendue = $now->copy()->hour($heure[0])->minute($heure[1]);
                                     if ($now->gt($heureAttendue)) {
                                         return true;
@@ -288,11 +419,56 @@ class Actions extends Model
                             }
                         }
                     }
-                    break;
-            }
+                }
+                break;
         }
 
         return false;
+    }
+
+    private function isInCorrectAnnuelPeriode($joursHeure, $now)
+    {
+        if (!isset($joursHeure['periodeMois']) || !isset($joursHeure['frequence'])) {
+            return false;
+        }
+
+        $periodeMois = $joursHeure['periodeMois'];
+        $frequence = $joursHeure['frequence'];
+
+        // Déterminer la période de l'année
+        $debutAnnee = $now->copy()->startOfYear();
+        $finAnnee = $now->copy()->endOfYear();
+
+        switch ($periodeMois) {
+            case 'premier':
+                // Premier mois de l'année (Janvier)
+                $debutPeriode = $debutAnnee->copy()->startOfMonth();
+                $finPeriode = $debutAnnee->copy()->endOfMonth();
+                break;
+
+            case 'dernier':
+                // Dernier mois de l'année (Décembre)
+                $debutPeriode = $finAnnee->copy()->startOfMonth();
+                $finPeriode = $finAnnee->copy()->endOfMonth();
+                break;
+
+            default:
+                return false;
+        }
+
+        switch ($frequence) {
+            case 'uneFois':
+                // Une seule fois dans l'année, dans la période définie
+                return $now->between($debutPeriode, $finPeriode);
+
+            case 'tousLesAns':
+                // Chaque année, dans la période définie
+                // Si on est dans la période de cette année, c'est valide
+                return $now->between($debutPeriode, $finPeriode);
+
+            default:
+                return false;
+        }
     }
 
     // Mettre à jour automatiquement le statut si en retard
