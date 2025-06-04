@@ -1222,8 +1222,8 @@ const filterChanged = async () => {
 const navigateToDetails = (id) => {
     // Rechercher l'élément dans les deux listes de données
     const item =
-        paginatedDataEnCours.value.find((i) => i.id === id) ||
-        paginatedDataEnRetard.value.find((i) => i.id === id);
+        displayedDataEnCours.value.find((i) => i.id === id) ||
+        displayedDataEnRetard.value.find((i) => i.id === id);
 
     if (item) {
         // Déterminer la destination en fonction de l'ID
@@ -1234,7 +1234,7 @@ const navigateToDetails = (id) => {
         } else {
             // Logique par défaut si l'ID ne correspond pas aux cas spécifiques
             // Déterminer le filtre à utiliser en fonction de la table d'origine
-            const isEnCours = paginatedDataEnCours.value.some(
+            const isEnCours = displayedDataEnCours.value.some(
                 (i) => i.id === id
             );
             const currentFilter = isEnCours
