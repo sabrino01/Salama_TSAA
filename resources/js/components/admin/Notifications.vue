@@ -31,15 +31,16 @@
                     </p>
                 </div>
 
-                <div
-                    class="w-full bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 mt-8"
-                >
-                    <h3 class="text-lg font-bold text-blue-800 mb-2">
-                        Paramètres de Notifications
-                    </h3>
-                    <div class="flex flex-col justify-start space-y-4">
-                        <!-- Toggle pour l'envoi d'email -->
-                        <div class="flex items-center space-x-2">
+                <div class="flex justify-end mt-8">
+                    <div
+                        class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4"
+                    >
+                        <h3 class="text-lg font-bold text-blue-800">
+                            Paramètres de Notifications
+                        </h3>
+
+                        <!-- Toggle Email -->
+                        <div class="flex items-center rounded-lg space-x-2">
                             <label
                                 for="emailNotification"
                                 class="text-gray-700 font-medium"
@@ -61,8 +62,8 @@
                             </button>
                         </div>
 
-                        <!-- Toggle pour l'alerte dans l'application -->
-                        <div class="flex items-center space-x-2">
+                        <!-- Toggle App Alert -->
+                        <div class="flex items-center space-x-2 rounded-lg">
                             <label
                                 for="appAlert"
                                 class="text-gray-700 font-medium"
