@@ -647,14 +647,6 @@ const userId = computed(() => user.value?.id);
 const handleEmailToggle = async () => {
     try {
         if (emailNotification.value) {
-            // Vérifier si la configuration existe
-            if (!emailConfig.value.host || !emailConfig.value.username) {
-                showEmailConfig.value = true;
-                activeTab.value = "serveur";
-                emailNotification.value = false;
-                return;
-            }
-
             // Activer les notifications
             const result = await emailService.toggleNotifications(
                 true,

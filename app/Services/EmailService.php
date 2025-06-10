@@ -437,57 +437,224 @@ class EmailService
     {
         // Simplification : utiliser directement les valeurs sans conversion complexe
         $typeLabels = [
-            'debut' => 'début',
-            'suivi' => 'suivi',
+            'debut' => 'Début',
+            'suivi' => 'Suivi',
         ];
 
-        $type = $typeLabels[$alertData['type']] ?? $alertData['type'];
-        $description = $alertData['item']['description'] ?? 'Action';
-        $icon = $type === 'debut' ? '🔔' : ($type === 'suivi' ? '📊' : '⚠️');
+        $type = $typeLabels[$alertData['type']] ?? ucfirst($alertData['type']);
+        $description = htmlspecialchars($alertData['item']['description'] ?? 'Action');
+        $message = htmlspecialchars($alertData['message']);
+        $icon = $type === 'Début' ? '🚀' : ($type === 'Suivi' ? '📊' : '⚠️');
 
-        return "
+        // Définir les couleurs selon le type d'alerte
+        $colors = [
+            'Début' => ['bg' => '#e0f2fe', 'border' => '#0288d1', 'text' => '#01579b'],
+            'Suivi' => ['bg' => '#f3e5f5', 'border' => '#8e24aa', 'text' => '#4a148c'],
+            'default' => ['bg' => '#fff3e0', 'border' => '#f57c00', 'text' => '#e65100']
+        ];
+
+        $alertColors = $colors[$type] ?? $colors['default'];
+
+        return '
         <!DOCTYPE html>
-        <html>
+        <html lang="fr">
         <head>
-            <meta charset='UTF-8'>
-            <title>Alerte {$type} d'action</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Alerte ' . $type . ' d\'action</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background-color: #f5f5f5;
+                }
+                .container {
+                    background-color: #ffffff;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+                }
+                .header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 30px 25px;
+                    text-align: center;
+                    position: relative;
+                }
+                .header::after {
+                    content: "";
+                    position: absolute;
+                    bottom: -10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 0;
+                    height: 0;
+                    border-left: 15px solid transparent;
+                    border-right: 15px solid transparent;
+                    border-top: 10px solid #764ba2;
+                }
+                .header h2 {
+                    margin: 0;
+                    font-size: 26px;
+                    font-weight: 300;
+                    letter-spacing: 1px;
+                }
+                .header .subtitle {
+                    margin: 8px 0 0 0;
+                    font-size: 14px;
+                    opacity: 0.9;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                }
+                .content {
+                    padding: 40px 25px 30px;
+                }
+                .greeting {
+                    font-size: 16px;
+                    margin-bottom: 25px;
+                    color: #555;
+                }
+                .action-details {
+                    background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+                    padding: 25px;
+                    border-radius: 10px;
+                    margin: 25px 0;
+                    border-left: 5px solid ' . $alertColors['border'] . ';
+                    position: relative;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+                }
+                .action-details::before {
+                    content: "' . $icon . '";
+                    position: absolute;
+                    top: -10px;
+                    right: 15px;
+                    background: white;
+                    padding: 8px 12px;
+                    border-radius: 50%;
+                    font-size: 18px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }
+                .action-details h3 {
+                    margin: 0 0 15px 0;
+                    color: ' . $alertColors['text'] . ';
+                    font-size: 18px;
+                    font-weight: 600;
+                }
+                .action-details p {
+                    margin: 12px 0;
+                    font-size: 15px;
+                }
+                .alert-message {
+                    background: linear-gradient(135deg, ' . $alertColors['bg'] . ' 0%, rgba(255,255,255,0.8) 100%);
+                    padding: 20px;
+                    border-radius: 8px;
+                    border-left: 4px solid ' . $alertColors['border'] . ';
+                    margin: 20px 0;
+                    font-style: italic;
+                    font-size: 15px;
+                    color: ' . $alertColors['text'] . ';
+                }
+                .btn {
+                    display: inline-block;
+                    padding: 16px 35px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 30px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 1.2px;
+                    font-size: 14px;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+                }
+                .btn:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+                }
+                .btn-container {
+                    text-align: center;
+                    margin: 35px 0;
+                }
+                .footer {
+                    background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+                    padding: 25px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 13px;
+                    border-top: 1px solid #dee2e6;
+                }
+                .divider {
+                    height: 3px;
+                    background: linear-gradient(90deg, transparent, #667eea, #764ba2, transparent);
+                    margin: 30px 0;
+                    border-radius: 2px;
+                }
+                .system-badge {
+                    display: inline-block;
+                    background: linear-gradient(135deg, #28a745, #20c997);
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-top: 10px;
+                }
+            </style>
         </head>
-        <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
-            <div style='max-width: 600px; margin: 0 auto; padding: 20px;'>
-                <h2 style='color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;'>
-                    {$icon} Alerte {$type} d'action
-                </h2>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h2>' . $icon . ' Alerte ' . $type . '</h2>
+                    <div class="subtitle">Système de suivi Salama_tsaa</div>
+                </div>
 
-                <div style='background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;'>
-                    <p style='margin: 0; font-size: 16px;'>
-                        <strong>Action :</strong> {$description}
+                <div class="content">
+                    <div class="greeting">
+                        Bonjour,
+                    </div>
+
+                    <p>Une nouvelle alerte pour le <strong>' . $type . '</strong> d\'action a été générée pour votre attention :</p>
+
+                    <div class="action-details">
+                        <h3>📋 Détails de l\'action</h3>
+                        <p><strong>Description :</strong> ' . $description . '</p>
+                    </div>
+
+                    <div class="alert-message">
+                        💬 <strong>Message d\'alerte :</strong><br>
+                        ' . $message . '
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <p>Veuillez vous connecter à votre espace personnel pour consulter les détails complets.</p>
+
+                    <div class="btn-container">
+                        <a href="http://127.0.0.1:8000/login" class="btn">
+                            🔗 Accéder au système
+                        </a>
+                    </div>
+
+                    <p style="color: #6c757d; font-size: 14px; margin-top: 30px;">
+                        Cordialement,<br>
                     </p>
                 </div>
 
-                <div style='background-color: #fef3c7; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b;'>
-                    <p style='margin: 0;'>{$alertData['message']}</p>
+                <div class="footer">
+                    <p>
+                        📧 Cet email a été envoyé automatiquement par le système d\'alertes.
+                        <span class="system-badge">Salama_tsaa</span>
+                    </p>
                 </div>
-
-                <!-- Bouton de redirection -->
-                <div style='text-align: center; margin-top: 30px;'>
-                    <a href='http://127.0.0.1:8000/login' style='
-                        display: inline-block;
-                        background-color: #2563eb;
-                        color: #fff;
-                        padding: 12px 24px;
-                        text-decoration: none;
-                        border-radius: 6px;
-                        font-weight: bold;
-                    '>Voir</a>
-                </div>
-
-                <hr style='margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;'>
-
-                <p style='font-size: 12px; color: #6b7280; text-align: center; margin: 0;'>
-                    Cet email a été envoyé automatiquement par votre système d'alertes du Salama_tsaa.
-                </p>
             </div>
         </body>
-        </html>";
+        </html>';
     }
 }
