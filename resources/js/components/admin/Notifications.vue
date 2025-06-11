@@ -604,7 +604,7 @@
                                         >Serveur SMTP</label
                                     >
                                     <input
-                                        v-model="emailConfig.host"
+                                        v-model="configData.host"
                                         type="text"
                                         class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="smtp.gmail.com"
@@ -617,7 +617,7 @@
                                         >Port</label
                                     >
                                     <input
-                                        v-model="emailConfig.port"
+                                        v-model="configData.port"
                                         type="number"
                                         class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="587"
@@ -630,7 +630,7 @@
                                         >Email</label
                                     >
                                     <input
-                                        v-model="emailConfig.username"
+                                        v-model="configData.username"
                                         type="email"
                                         class="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="votre@email.com"
@@ -644,7 +644,7 @@
                                     >
                                     <div class="relative flex items-center">
                                         <input
-                                            v-model="emailConfig.password"
+                                            v-model="configData.password"
                                             :type="
                                                 showPassword
                                                     ? 'text'
@@ -682,9 +682,14 @@
                             </button>
                             <button
                                 @click="saveEmailConfig"
-                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                                :disabled="isSubmitting"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Enregistrer
+                                {{
+                                    isSubmitting
+                                        ? "Validation en cours..."
+                                        : "Enregistrer"
+                                }}
                             </button>
                         </div>
                     </div>
@@ -710,7 +715,7 @@ import {
     Eye,
     EyeOff,
 } from "lucide-vue-next";
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, reactive } from "vue";
 import { useRouter } from "vue-router";
 import emailService from "../../utils/emailService.js"; // Importer le service email
 
@@ -720,11 +725,15 @@ const emailNotification = ref(
     localStorage.getItem("emailNotification") === "true"
 );
 const showEmailConfig = ref(false);
+const activeTab = ref("serveur");
+const isSubmitting = ref(false); // État pour le bouton de soumission
 const emailConfig = ref({
     host: "",
     port: 587,
     username: "",
     password: "",
+    is_active: false,
+    config_valid: false,
 });
 const appAlert = ref(localStorage.getItem("appAlert") === "true");
 const paginationEnabled = ref(true); // État de la pagination
@@ -748,7 +757,13 @@ const currentItem = ref(null);
 const alertQueue = ref([]); // File d'attente des alertes
 const currentAlert = ref(null); // Alerte actuellement affichée
 const isInitialLoad = ref(true);
-const activeTab = ref("membres"); // Pour gérer les onglets
+
+const configData = reactive({
+    host: "",
+    port: 587,
+    username: "",
+    password: "",
+});
 
 // Données pour la gestion des fréquences
 const joursMap = {
@@ -775,17 +790,66 @@ const user = computed(() => {
 });
 const userId = computed(() => user.value?.id);
 
+// Fonction pour charger la configuration email
+const loadEmailConfig = async () => {
+    try {
+        const config = await emailService.getConfig(userId.value);
+        if (config) {
+            emailConfig.value = config;
+            emailNotification.value = config.is_active;
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement de la configuration:", error);
+        toast.error("Erreur lors du chargement de la configuration");
+    }
+};
+
+const saveEmailConfig = async () => {
+    isSubmitting.value = true; // Désactiver le bouton pendant la soumission
+
+    try {
+        const result = await emailService.saveConfig(
+            {
+                host: configData.host,
+                port: configData.port,
+                username: configData.username,
+                password: configData.password,
+            },
+            userId.value
+        );
+
+        if (result.success) {
+            toast.success(result.message);
+            // Mettre à jour la config locale
+            emailConfig.value = {
+                ...emailConfig.value,
+                host: configData.host,
+                port: configData.port,
+                username: configData.username,
+                config_valid: true,
+            };
+
+            // Ici on ne force plus l'activation des notifications
+            showEmailConfig.value = false;
+
+            configData.password = "";
+        } else {
+            throw new Error(result.message);
+        }
+        toast.success("Configuration sauvegardée !");
+    } catch (error) {
+        console.error("Erreur sauvegarde config:", error);
+        toast.error(
+            `Erreur de configuration: ${error.message || "Erreur inconnue"}`
+        );
+    } finally {
+        isSubmitting.value = false; // Réactiver le bouton après la soumission
+    }
+};
+
 const handleEmailToggle = async () => {
     try {
         if (emailNotification.value) {
-            // Vérifier si la configuration existe
-            if (!emailConfig.value.host || !emailConfig.value.username) {
-                showEmailConfig.value = true;
-                activeTab.value = "serveur";
-                emailNotification.value = false;
-                return;
-            }
-
             // Activer les notifications
             const result = await emailService.toggleNotifications(
                 true,
@@ -795,97 +859,8 @@ const handleEmailToggle = async () => {
                 throw new Error(result.message);
             }
 
-            // Vérifier toutes les alertes avant d'essayer de les envoyer
-            verifierToutesAlertesForEmail();
-
-            // Envoyer les alertes en attente
-            if (alertQueue.value.length > 0) {
-                let successCount = 0;
-                let errorCount = 0;
-                let totalResponsablesNotified = 0;
-
-                for (const alert of alertQueue.value) {
-                    try {
-                        const alertResult = await emailService.sendAlert(
-                            {
-                                sujet: `Alerte ${
-                                    alert.type === "debut" ? "début" : "suivi"
-                                } d'action`,
-                                message: formatAlertMessage(alert),
-                                type:
-                                    alert.type === "suivis"
-                                        ? "suivi"
-                                        : alert.type,
-                                item: alert.item,
-                            },
-                            userId.value
-                        );
-
-                        if (alertResult.success) {
-                            successCount++;
-                            if (alertResult.details?.responsables) {
-                                totalResponsablesNotified +=
-                                    alertResult.details.responsables
-                                        .success_count;
-                            }
-                        } else {
-                            errorCount++;
-                        }
-                    } catch (alertError) {
-                        errorCount++;
-                    }
-                }
-
-                // Messages de résultat
-                if (successCount > 0) {
-                    let message = `${successCount} alerte(s) envoyée(s) par email`;
-                    if (totalResponsablesNotified > 0) {
-                        message += ` + ${totalResponsablesNotified} responsable(s) notifié(s)`;
-                    }
-                    toast.success(message);
-                }
-                if (errorCount > 0) {
-                    toast.error(
-                        `${errorCount} alerte(s) n'ont pas pu être envoyées`
-                    );
-                }
-                if (totalResponsablesNotified > 0) {
-                    toast.success(
-                        "Les responsables désignés ont été automatiquement notifiés",
-                        { duration: 4000 }
-                    );
-                }
-            } else {
-                // Email de confirmation
-                const testResult = await emailService.sendAlert(
-                    {
-                        sujet: "Notifications par email activées",
-                        message:
-                            "Vous recevrez désormais les alertes par email.",
-                        type: "test",
-                        item: { description: "Activation des notifications" },
-                    },
-                    userId.value
-                );
-
-                let confirmationMessage =
-                    "Notifications activées ! Un email de confirmation a été envoyé.";
-
-                if (testResult.success && testResult.details?.responsables) {
-                    const responsablesCount =
-                        testResult.details.responsables.success_count;
-                    if (responsablesCount > 0) {
-                        confirmationMessage += ` Vos responsables (${responsablesCount}) ont aussi été notifiés.`;
-                    }
-                    if (testResult.details.responsables.error_count > 0) {
-                        toast.error(
-                            `Attention: ${testResult.details.responsables.error_count} responsable(s) n'ont pas pu être notifiés`
-                        );
-                    }
-                }
-
-                toast.success(confirmationMessage);
-            }
+            // Gérer les alertes en attente (votre logique existante)
+            await handlePendingAlerts();
         } else {
             // Désactiver les notifications
             const result = await emailService.toggleNotifications(
@@ -898,13 +873,86 @@ const handleEmailToggle = async () => {
             toast.success("Notifications par email désactivées");
         }
 
+        // Sauvegarder l'état pour la persistence de session
         localStorage.setItem(
             "emailNotification",
             emailNotification.value.toString()
         );
     } catch (error) {
         toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
-        emailNotification.value = !emailNotification.value;
+        emailNotification.value = !emailNotification.value; // Reset en cas d'erreur
+    }
+};
+
+/**
+ * Gérer les alertes en attente (votre logique existante)
+ */
+const handlePendingAlerts = async () => {
+    // Vérifier toutes les alertes avant d'essayer de les envoyer
+    verifierToutesAlertesForEmail();
+
+    // Envoyer les alertes en attente
+    if (alertQueue.value.length > 0) {
+        let successCount = 0;
+        let errorCount = 0;
+        let totalResponsablesNotified = 0;
+
+        for (const alert of alertQueue.value) {
+            try {
+                const alertResult = await emailService.sendAlert(
+                    {
+                        sujet: `Alerte ${
+                            alert.type === "debut" ? "début" : "suivi"
+                        } d'action`,
+                        message: formatAlertMessage(alert),
+                        type: alert.type === "suivis" ? "suivi" : alert.type,
+                        item: alert.item,
+                    },
+                    userId.value
+                );
+
+                if (alertResult.success) {
+                    successCount++;
+                    if (alertResult.details?.responsables) {
+                        totalResponsablesNotified +=
+                            alertResult.details.responsables.success_count;
+                    }
+                } else {
+                    errorCount++;
+                }
+            } catch (alertError) {
+                errorCount++;
+            }
+        }
+
+        // Messages de résultat
+        if (successCount > 0) {
+            let message = `${successCount} alerte(s) envoyée(s) par email`;
+            if (totalResponsablesNotified > 0) {
+                message += ` + ${totalResponsablesNotified} responsable(s) notifié(s)`;
+            }
+            toast.success(message);
+        }
+        if (errorCount > 0) {
+            toast.error(`${errorCount} alerte(s) n'ont pas pu être envoyées`);
+        }
+    } else {
+        // Email de confirmation
+        const testResult = await emailService.sendAlert(
+            {
+                sujet: "Notifications par email activées",
+                message: "Vous recevrez désormais les alertes par email.",
+                type: "test",
+                item: { description: "Activation des notifications" },
+            },
+            userId.value
+        );
+
+        if (testResult.success) {
+            toast.success(
+                "Notifications activées ! Un email de confirmation a été envoyé."
+            );
+        }
     }
 };
 
@@ -960,65 +1008,6 @@ const verifierToutesAlertesForEmail = () => {
     });
 
     // Ne PAS appeler afficherProchaineAlerte() ici pour éviter l'ouverture des modales
-};
-
-const saveEmailConfig = async () => {
-    try {
-        if (activeTab.value === "serveur") {
-            if (
-                !emailConfig.value.host ||
-                !emailConfig.value.username ||
-                !emailConfig.value.password
-            ) {
-                toast.error(
-                    "Veuillez remplir tous les champs obligatoires (host, username, password)"
-                );
-                return;
-            }
-        }
-
-        const result = await emailService.saveConfig(
-            emailConfig.value,
-            userId.value
-        );
-
-        if (!result.success) {
-            throw new Error(result.message);
-        }
-
-        // Ici on ne force plus l'activation des notifications
-        showEmailConfig.value = false;
-
-        toast.success("Configuration sauvegardée !");
-    } catch (error) {
-        console.error("Erreur sauvegarde config:", error);
-        toast.error(
-            `Erreur de configuration: ${error.message || "Erreur inconnue"}`
-        );
-    }
-};
-
-// Fonction pour charger la configuration email
-const loadEmailConfig = async () => {
-    try {
-        const config = await emailService.getConfig(userId.value);
-        if (config) {
-            emailConfig.value = {
-                host: config.host,
-                port: config.port,
-                username: config.username,
-                password: "", // Ne pas afficher le mot de passe
-            };
-            emailNotification.value = config.is_active;
-            localStorage.setItem(
-                "emailNotification",
-                config.is_active.toString()
-            );
-        }
-    } catch (error) {
-        console.error("Erreur lors du chargement de la configuration:", error);
-        toast.error("Erreur lors du chargement de la configuration");
-    }
 };
 
 // Formater le message d'alerte

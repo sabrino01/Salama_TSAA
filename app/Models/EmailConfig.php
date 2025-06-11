@@ -9,12 +9,13 @@ class EmailConfig extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'host', 'port', 'username', 'password', 'is_active'];
+    protected $fillable = ['user_id', 'host', 'port', 'username', 'password', 'is_active', 'config_valid'];
 
     protected $hidden = ['password'];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'config_valid' => 'boolean',
         'port' => 'integer',
     ];
 

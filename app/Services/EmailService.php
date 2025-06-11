@@ -33,8 +33,32 @@ class EmailService
                         'message' => 'Configuration non trouvée'
                     ];
                 }
+
+                if (!$config->config_valid) {
+                    return [
+                        'success' => false,
+                        'message' => 'Configuration email invalide'
+                    ];
+                }
             } else {
-                // Pour les utilisateurs normaux, créer ou mettre à jour leur préférence
+                // Pour les utilisateurs normaux, vérifier d'abord la config admin
+                $adminUser = User::where('role', 'admin')->first();
+                if (!$adminUser) {
+                    return [
+                        'success' => false,
+                        'message' => 'Aucun administrateur trouvé'
+                    ];
+                }
+
+                $adminConfig = EmailConfig::where('user_id', $adminUser->id)->first();
+                if (!$adminConfig || !$adminConfig->config_valid) {
+                    return [
+                        'success' => false,
+                        'message' => 'Configuration administrateur invalide. Contactez l\'administrateur.'
+                    ];
+                }
+
+                // Créer ou mettre à jour leur préférence
                 $config = EmailConfig::firstOrCreate(
                     ['user_id' => $userId],
                     [
@@ -42,7 +66,8 @@ class EmailService
                         'port' => 587,
                         'username' => '',
                         'password' => '',
-                        'is_active' => false
+                        'is_active' => false,
+                        'config_valid' => false // Indiquer que la config n'est pas valide pour les users
                     ]
                 );
             }
@@ -76,6 +101,9 @@ class EmailService
                 ];
             }
 
+            $existingConfig = EmailConfig::where('user_id', $userId)->first();
+            $currentActivateState = $existingConfig ? $existingConfig->is_active : false;
+
             EmailConfig::updateOrCreate(
                 ['user_id' => $userId],
                 [
@@ -83,7 +111,8 @@ class EmailService
                     'port' => $config['port'] ?? 587,
                     'username' => $config['username'],
                     'password' => $config['password'],
-                    'is_active' => true
+                    'is_active' => $currentActivateState,
+                    'config_valid' => true // Indiquer que la config est valide
                 ]
             );
 
@@ -121,16 +150,27 @@ class EmailService
                     'port' => $config->port,
                     'username' => $config->username,
                     'password' => '', // Ne pas retourner le mot de passe
-                    'is_active' => $config->is_active
+                    'is_active' => $config->is_active,
+                    'config_valid' => $config->config_valid ?? false// Indiquer si la config est valide
                 ];
             } else {
+                $adminConfig = EmailConfig::where('user_id', function ($query) {
+                    $query->select('id')
+                        ->from('users')
+                        ->where('role', 'admin')
+                        ->limit(1);
+                })->where('config_valid', true)->first();
+
+                $adminConfigValid = $adminConfig && $adminConfig->config_valid;
+
                 // Pour les utilisateurs normaux, retourner seulement le statut
                 return [
                     'host' => '',
                     'port' => 587,
                     'username' => '',
                     'password' => '',
-                    'is_active' => $config ? $config->is_active : false
+                    'is_active' => $adminConfigValid ? ($config ? $config->is_active : false) : false,
+                    'admin_config_valid' => $adminConfigValid // Ajouter cette info pour le frontend
                 ];
             }
 
@@ -171,7 +211,16 @@ class EmailService
                         'message' => 'Configuration admin non trouvée'
                     ];
                 }
-                // Utiliser la config admin pour l'envoi, mais vérifier que l'user a activé ses notifications
+
+                // VÉRIFICATION : Vérifier que la config admin est valide
+                if (!$adminConfig->config_valid) {
+                    return [
+                        'success' => false,
+                        'message' => 'Configuration administrateur invalide. Impossible d\'envoyer des alertes.'
+                    ];
+                }
+
+                // Vérifier que l'utilisateur a activé ses notifications
                 if (!$config || !$config->is_active) {
                     return [
                         'success' => false,
@@ -179,13 +228,21 @@ class EmailService
                     ];
                 }
                 $config = $adminConfig; // Utiliser la config admin pour l'envoi
-            }
+            } else {
+                // Pour les admins, vérifier config_valid et is_active
+                if (!$config->config_valid) {
+                    return [
+                        'success' => false,
+                        'message' => 'Configuration email invalide'
+                    ];
+                }
 
-            if (!$config->is_active) {
-                return [
-                    'success' => false,
-                    'message' => 'Configuration email inactive'
-                ];
+                if (!$config->is_active) {
+                    return [
+                        'success' => false,
+                        'message' => 'Configuration email inactive'
+                    ];
+                }
             }
 
             // Envoyer l'email à l'utilisateur principal
@@ -223,7 +280,6 @@ class EmailService
             ];
         }
     }
-
     private function sendToResponsables(EmailConfig $config, int $userId, array $alertData): array
     {
         try {
