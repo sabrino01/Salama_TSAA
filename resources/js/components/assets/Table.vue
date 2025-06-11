@@ -32,7 +32,7 @@
                     <td
                         v-for="(column, colIndex) in columns"
                         :key="colIndex"
-                        class="border border-gray-300 px-4 py-2"
+                        class="border border-gray-300 px-4 py-2 truncate"
                     >
                         {{ row[column.field] }}
                     </td>
