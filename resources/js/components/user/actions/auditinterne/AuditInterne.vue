@@ -585,12 +585,589 @@ const exportToExcel = async () => {
         toast.error("Une erreur s'est produite lors de l'exportation.");
     }
 };
-
 // Fonction pour exporter en PDF
-const exportToPdf = () => {
-    const selectedIds = tableRef.value?.selectedRows || [];
+// Fonction pour convertir une image en base64
+const getImageAsBase64 = (imagePath) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function () {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = this.naturalWidth;
+            canvas.height = this.naturalHeight;
+            ctx.drawImage(this, 0, 0);
+            resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = reject;
+        img.src = imagePath;
+    });
+};
 
-    // Filtrer les actions à exporter
+// Définir la hauteur exacte des images header/footer
+const HEADER_HEIGHT = 30; // hauteur de l'image header
+const HEADER_Y = 10; // position Y du header
+const FOOTER_HEIGHT = 20; // hauteur de l'image footer
+const FOOTER_Y_OFFSET = 30; // distance du bas de page pour le footer
+
+// Fonction pour ajouter le header avec l'image
+const addHeaderImages = async (doc, pageWidth) => {
+    try {
+        const salamaHeaderImg = await getImageAsBase64("/image/salama.png");
+        doc.addImage(salamaHeaderImg, "PNG", 10, HEADER_Y, 40, HEADER_HEIGHT);
+    } catch (error) {
+        console.warn("Erreur lors du chargement de l'image du header:", error);
+    }
+};
+
+// Fonction pour ajouter le footer avec les images
+const addFooterImages = async (doc, pageWidth, pageHeight) => {
+    try {
+        const salamaFooter01 = await getImageAsBase64(
+            "/image/capture salama 01.png"
+        );
+        const salamaFooter02 = await getImageAsBase64(
+            "/image/capture salama 02.png"
+        );
+        const footerY = pageHeight - FOOTER_Y_OFFSET;
+        doc.addImage(salamaFooter01, "PNG", 10, footerY, 50, FOOTER_HEIGHT);
+        doc.addImage(
+            salamaFooter02,
+            "PNG",
+            pageWidth - 60,
+            footerY,
+            50,
+            FOOTER_HEIGHT
+        );
+    } catch (error) {
+        console.warn("Erreur lors du chargement des images du footer:", error);
+    }
+};
+
+// Fonction utilitaire pour découper le texte selon la largeur disponible
+const splitTextToFitWidth = (doc, text, maxWidth) => {
+    if (!text) return [];
+
+    // Découpe d'abord sur les retours à la ligne
+    const paragraphs = text.split("\n");
+    const lines = [];
+
+    for (let para of paragraphs) {
+        const words = para.split(" ");
+        let currentLine = "";
+
+        for (let word of words) {
+            const testLine = currentLine ? currentLine + " " + word : word;
+            const testWidth =
+                (doc.getStringUnitWidth(testLine) *
+                    doc.internal.getFontSize()) /
+                doc.internal.scaleFactor;
+
+            if (testWidth <= maxWidth) {
+                currentLine = testLine;
+            } else {
+                if (currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    // Si un seul mot est trop long, on le force quand même
+                    lines.push(word);
+                }
+            }
+        }
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+    }
+
+    return lines;
+};
+
+// Fonction améliorée pour ajouter des données avec label sur une ligne et valeur sur la ligne suivante
+const addDataWithSeparateLines = (
+    doc,
+    label,
+    value,
+    currentY,
+    leftMargin,
+    availableWidth,
+    indentValue = 0
+) => {
+    // Afficher le label en gras
+    doc.setFont(undefined, "bold");
+    doc.text(`${label}`, leftMargin, currentY);
+    currentY += 6; // Passer à la ligne suivante
+
+    // Afficher la valeur en normal avec indentation optionnelle
+    doc.setFont(undefined, "normal");
+
+    // Découper le texte de la valeur si nécessaire
+    const valueLines = splitTextToFitWidth(
+        doc,
+        value || "N/A",
+        availableWidth - indentValue
+    );
+
+    // Afficher toutes les lignes de la valeur avec indentation
+    valueLines.forEach((line) => {
+        doc.text(line, leftMargin + indentValue, currentY);
+        currentY += 5; // Espacement entre les lignes de valeur
+    });
+
+    currentY += 2; // Espace après la valeur avant le prochain élément
+
+    return currentY;
+};
+
+// Fonction pour vérifier si le contenu peut tenir dans l'espace restant
+const checkSpaceAndAddPage = async (
+    doc,
+    currentY,
+    requiredSpace,
+    pageWidth,
+    pageHeight,
+    contentEndY
+) => {
+    // CORRECTION: Vérifier que currentY + requiredSpace ne dépasse pas contentEndY
+    // et laisser un espace de sécurité de 5mm avant le footer
+    if (currentY + requiredSpace > contentEndY - 5) {
+        doc.addPage();
+        await addHeaderImages(doc, pageWidth);
+        await addFooterImages(doc, pageWidth, pageHeight);
+        // Retourner la position Y de début de contenu (juste sous le header)
+        return HEADER_Y + HEADER_HEIGHT + 10;
+    }
+    return currentY;
+};
+
+// Fonction pour calculer l'espace de contenu disponible
+const getContentBounds = (pageHeight) => {
+    const contentStartY = HEADER_Y + HEADER_HEIGHT + 10; // 10mm d'espace après le header
+    const contentEndY = pageHeight - FOOTER_Y_OFFSET - FOOTER_HEIGHT - 5; // 5mm d'espace avant le footer
+    return { contentStartY, contentEndY };
+};
+
+// Fonction pour créer le contenu de chaque action
+const createActionContent = async (
+    doc,
+    action,
+    startY,
+    pageWidth,
+    pageHeight,
+    contentEndY
+) => {
+    let currentY = startY;
+    const leftMargin = 20;
+    const rightMargin = pageWidth - 20;
+    const contentWidth = rightMargin - leftMargin;
+
+    // Titre de l'action avec "Ajouté par" à droite
+    doc.setFontSize(16);
+    doc.setFont(undefined, "bold");
+    doc.text(`N° ${action.num_actions}`, leftMargin, currentY);
+
+    // "Ajouté par" à droite du numéro d'action - EN UPPERCASE
+    doc.setFontSize(11);
+    doc.setFont(undefined, "normal");
+    const ajouteParText = `Ajouté par: ${(
+        action.nom_utilisateur || "N/A"
+    ).toUpperCase()}`;
+    const ajouteParWidth =
+        (doc.getStringUnitWidth(ajouteParText) * doc.internal.getFontSize()) /
+        doc.internal.scaleFactor;
+    doc.text(ajouteParText, rightMargin - ajouteParWidth, currentY);
+
+    currentY += 8;
+
+    // Ligne de séparation
+    doc.setDrawColor(0, 0, 0);
+    doc.line(leftMargin, currentY, rightMargin, currentY);
+    currentY += 10;
+
+    doc.setFontSize(11);
+    doc.setFont(undefined, "normal");
+
+    // Vérifier l'espace avant d'ajouter les informations de base
+    currentY = await checkSpaceAndAddPage(
+        doc,
+        currentY,
+        60,
+        pageWidth,
+        pageHeight,
+        contentEndY
+    );
+
+    // Informations de base avec labels et valeurs sur des lignes séparées
+    currentY = addDataWithSeparateLines(
+        doc,
+        "Date:",
+        action.date,
+        currentY,
+        leftMargin,
+        contentWidth
+    );
+
+    // Vérifier l'espace après chaque section importante
+    currentY = await checkSpaceAndAddPage(
+        doc,
+        currentY,
+        15,
+        pageWidth,
+        pageHeight,
+        contentEndY
+    );
+
+    currentY = addDataWithSeparateLines(
+        doc,
+        "Type d'action:",
+        action.type_action_libelle,
+        currentY,
+        leftMargin,
+        contentWidth
+    );
+
+    currentY = await checkSpaceAndAddPage(
+        doc,
+        currentY,
+        15,
+        pageWidth,
+        pageHeight,
+        contentEndY
+    );
+
+    currentY = addDataWithSeparateLines(
+        doc,
+        "Statut:",
+        action.statut,
+        currentY,
+        leftMargin,
+        contentWidth
+    );
+
+    currentY = await checkSpaceAndAddPage(
+        doc,
+        currentY,
+        15,
+        pageWidth,
+        pageHeight,
+        contentEndY
+    );
+
+    currentY = addDataWithSeparateLines(
+        doc,
+        "Responsables:",
+        action.responsables_libelle,
+        currentY,
+        leftMargin,
+        contentWidth
+    );
+
+    // Description avec gestion améliorée
+    if (action.description) {
+        // Calculer l'espace nécessaire pour la description
+        const descriptionLines = splitTextToFitWidth(
+            doc,
+            action.description,
+            contentWidth - 5
+        );
+        const requiredSpace = 8 + descriptionLines.length * 5 + 5; // label + lignes + espacement
+
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            requiredSpace,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Description:",
+            action.description,
+            currentY,
+            leftMargin,
+            contentWidth,
+            5
+        );
+    }
+
+    // Constat avec gestion améliorée
+    if (action.constat_libelle) {
+        const constatLines = splitTextToFitWidth(
+            doc,
+            action.constat_libelle,
+            contentWidth - 5
+        );
+        const requiredSpace = 8 + constatLines.length * 5 + 5;
+
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            requiredSpace,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Constat:",
+            action.constat_libelle,
+            currentY,
+            leftMargin,
+            contentWidth,
+            5
+        );
+    }
+
+    // Autres informations avec vérification d'espace pour chacune
+    if (action.source_libelle) {
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            20,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Source:",
+            action.source_libelle,
+            currentY,
+            leftMargin,
+            contentWidth
+        );
+    }
+
+    if (action.frequenceWithDetails || action.frequence) {
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            20,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Fréquence:",
+            action.frequenceWithDetails || action.frequence,
+            currentY,
+            leftMargin,
+            contentWidth
+        );
+    }
+
+    if (action.mesure) {
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            20,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Livrable:",
+            action.mesure,
+            currentY,
+            leftMargin,
+            contentWidth
+        );
+    }
+
+    if (action.suivis_noms) {
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            20,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Suivis:",
+            action.suivis_noms,
+            currentY,
+            leftMargin,
+            contentWidth
+        );
+    }
+
+    if (action.observation) {
+        const observationLines = splitTextToFitWidth(
+            doc,
+            action.observation,
+            contentWidth
+        );
+        const requiredSpace = 8 + observationLines.length * 5 + 5;
+
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            requiredSpace,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Observation:",
+            action.observation,
+            currentY,
+            leftMargin,
+            contentWidth
+        );
+    }
+
+    // Mises à jour des responsables
+    if (action.responsables_updates && action.responsables_updates.length > 0) {
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            30,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+
+        doc.setFont(undefined, "bold");
+        doc.text("Mises à jour des responsables:", leftMargin, currentY);
+        currentY += 8;
+
+        for (const update of action.responsables_updates) {
+            currentY = await checkSpaceAndAddPage(
+                doc,
+                currentY,
+                25,
+                pageWidth,
+                pageHeight,
+                contentEndY
+            );
+
+            doc.setFont(undefined, "bold");
+            doc.text(`${update.responsable_nom}:`, leftMargin + 5, currentY);
+            currentY += 6;
+
+            doc.setFont(undefined, "normal");
+            if (update.statut_resp) {
+                currentY = addDataWithSeparateLines(
+                    doc,
+                    "Statut:",
+                    update.statut_resp,
+                    currentY,
+                    leftMargin + 10,
+                    contentWidth - 20
+                );
+            }
+            if (update.observation_resp) {
+                currentY = addDataWithSeparateLines(
+                    doc,
+                    "Observation:",
+                    update.observation_resp,
+                    currentY,
+                    leftMargin + 10,
+                    contentWidth - 20
+                );
+            }
+            currentY += 5;
+        }
+    }
+
+    // Mises à jour des suivis
+    if (action.suivis_updates && action.suivis_updates.length > 0) {
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            30,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+
+        doc.setFont(undefined, "bold");
+        doc.text("Mises à jour des suivis:", leftMargin, currentY);
+        currentY += 8;
+
+        for (const update of action.suivis_updates) {
+            currentY = await checkSpaceAndAddPage(
+                doc,
+                currentY,
+                25,
+                pageWidth,
+                pageHeight,
+                contentEndY
+            );
+
+            doc.setFont(undefined, "bold");
+            doc.text(`${update.suivi_nom}:`, leftMargin + 5, currentY);
+            currentY += 6;
+
+            doc.setFont(undefined, "normal");
+            if (update.statut_suivi) {
+                currentY = addDataWithSeparateLines(
+                    doc,
+                    "Statut:",
+                    update.statut_suivi,
+                    currentY,
+                    leftMargin + 10,
+                    contentWidth - 20
+                );
+            }
+            if (update.observation_suivi) {
+                currentY = addDataWithSeparateLines(
+                    doc,
+                    "Observation:",
+                    update.observation_suivi,
+                    currentY,
+                    leftMargin + 10,
+                    contentWidth - 20
+                );
+            }
+            currentY += 5;
+        }
+    }
+
+    // Observation par suivis
+    if (action.observationDates) {
+        const observationDatesLines = splitTextToFitWidth(
+            doc,
+            action.observationDates,
+            contentWidth - 5
+        );
+        const requiredSpace = 8 + observationDatesLines.length * 5 + 5;
+
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            requiredSpace,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Observation par suivis:",
+            action.observationDates,
+            currentY,
+            leftMargin,
+            contentWidth,
+            5
+        );
+    }
+
+    return currentY;
+};
+
+// Fonction principale d'exportation en PDF
+const exportToPdf = async () => {
+    const selectedIds = tableRef.value?.selectedRows || [];
     const selectedData = formattedActions.value.filter((action) =>
         selectedIds.includes(action.num_actions)
     );
@@ -601,76 +1178,61 @@ const exportToPdf = () => {
     }
 
     try {
-        // Si vous avez besoin de données supplémentaires depuis l'API
-        // const additionalData = await axios.post(
-        //     "/api/actions/auditinterne/details",
-        //     { ids: selectedIds }
-        // );
-
-        // Fusionner les données supplémentaires avec les données sélectionnées
-        const dataToExport = selectedData.map((action) => {
-            // const additionalInfo = additionalData.data.find(
-            //     (item) => item.num_actions === action.num_actions
-            // );
-            return {
-                ...action, //...additionalInfo
-            };
+        const doc = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4",
         });
 
-        // Initialiser le PDF
-        const doc = new jsPDF({ orientation: "landscape" });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
 
-        dataToExport.forEach((action, index) => {
-            if (index > 0) doc.addPage();
-            // Ajouter un titre
-            doc.setFontSize(18);
-            doc.text("Actions Audit Interne", 14, 20);
+        // Calculer les limites de contenu avec la fonction dédiée
+        const { contentStartY, contentEndY } = getContentBounds(pageHeight);
 
-            // Créer une table avec une seule ligne (cette action uniquement)
-            const tableData = [
-                [
-                    action.num_actions,
-                    action.date,
-                    action.source_libelle,
-                    action.type_action_libelle,
-                    action.responsable_libelle,
-                    action.suivi_nom,
-                    action.description,
-                    action.frequenceWithDetails || action.frequence,
-                    action.mesure,
-                    action.observation,
-                    action.statut,
-                    action.nom_utilisateur,
-                ],
-            ];
+        let pageNumber = 1;
+        const totalPages = selectedData.length;
 
-            doc.autoTable({
-                head: [
-                    [
-                        "N°",
-                        "Date",
-                        "Source",
-                        "Type d'action",
-                        "Responsable",
-                        "Suivi",
-                        "Description",
-                        "Fréquence",
-                        "Livrable",
-                        "Observation",
-                        "Statut",
-                        "Ajouté par",
-                    ],
-                ],
-                body: tableData,
-                startY: 30,
-            });
-        });
+        for (let i = 0; i < selectedData.length; i++) {
+            const action = selectedData[i];
 
-        // Sauvegarder le PDF
-        doc.save("Audit_Interne.pdf");
+            if (i > 0) {
+                doc.addPage();
+                pageNumber++;
+            }
+
+            await addHeaderImages(doc, pageWidth);
+            await addFooterImages(doc, pageWidth, pageHeight);
+
+            await createActionContent(
+                doc,
+                action,
+                contentStartY,
+                pageWidth,
+                pageHeight,
+                contentEndY
+            );
+
+            // Numéro de page dans la zone du footer (mais pas sur les images)
+            doc.setFontSize(9);
+            doc.setFont(undefined, "normal");
+            const pageText = `Page ${pageNumber} / ${totalPages}`;
+            const pageTextWidth =
+                (doc.getStringUnitWidth(pageText) * 9) /
+                doc.internal.scaleFactor;
+
+            // Centrer le numéro de page entre les deux images du footer
+            const centerX = pageWidth / 2 - pageTextWidth / 2;
+            doc.text(pageText, centerX, pageHeight - 15); // Position au milieu des images footer
+        }
+
+        const fileName = `Audit_Interne_${
+            new Date().toISOString().split("T")[0]
+        }.pdf`;
+        doc.save(fileName);
 
         toast.success("PDF exporté avec succès !");
-        showExportMenu.value = false; // Masquer le menu après l'action
+        showExportMenu.value = false;
     } catch (error) {
         console.error("Erreur lors de l'exportation en PDF :", error);
         toast.error("Une erreur s'est produite lors de l'exportation.");
