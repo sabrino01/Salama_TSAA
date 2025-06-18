@@ -30,8 +30,8 @@ const action = ref({
     description: "",
     sources_id: "",
     type_actions_id: "",
-    responsables_id: [""],
-    suivis_id: [""],
+    responsables_id: [],
+    suivis_id: [],
     constats_id: "",
     observation: "",
     frequence: "",
@@ -55,16 +55,22 @@ const formatDateUpdate = (dateString) => {
 const addSuivi = () => {
     action.value.suivis_id.push("");
 };
+// Fonction pour retirer un suivi
 const removeSuivi = (index) => {
-    action.value.suivis_id.splice(index, 1);
+    if (action.value.suivis_id.length > 1) {
+        action.value.suivis_id.splice(index, 1);
+    }
 };
 
 // Ajouter ou retirer un responsable
 const addResponsable = () => {
     action.value.responsables_id.push("");
 };
+// Fonction pour retirer un responsable
 const removeResponsable = (index) => {
-    action.value.responsables_id.splice(index, 1);
+    if (action.value.responsables_id.length > 1) {
+        action.value.responsables_id.splice(index, 1);
+    }
 };
 
 // Variable pour stocker la fréquence originale
@@ -271,16 +277,31 @@ onMounted(async () => {
         const actionResponse = await axios.get(`/api/actions/${actionId}`);
         Object.assign(action.value, actionResponse.data);
 
+        // Gestion des responsables
         if (action.value.responsables_id) {
             action.value.responsables_id = action.value.responsables_id
                 .split(",")
+                .filter((id) => id) // Filtrer les valeurs vides
                 .map(Number);
         }
+        // S'assurer qu'il y a au moins un select vide pour les responsables
+        if (
+            !action.value.responsables_id ||
+            action.value.responsables_id.length === 0
+        ) {
+            action.value.responsables_id = [""];
+        }
 
+        // Gestion des suivis
         if (action.value.suivis_id) {
             action.value.suivis_id = action.value.suivis_id
                 .split(",")
+                .filter((id) => id) // Filtrer les valeurs vides
                 .map(Number);
+        }
+        // S'assurer qu'il y a au moins un select vide pour les suivis
+        if (!action.value.suivis_id || action.value.suivis_id.length === 0) {
+            action.value.suivis_id = [""];
         }
 
         // Normaliser et stocker la valeur originale de la fréquence
