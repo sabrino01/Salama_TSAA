@@ -1,5 +1,5 @@
 <script setup>
-import Sidebar from "../../../assets/SidebarResponsable.vue";
+import Sidebar from "../../../assets/SidebarSuivi.vue";
 import Navbar from "../../../assets/Navbar.vue";
 import Footer from "../../../assets/Footer.vue";
 import {
@@ -464,8 +464,8 @@ const modifierSuivisPTA = async () => {
                     >
                         <!-- Champ Action -->
                         <div class="flex w-[48%] items-start">
-                            <span class="w-[10%] font-semibold text-gray-800">
-                                Action :
+                            <span class="w-[25%] font-semibold text-gray-800">
+                                Description de la non conformité :
                             </span>
                             <div
                                 class="w-[90%] font-semibold bg-white border-b border-b-gray-400 px-2 py-2 text-gray-600 whitespace-pre-wrap break-words"
@@ -489,6 +489,23 @@ const modifierSuivisPTA = async () => {
                         </div>
                     </div>
 
+                    <div
+                        class="flex flex-wrap justify-start gap-12 mt-6 w-full text-xl ml-4"
+                    >
+                        <!-- Champ Action -->
+                        <div class="flex w-[48%] items-start">
+                            <span class="w-[10%] font-semibold text-gray-800">
+                                Action :
+                            </span>
+                            <div
+                                class="w-[90%] font-semibold bg-white border-b border-b-gray-400 px-2 py-2 text-gray-600 whitespace-pre-wrap break-words"
+                                style="max-width: 100%"
+                            >
+                                {{ action.action || "Aucune action définie" }}
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex w-[60%] items-center mt-5">
                         <label
                             for="statut"
@@ -506,6 +523,8 @@ const modifierSuivisPTA = async () => {
                             <option value="En retard">En retard</option>
                             <option value="Clôturé">Clôturé</option>
                             <option value="Abandonné">Abandonné</option>
+                            <option value="Non Réalisé">Non Réalisé</option>
+                            <option value="A Emporter">A Emporter</option>
                         </select>
                     </div>
 

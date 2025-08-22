@@ -12,7 +12,7 @@
 
         <!-- Modal -->
         <div
-            class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 flex flex-col"
+            class="relative bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 flex flex-col max-h-[90vh]"
         >
             <!-- Header -->
             <div class="py-4 px-6 border-b border-gray-200">
@@ -21,178 +21,223 @@
 
             <!-- Body -->
             <div class="py-6 px-6 flex-grow overflow-y-auto">
-                <!-- Sélection des jours de la semaine -->
-                <div class="mb-4">
+                <!-- Sélection du type de menu -->
+                <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Choix du jours
-                    </label>
-                    <div class="flex flex-wrap gap-2">
-                        <label
-                            v-for="jour in jours"
-                            :key="jour"
-                            class="inline-flex items-center"
-                        >
-                            <input
-                                type="checkbox"
-                                v-model="joursHeure.jours"
-                                :value="jour"
-                                class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-1"
-                            />
-                            <span class="ml-1">{{ jour }}</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Heure de début et fin (visible uniquement si au moins un jour est sélectionné) -->
-                <div
-                    v-if="joursHeure.jours.length > 0"
-                    class="grid grid-cols-2 gap-4 mb-4"
-                >
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                            Heure de début
-                        </label>
-                        <input
-                            type="time"
-                            v-model="joursHeure.heureDebut"
-                            class="w-full rounded-md border border-gray-300 px-3 py-2"
-                        />
-                    </div>
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                            Heure de fin
-                        </label>
-                        <input
-                            type="time"
-                            v-model="joursHeure.heureFin"
-                            class="w-full rounded-md border border-gray-300 px-3 py-2"
-                            :min="joursHeure.heureDebut"
-                        />
-                    </div>
-                </div>
-
-                <!-- Champ pour définir la période -->
-                <div
-                    v-if="
-                        joursHeure.jours.length > 0 &&
-                        joursHeure.heureDebut &&
-                        joursHeure.heureFin
-                    "
-                    class="mb-4"
-                >
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Définir la période
+                        Type de planification
                     </label>
                     <div class="flex flex-wrap gap-4">
                         <label class="inline-flex items-center">
                             <input
                                 type="radio"
-                                v-model="periode"
-                                value="cetteSemaine"
+                                v-model="typeMenu"
+                                value="dateHeure"
                                 class="rounded-full border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                             />
-                            <span class="ml-2">Dès cette semaine</span>
+                            <span class="ml-2">Date et heure</span>
                         </label>
                         <label class="inline-flex items-center">
                             <input
                                 type="radio"
-                                v-model="periode"
-                                value="semaineProchaine"
+                                v-model="typeMenu"
+                                value="dateHeureSemaine"
                                 class="rounded-full border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                             />
-                            <span class="ml-2">Semaine prochaine</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input
-                                type="radio"
-                                v-model="periode"
-                                value="moisProchain"
-                                class="rounded-full border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                            <span class="ml-2">Le mois prochain</span>
+                            <span class="ml-2">Date et heure par semaine</span>
                         </label>
                     </div>
                 </div>
 
-                <!-- Suivis des jours et heures (visible uniquement si période est définie) -->
-                <div
-                    v-if="
-                        joursHeure.jours.length > 0 &&
-                        joursHeure.heureDebut &&
-                        joursHeure.heureFin &&
-                        periode
-                    "
-                    class="mb-4"
-                >
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-700">
-                            Jours et heures de suivi
-                        </label>
-                        <button
-                            @click="ajouterSuiviJoursHeure"
-                            class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-sm"
+                <!-- Menu Date et Heure -->
+                <div v-if="typeMenu === 'dateHeure'">
+                    <!-- Date et heure de début -->
+                    <div class="mb-4">
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
                         >
-                            <Plus size="16" />
-                        </button>
+                            Date et heure de début
+                        </label>
+                        <input
+                            type="datetime-local"
+                            v-model="planification.dateHeureDebut"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2"
+                        />
                     </div>
 
+                    <!-- Date et heure de fin (visible si début défini) -->
+                    <div v-if="planification.dateHeureDebut" class="mb-4">
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                            Date et heure de fin
+                        </label>
+                        <input
+                            type="datetime-local"
+                            v-model="planification.dateHeureFin"
+                            :min="planification.dateHeureDebut"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2"
+                        />
+                    </div>
+
+                    <!-- Suivis (visible si début et fin définis) -->
                     <div
-                        v-for="(suivi, index) in joursHeure.suivis"
-                        :key="`jour-${index}`"
-                        class="mb-3 p-2 border border-gray-200 rounded-md"
+                        v-if="
+                            planification.dateHeureDebut &&
+                            planification.dateHeureFin
+                        "
+                        class="mb-4"
                     >
-                        <div class="flex flex-wrap gap-2 mb-2">
+                        <div class="flex justify-between items-center mb-2">
                             <label
-                                v-for="jour in jours"
-                                :key="`suivi-${index}-${jour}`"
-                                class="inline-flex items-center"
+                                class="block text-sm font-medium text-gray-700"
                             >
-                                <input
-                                    type="checkbox"
-                                    v-model="suivi.jours"
-                                    :value="jour"
-                                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-1"
-                                />
-                                <span class="ml-1">{{ jour }}</span>
+                                Dates et heures de suivi
                             </label>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label
-                                    class="block text-sm font-medium text-gray-700 mb-1"
-                                >
-                                    Heure de début
-                                </label>
-                                <input
-                                    type="time"
-                                    v-model="suivi.heureDebut"
-                                    class="w-full rounded-md border border-gray-300 px-3 py-2"
-                                />
-                            </div>
-                            <div>
-                                <label
-                                    class="block text-sm font-medium text-gray-700 mb-1"
-                                >
-                                    Heure de fin
-                                </label>
-                                <input
-                                    type="time"
-                                    v-model="suivi.heureFin"
-                                    class="w-full rounded-md border border-gray-300 px-3 py-2"
-                                />
-                            </div>
-                        </div>
-                        <div class="flex justify-end mt-2">
                             <button
-                                @click="supprimerSuiviJoursHeure(index)"
-                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                                @click="ajouterSuivi"
+                                class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-sm"
                             >
-                                <X size="16" />
+                                <Plus size="16" />
                             </button>
+                        </div>
+
+                        <div
+                            v-for="(suivi, index) in planification.suivis"
+                            :key="`suivi-${index}`"
+                            class="mb-3 p-3 border border-gray-200 rounded-md"
+                        >
+                            <div class="mb-2">
+                                <label
+                                    class="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Date et heure de suivi {{ index + 1 }}
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    v-model="suivi.dateHeure"
+                                    :min="planification.dateHeureFin"
+                                    class="w-full rounded-md border border-gray-300 px-3 py-2"
+                                />
+                            </div>
+                            <div class="flex justify-end">
+                                <button
+                                    @click="supprimerSuivi(index)"
+                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                                >
+                                    <X size="16" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu Date et Heure par Semaine -->
+                <div v-if="typeMenu === 'dateHeureSemaine'">
+                    <!-- Date et heure de début -->
+                    <div class="mb-4">
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                            Date et heure de début
+                        </label>
+                        <input
+                            type="datetime-local"
+                            v-model="planificationSemaine.dateHeureDebut"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2"
+                        />
+                    </div>
+
+                    <!-- Date et heure de fin (limitée au mois en cours) -->
+                    <div
+                        v-if="planificationSemaine.dateHeureDebut"
+                        class="mb-4"
+                    >
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                            Date et heure de fin (dans le mois en cours)
+                        </label>
+                        <input
+                            type="datetime-local"
+                            v-model="planificationSemaine.dateHeureFin"
+                            :min="planificationSemaine.dateHeureDebut"
+                            :max="finDuMois"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2"
+                        />
+                    </div>
+
+                    <!-- Date et heure finale -->
+                    <div
+                        v-if="
+                            planificationSemaine.dateHeureDebut &&
+                            planificationSemaine.dateHeureFin
+                        "
+                        class="mb-4"
+                    >
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                            Date et heure finale
+                        </label>
+                        <input
+                            type="datetime-local"
+                            v-model="planificationSemaine.dateHeureFinale"
+                            :min="planificationSemaine.dateHeureFin"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2"
+                        />
+                    </div>
+
+                    <!-- Suivis (visible si toutes les dates sont définies) -->
+                    <div
+                        v-if="
+                            planificationSemaine.dateHeureDebut &&
+                            planificationSemaine.dateHeureFin &&
+                            planificationSemaine.dateHeureFinale
+                        "
+                        class="mb-4"
+                    >
+                        <div class="flex justify-between items-center mb-2">
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >
+                                Dates et heures de suivi
+                            </label>
+                            <button
+                                @click="ajouterSuiviSemaine"
+                                class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-sm"
+                            >
+                                <Plus size="16" />
+                            </button>
+                        </div>
+
+                        <div
+                            v-for="(
+                                suivi, index
+                            ) in planificationSemaine.suivis"
+                            :key="`suivi-semaine-${index}`"
+                            class="mb-3 p-3 border border-gray-200 rounded-md"
+                        >
+                            <div class="mb-2">
+                                <label
+                                    class="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Date et heure de suivi {{ index + 1 }}
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    v-model="suivi.dateHeure"
+                                    :min="planificationSemaine.dateHeureFinale"
+                                    class="w-full rounded-md border border-gray-300 px-3 py-2"
+                                />
+                            </div>
+                            <div class="flex justify-end">
+                                <button
+                                    @click="supprimerSuiviSemaine(index)"
+                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                                >
+                                    <X size="16" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -239,24 +284,59 @@ export default {
     emits: ["update:modelValue", "save"],
     data() {
         return {
-            jours: ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"],
-            joursHeure: {
-                jours: [],
-                heureDebut: "",
-                heureFin: "",
+            typeMenu: "", // 'dateHeure' ou 'dateHeureSemaine'
+            // Données pour le menu "Date et heure"
+            planification: {
+                dateHeureDebut: "",
+                dateHeureFin: "",
                 suivis: [],
             },
-            periode: "", // Stocke la période sélectionnée
+            // Données pour le menu "Date et heure par semaine"
+            planificationSemaine: {
+                dateHeureDebut: "",
+                dateHeureFin: "",
+                dateHeureFinale: "",
+                suivis: [],
+            },
         };
     },
     computed: {
         estValide() {
-            return (
-                this.joursHeure.jours.length > 0 &&
-                this.joursHeure.heureDebut &&
-                this.joursHeure.heureFin &&
-                this.periode // Vérifie que la période est définie
+            if (this.typeMenu === "dateHeure") {
+                return (
+                    this.planification.dateHeureDebut &&
+                    this.planification.dateHeureFin
+                );
+            } else if (this.typeMenu === "dateHeureSemaine") {
+                return (
+                    this.planificationSemaine.dateHeureDebut &&
+                    this.planificationSemaine.dateHeureFin &&
+                    this.planificationSemaine.dateHeureFinale
+                );
+            }
+            return false;
+        },
+        finDuMois() {
+            if (!this.planificationSemaine.dateHeureDebut) return "";
+
+            const dateDebut = new Date(
+                this.planificationSemaine.dateHeureDebut
             );
+            const annee = dateDebut.getFullYear();
+            const mois = dateDebut.getMonth();
+
+            // Dernier jour du mois
+            const dernierJour = new Date(annee, mois + 1, 0);
+
+            // Format pour input datetime-local
+            const finMois = new Date(
+                dernierJour.getFullYear(),
+                dernierJour.getMonth(),
+                dernierJour.getDate(),
+                23,
+                59
+            );
+            return finMois.toISOString().slice(0, 16);
         },
     },
     methods: {
@@ -265,34 +345,64 @@ export default {
             this.resetForm();
         },
         resetForm() {
-            this.joursHeure = {
-                jours: [],
-                heureDebut: "",
-                heureFin: "",
+            this.typeMenu = "";
+            this.planification = {
+                dateHeureDebut: "",
+                dateHeureFin: "",
                 suivis: [],
             };
-            this.periode = ""; // Réinitialise la période
+            this.planificationSemaine = {
+                dateHeureDebut: "",
+                dateHeureFin: "",
+                dateHeureFinale: "",
+                suivis: [],
+            };
         },
-        ajouterSuiviJoursHeure() {
-            this.joursHeure.suivis.push({
-                jours: [],
-                heureDebut: "",
-                heureFin: "",
+        ajouterSuivi() {
+            this.planification.suivis.push({
+                dateHeure: "",
             });
         },
-        supprimerSuiviJoursHeure(index) {
-            this.joursHeure.suivis.splice(index, 1);
+        supprimerSuivi(index) {
+            this.planification.suivis.splice(index, 1);
+        },
+        ajouterSuiviSemaine() {
+            this.planificationSemaine.suivis.push({
+                dateHeure: "",
+            });
+        },
+        supprimerSuiviSemaine(index) {
+            this.planificationSemaine.suivis.splice(index, 1);
         },
         enregistrer() {
             if (this.estValide) {
                 const donnees = {
                     type: this.titre,
-                    joursHeure: { ...this.joursHeure },
-                    periode: this.periode, // Inclut la période dans les données
+                    typeMenu: this.typeMenu,
+                    planification:
+                        this.typeMenu === "dateHeure"
+                            ? { ...this.planification }
+                            : { ...this.planificationSemaine },
                 };
                 this.$emit("save", donnees);
                 this.fermerModal();
             }
+        },
+    },
+    watch: {
+        // Réinitialiser les données quand on change de type de menu
+        typeMenu() {
+            this.planification = {
+                dateHeureDebut: "",
+                dateHeureFin: "",
+                suivis: [],
+            };
+            this.planificationSemaine = {
+                dateHeureDebut: "",
+                dateHeureFin: "",
+                dateHeureFinale: "",
+                suivis: [],
+            };
         },
     },
 };

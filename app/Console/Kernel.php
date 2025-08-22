@@ -20,10 +20,15 @@ class Kernel extends ConsoleKernel
 
     protected function schedule(Schedule $schedule)
     {
-        // Vérifier les statuts toutes les heures
+        // Check action statuses hourly at the start of the hour
         $schedule->command('actions:check-statuses')
-                 ->hourly()
-                 ->withoutOverlapping();
+            ->hourly()
+            ->withoutOverlapping();
+
+        // Process scheduled notifications hourly, 5 minutes after the hour
+        $schedule->command('notifications:process')
+            ->hourlyAt(5) // Runs at :05 of every hour
+            ->withoutOverlapping();
     }
 
     /**
@@ -33,7 +38,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

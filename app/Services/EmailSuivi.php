@@ -116,12 +116,11 @@ class EmailSuivi
      * @param int $suiviUserId - ID de l'utilisateur suivi (pour la config email)
      * @return bool - true si l'email a été envoyé avec succès
      */
-    public function envoyerNotificationMiseAJourSuivi($actionInfo, $nouveauStatut, $observation = null, $suiviUserId = null)
+    public function envoyerNotificationMiseAJourSuivi($actionInfo, $nouveauStatut, $observation = null, $suiviUserId = null, $responsablesEmails = [])
     {
         try {
             // Si pas d'ID utilisateur fourni, essayer de le récupérer depuis les données de l'action
             if (!$suiviUserId) {
-                // Extraire l'ID du suivi depuis l'email ou d'autres moyens
                 $suiviUserId = $this->getSuiviUserIdFromEmail($actionInfo->suivi_email);
             }
 
@@ -147,8 +146,17 @@ class EmailSuivi
                 return false;
             }
 
-            // Configuration du destinataire et du contenu
+            // Configuration du destinataire principal (auteur de l'action)
             $this->phpMailer->addAddress($actionInfo->user_email);
+
+            // Ajouter les responsables en CC
+            foreach ($responsablesEmails as $email) {
+                if (!empty($email)) {
+                    $this->phpMailer->addCC($email);
+                }
+            }
+
+            // Configuration du sujet et du contenu
             $this->phpMailer->Subject = 'Mise à jour d\'action par suivi - ' . $actionInfo->num_actions;
             $this->phpMailer->Body = $this->genererTemplateEmail($actionInfo, $nouveauStatut, $observation);
             $this->phpMailer->AltBody = $this->genererTexteSimple($actionInfo, $nouveauStatut, $observation);
@@ -159,6 +167,7 @@ class EmailSuivi
             Log::info('Email de suivi envoyé avec succès', [
                 'action_id' => $actionInfo->action_id,
                 'destinataire' => $actionInfo->user_email,
+                'responsables_cc' => $responsablesEmails,
                 'expediteur' => $actionInfo->suivi_email,
                 'suivi_libelle' => $actionInfo->suivi_libelle,
                 'config_utilisee' => $config['username']
@@ -171,6 +180,7 @@ class EmailSuivi
                 'action_id' => $actionInfo->action_id ?? 'unknown',
                 'suivi_email' => $actionInfo->suivi_email ?? 'unknown',
                 'user_email' => $actionInfo->user_email ?? 'unknown',
+                'responsables_cc' => $responsablesEmails,
                 'suivi_user_id' => $suiviUserId ?? 'unknown',
                 'error_details' => $e->getTraceAsString()
             ]);

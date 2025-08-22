@@ -1,6 +1,10 @@
+<!-- NavbarUser.vue -->
 <template>
     <div
-        class="bg-white shadow-md p-4 flex justify-end items-center space-x-4 top-0 z-50"
+        :class="[
+            'bg-white shadow-md p-4 flex justify-end items-center space-x-4 transition-all duration-300',
+            isSidebarCollapsed ? 'left-16' : 'left-64',
+        ]"
     >
         <div
             class="border-l border-gray-200 ml-4 pl-4 flex items-center space-x-4"
@@ -11,7 +15,6 @@
                 <p class="text-gray-500 text-sm">{{ userData.departement }}</p>
             </div>
         </div>
-
         <!-- Image de profil et dropdown -->
         <div class="relative">
             <button @click="toggleDropdown" class="focus:outline-none">
@@ -21,7 +24,6 @@
                     class="w-10 h-10 rounded-full border border-gray-300"
                 />
             </button>
-
             <div
                 v-if="isDropdownOpen"
                 class="absolute right-0 mt-2 w-48 bg-white border shadow-lg rounded-lg overflow-hidden z-50"
@@ -36,7 +38,6 @@
                     </button>
                     <div class="border-b border-gray-300"></div>
                 </template>
-
                 <!-- Bouton Déconnexion (toujours visible) -->
                 <button
                     @click="handleLogout"
@@ -54,13 +55,22 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import emitter from "../../utils/eventBus";
 
+// Props pour recevoir l'état du sidebar
+const props = defineProps({
+    isSidebarCollapsed: {
+        type: Boolean,
+        default: false,
+    },
+});
+
 const router = useRouter();
 const isDropdownOpen = ref(false);
 const userData = ref({
-    // Ajout de userData qui manquait aussi
     nom_utilisateur: "",
     departement: "",
+    role: "",
 });
+
 const toggleDropdown = () => {
     isDropdownOpen.value = !isDropdownOpen.value;
 };
@@ -72,18 +82,13 @@ const goToProfile = () => {
     } else {
         router.push(`/user/profile/${user.id}`);
     }
-    isDropdownOpen.value = false; // Fermer le dropdown après la redirection
+    isDropdownOpen.value = false;
 };
 
 const handleLogout = () => {
-    // Supprimer les données du localStorage
     localStorage.removeItem("user");
     localStorage.removeItem("token");
-
-    // Fermer le dropdown
     isDropdownOpen.value = false;
-
-    // Rediriger vers la page de connexion
     router.push("/login");
 };
 

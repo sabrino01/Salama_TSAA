@@ -1,5 +1,5 @@
 <script setup>
-import Sidebar from "../../../assets/SidebarResponsable.vue";
+import Sidebar from "../../../assets/SidebarSuivi.vue";
 import Navbar from "../../../assets/Navbar.vue";
 import Footer from "../../../assets/Footer.vue";
 import Table from "../../../assets/TableSuivi.vue";
@@ -7,6 +7,16 @@ import { Info, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+
+// État pour suivre si le sidebar est réduit
+const isSidebarCollapsed = ref(false);
+
+// Fonction appelée quand le sidebar change d'état
+const handleSidebarToggle = (collapsed) => {
+    isSidebarCollapsed.value = collapsed;
+    // Sauvegarde l'état dans le localStorage
+    localStorage.setItem("sidebar-collapsed", collapsed);
+};
 
 const router = useRouter();
 const actionsSuivisAI = ref([]);
@@ -310,7 +320,7 @@ const columns = [
     { label: "N°", field: "num_actions" },
     { label: "Date", field: "date" },
     {
-        label: "Action",
+        label: "Description non conformité",
         field: "description",
         classes: "truncate", // Classes Tailwind à appliquer à cette colonne
         isExpandable: true, // Indique que cette colonne a un contenu extensible
@@ -360,18 +370,27 @@ const actions = [
 // Fonction pour charger les actions au démarrage
 onMounted(() => {
     chargerActionsSuivis(currentPage.value, searchQuery.value);
+    // Récupère l'état du sidebar depuis le localStorage
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+        isSidebarCollapsed.value = saved === "true";
+    }
 });
 </script>
 
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <Sidebar class="w-64 bg-[#0062ff] text-white fixed h-full" />
+        <Sidebar @sidebar-toggle="handleSidebarToggle" />
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col ml-64">
-            <!-- Navbar -->
-            <Navbar />
+        <div
+            :class="[
+                'flex-1 flex flex-col transition-all duration-300',
+                isSidebarCollapsed ? 'ml-16' : 'ml-64',
+            ]"
+        >
+            <Navbar v-if="true" :isSidebarCollapsed="isSidebarCollapsed" />
 
             <!-- Contenu principal avec padding en bas -->
             <div class="flex-1 p-5 bg-gray-50 pb-16">
@@ -380,7 +399,7 @@ onMounted(() => {
                     <div
                         class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
                     >
-                        Suivis Audit Interne et PTA
+                        Suivis
                     </div>
                     <div class="basis-[2%]">
                         <Info />
@@ -391,12 +410,13 @@ onMounted(() => {
                 <div class="w-full text-gray-600 mt-5">
                     <p class="indent-4 font-poppins">
                         Dans l'espace du Suivi, vous pourriez voir et éditer les
-                        informations sur les actions, que ce soit Audit Interne
-                        ou PTA.
+                        informations sur les actions, que ce soit Audit Interne,
+                        PTA, Audit Externe, CAC, Enquête de Satisfaction et
+                        SWOT.
                     </p>
                 </div>
 
-                <!-- Choix d'action à faire(A.I ou PTA) -->
+                <!-- Choix d'action à faire(A.I / PTA / A.E / CAC / ENQUETE / SWOT) -->
                 <div class="flex w-full mt-5 ml-4 justify-center space-x-4">
                     <!-- Lien Audit Interne -->
                     <router-link
@@ -422,6 +442,62 @@ onMounted(() => {
                         }"
                     >
                         PTA
+                    </router-link>
+
+                    <div class="border-r border-gray-300"></div>
+
+                    <!-- Lien AE -->
+                    <router-link
+                        to="/suivi/actions/ae"
+                        class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                        :class="{
+                            'border-b-4 border-blue-600':
+                                $route.path === '/suivi/actions/ae',
+                        }"
+                    >
+                        Audit Externe
+                    </router-link>
+
+                    <div class="border-r border-gray-300"></div>
+
+                    <!-- Lien CAC -->
+                    <router-link
+                        to="/suivi/actions/cac"
+                        class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                        :class="{
+                            'border-b-4 border-blue-600':
+                                $route.path === '/suivi/actions/cac',
+                        }"
+                    >
+                        CAC
+                    </router-link>
+
+                    <div class="border-r border-gray-300"></div>
+
+                    <!-- Lien ENQUETE -->
+                    <router-link
+                        to="/suivi/actions/enquete"
+                        class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                        :class="{
+                            'border-b-4 border-blue-600':
+                                $route.path === '/suivi/actions/enquete',
+                        }"
+                    >
+                        ENQUETE
+                    </router-link>
+
+                    <div class="border-r border-gray-300"></div>
+
+                    <!-- Lien SWOT -->
+                    <router-link
+                        to="/suivi/actions/swot"
+                        class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                        :class="{
+                            'border-b-4 border-blue-600':
+                                $route.path === '/suivi/actions/swot',
+                        }"
+                    >
+                        SWOT
                     </router-link>
                 </div>
 

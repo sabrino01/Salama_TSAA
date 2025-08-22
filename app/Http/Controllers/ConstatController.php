@@ -24,9 +24,10 @@ class ConstatController extends Controller
     public function show($id)
     {
         $constat = Constat::find($id);
-        if(!$constat) {
+        if (!$constat) {
             return response()->json([
-                'message' => 'Constat ou Action non trouvé', 404
+                'message' => 'Constat ou Action non trouvé',
+                404
             ]);
         }
         return response()->json($constat);
@@ -37,13 +38,16 @@ class ConstatController extends Controller
         $validateData = $request->validate([
             'code' => 'required|string|max:255|unique:constats',
             'libelle' => 'required|string|max:255',
-            'description' => 'required|string|max:255'
+            'description' => 'required|string|max:255',
+            'types_audit' => 'required|array|min:1',
+            'types_audit.*' => 'in:pta,auditinterne,auditexterne,cac,swot,enquete,aii'
         ]);
 
         Constat::create([
             'code' => $validateData['code'],
             'libelle' => $validateData['libelle'],
-            'description' => $validateData['description']
+            'description' => $validateData['description'],
+            'types_audit' => $validateData['types_audit']
         ]);
 
         return response()->json([
@@ -51,19 +55,29 @@ class ConstatController extends Controller
         ]);
     }
 
+    // Méthode pour récupérer les types d'audit disponibles
+    public function getTypesAudit()
+    {
+        return response()->json([
+            'types_audit' => Constat::TYPES_AUDIT
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $constat = Constat::find($id);
-        if(!$constat) {
+        if (!$constat) {
             return response()->json([
-                'message' => 'Constat ou Action non trouvé', 404
-            ]);
+                'message' => 'Constat ou Action non trouvé'
+            ], 404);
         }
 
         $validateData = $request->validate([
-            'code' => 'required|string|max:255|unique:constats,code,' .$id,
+            'code' => 'required|string|max:255|unique:constats,code,' . $id,
             'libelle' => 'required|string|max:255',
-            'description' => 'required|string|max:255'
+            'description' => 'required|string|max:255',
+            'types_audit' => 'required|array|min:1',
+            'types_audit.*' => 'in:pta,auditinterne,auditexterne,cac,swot,enquete,aii'
         ]);
 
         $constat->update($validateData);
@@ -76,9 +90,10 @@ class ConstatController extends Controller
     public function destroy($id)
     {
         $constat = Constat::find($id);
-        if(!$constat) {
+        if (!$constat) {
             return response()->json([
-                'message' => 'Constat ou Action non trouvé', 404
+                'message' => 'Constat ou Action non trouvé',
+                404
             ]);
         }
 

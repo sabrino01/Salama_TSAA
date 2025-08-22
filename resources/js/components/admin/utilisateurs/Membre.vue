@@ -8,6 +8,16 @@ import { Info, Plus, Search, ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 
+// État pour suivre si le sidebar est réduit
+const isSidebarCollapsed = ref(false);
+
+// Fonction appelée quand le sidebar change d'état
+const handleSidebarToggle = (collapsed) => {
+    isSidebarCollapsed.value = collapsed;
+    // Sauvegarde l'état dans le localStorage
+    localStorage.setItem("sidebar-collapsed", collapsed);
+};
+
 const membres = ref([]);
 const totalMembres = ref(0);
 const currentPage = ref(1);
@@ -129,140 +139,163 @@ const filterActions = (row, actions) => {
 // Charger les membres au montage du composant
 onMounted(() => {
     chargerMembres();
+    // Récupère l'état du sidebar depuis le localStorage
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+        isSidebarCollapsed.value = saved === "true";
+    }
 });
 </script>
 
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <Sidebar class="w-64 bg-[#0062ff] text-white fixed h-full" />
+        <Sidebar @sidebar-toggle="handleSidebarToggle" />
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col ml-64">
-            <!-- Navbar -->
-            <Navbar />
+        <div
+            :class="[
+                'flex-1 flex flex-col transition-all duration-300',
+                isSidebarCollapsed ? 'ml-16' : 'ml-64',
+            ]"
+        >
+            <Navbar v-if="true" :isSidebarCollapsed="isSidebarCollapsed" />
 
             <!-- Contenu principal -->
-            <div class="flex-1 p-5 bg-gray-50 pb-16">
-                <!-- Titre -->
-                <div class="flex w-full">
-                    <div
-                        class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
-                    >
-                        Membres
-                    </div>
-                    <div class="basis-[2%]">
-                        <Info />
-                    </div>
-                </div>
-
-                <!-- Description -->
-                <div class="w-full text-gray-600 mt-5">
-                    <p class="indent-4 font-poppins">
-                        Dans l'espace membres, vous pouvez voir la liste de tous
-                        les membres de l'application, d'y ajouter et de faire
-                        plus.
-                    </p>
-                </div>
-
-                <!-- Barre de recherche -->
-                <div class="flex w-full mt-5 ml-4">
-                    <router-link to="/admin/utilisateurs/membres/ajouter">
-                        <button
-                            class="flex items-center justify-center bg-[#0062ff] text-white px-4 py-2 rounded-md w-38"
+            <div class="flex-1 overflow-y-auto bg-gray-50">
+                <div class="p-5">
+                    <!-- Titre -->
+                    <div class="flex w-full">
+                        <div
+                            class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
                         >
-                            <Plus class="w-5 h-5 mr-2" /> Ajouter
-                        </button>
-                    </router-link>
-
-                    <div
-                        class="flex items-center ml-6 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                    >
-                        <Search class="w-5 h-5 mr-2 text-gray-500" />
-                        <input
-                            type="text"
-                            placeholder="Rechercher...."
-                            class="outline-none bg-transparent text-gray-800 placeholder-gray-500"
-                            v-model="searchQuery"
-                            @input="rechercherMembres"
-                        />
+                            Membres
+                        </div>
+                        <div class="basis-[2%]">
+                            <Info />
+                        </div>
                     </div>
-                </div>
 
-                <!-- Tableau des membres -->
-                <div class="mt-5 ml-4">
-                    <Table
-                        :columns="columns"
-                        :data="membres"
-                        :actions="actions"
-                        :filterActions="filterActions"
-                    />
+                    <div class="min-h-[800px]">
+                        <!-- Description -->
+                        <div class="w-full text-gray-600 mt-5">
+                            <p class="indent-4 font-poppins">
+                                Dans l'espace membres, vous pouvez voir la liste
+                                de tous les membres de l'application, d'y
+                                ajouter et de faire plus.
+                            </p>
+                        </div>
+
+                        <!-- Barre de recherche -->
+                        <div class="flex w-full mt-5 ml-4">
+                            <router-link
+                                to="/admin/utilisateurs/membres/ajouter"
+                            >
+                                <button
+                                    class="flex items-center justify-center bg-[#0062ff] text-white px-4 py-2 rounded-md w-38"
+                                >
+                                    <Plus class="w-5 h-5 mr-2" /> Ajouter
+                                </button>
+                            </router-link>
+
+                            <div
+                                class="flex items-center ml-6 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <Search class="w-5 h-5 mr-2 text-gray-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Rechercher...."
+                                    class="outline-none bg-transparent text-gray-800 placeholder-gray-500"
+                                    v-model="searchQuery"
+                                    @input="rechercherMembres"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Tableau des membres -->
+                        <div class="mt-5 ml-4">
+                            <Table
+                                :columns="columns"
+                                :data="membres"
+                                :actions="actions"
+                                :filterActions="filterActions"
+                            />
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="flex w-full mt-5 justify-between">
+                            <!-- Résultat -->
+                            <div
+                                class="flex items-center text-gray-500 justify-start px-4 space-x-2"
+                            >
+                                <span>Résultat</span>
+                                <strong>{{
+                                    totalMembres === 0
+                                        ? 0
+                                        : (currentPage - 1) * perPage + 1
+                                }}</strong>
+                                <span>à</span>
+                                <strong>{{
+                                    totalMembres === 0
+                                        ? 0
+                                        : Math.min(
+                                              currentPage * perPage,
+                                              totalMembres
+                                          )
+                                }}</strong>
+                                <span>sur</span>
+                                <strong>{{ totalMembres }}</strong>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div
+                                class="flex items-center justify-end space-x-2"
+                            >
+                                <button
+                                    class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                                    :disabled="
+                                        currentPage <= 1 || totalMembres === 0
+                                    "
+                                    @click="goToPage(currentPage - 1)"
+                                >
+                                    <ChevronLeft class="w-4 h-4" /> Préc.
+                                </button>
+
+                                <!-- Numéros de page -->
+                                <div class="flex space-x-1">
+                                    <button
+                                        v-for="page in pages"
+                                        :key="page"
+                                        class="flex items-center justify-center w-8 h-8 rounded-md border"
+                                        :class="
+                                            page === currentPage
+                                                ? 'bg-[#0062ff] text-white'
+                                                : 'bg-white text-black border-gray-300'
+                                        "
+                                        @click="goToPage(page)"
+                                    >
+                                        {{ page }}
+                                    </button>
+                                </div>
+
+                                <button
+                                    class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                                    :disabled="
+                                        currentPage >= lastPage ||
+                                        totalMembres === 0
+                                    "
+                                    @click="goToPage(currentPage + 1)"
+                                >
+                                    Suiv. <ChevronRight class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Footer -->
-                <div class="flex w-full mt-5 justify-between">
-                    <!-- Résultat -->
-                    <div
-                        class="flex items-center text-gray-500 justify-start px-4 space-x-2"
-                    >
-                        <span>Résultat</span>
-                        <strong>{{
-                            totalMembres === 0
-                                ? 0
-                                : (currentPage - 1) * perPage + 1
-                        }}</strong>
-                        <span>à</span>
-                        <strong>{{
-                            totalMembres === 0
-                                ? 0
-                                : Math.min(currentPage * perPage, totalMembres)
-                        }}</strong>
-                        <span>sur</span>
-                        <strong>{{ totalMembres }}</strong>
-                    </div>
-
-                    <!-- Pagination -->
-                    <div class="flex items-center justify-end space-x-2">
-                        <button
-                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
-                            :disabled="currentPage <= 1 || totalMembres === 0"
-                            @click="goToPage(currentPage - 1)"
-                        >
-                            <ChevronLeft class="w-4 h-4" /> Préc.
-                        </button>
-
-                        <!-- Numéros de page -->
-                        <div class="flex space-x-1">
-                            <button
-                                v-for="page in pages"
-                                :key="page"
-                                class="flex items-center justify-center w-8 h-8 rounded-md border"
-                                :class="
-                                    page === currentPage
-                                        ? 'bg-[#0062ff] text-white'
-                                        : 'bg-white text-black border-gray-300'
-                                "
-                                @click="goToPage(page)"
-                            >
-                                {{ page }}
-                            </button>
-                        </div>
-
-                        <button
-                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
-                            :disabled="
-                                currentPage >= lastPage || totalMembres === 0
-                            "
-                            @click="goToPage(currentPage + 1)"
-                        >
-                            Suiv. <ChevronRight class="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
+                <Footer />
             </div>
-
-            <!-- Footer -->
-            <Footer />
         </div>
     </div>
 </template>

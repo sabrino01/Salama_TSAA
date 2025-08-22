@@ -1,149 +1,160 @@
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <Sidebar class="w-64 bg-[#0062ff] text-white fixed h-full" />
+        <Sidebar @sidebar-toggle="handleSidebarToggle" />
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col ml-64">
-            <!-- Navbar -->
-            <Navbar />
+        <div
+            :class="[
+                'flex-1 flex flex-col transition-all duration-300',
+                isSidebarCollapsed ? 'ml-16' : 'ml-64',
+            ]"
+        >
+            <Navbar v-if="true" :isSidebarCollapsed="isSidebarCollapsed" />
 
             <!-- Contenu principal avec padding en bas -->
-            <div class="flex-1 p-5 bg-gray-50 pb-16">
-                <!-- Titre -->
-                <div class="flex w-full">
-                    <div
-                        class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
-                    >
-                        Profile
+            <div class="flex-1 overflow-y-auto bg-gray-50">
+                <div class="p-5">
+                    <!-- Titre -->
+                    <div class="flex w-full">
+                        <div
+                            class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
+                        >
+                            Profile
+                        </div>
+                        <div class="basis-[2%]">
+                            <Info />
+                        </div>
                     </div>
-                    <div class="basis-[2%]">
-                        <Info />
+
+                    <div class="min-h-[800px]">
+                        <!-- Phrase introductive -->
+                        <div class="w-full text-gray-600 mt-5">
+                            <p class="indent-4 font-poppins">
+                                Dans l'espace profile, vous pouvez voir les
+                                informations de votre compte, de les modifier et
+                                de faire plus.
+                            </p>
+                        </div>
+
+                        <!-- Information et modification sur le profile -->
+                        <div class="w-full mt-5">
+                            <div class="flex w-[60%] items-center">
+                                <span
+                                    for="nom"
+                                    class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Nom :
+                                </span>
+                                <input
+                                    type="text"
+                                    id="nom"
+                                    class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    v-model="userData.nom"
+                                />
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <span
+                                    for="nom d'utilisateur"
+                                    class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Nom d'utilisateur :
+                                </span>
+                                <input
+                                    type="text"
+                                    id="nomutilisateur"
+                                    class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    v-model="userData.nom_utilisateur"
+                                />
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <span
+                                    for="email"
+                                    class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Email :
+                                </span>
+                                <input
+                                    type="text"
+                                    id="email"
+                                    class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    v-model="userData.email"
+                                />
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <span
+                                    for="departement"
+                                    class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Département :
+                                </span>
+                                <input
+                                    type="text"
+                                    id="departement"
+                                    class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    v-model="userData.departement"
+                                />
+                            </div>
+                            <div class="flex w-[47%] justify-end mt-5">
+                                <button
+                                    @click="updateProfile"
+                                    class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
+                                >
+                                    Modifier
+                                </button>
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <span
+                                    class="w-[26%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Changer le mot de passe
+                                </span>
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <label
+                                    for="mot_de_passe"
+                                    class="w-[25%] ml-10 text-lg font-semibold text-gray-800"
+                                >
+                                    Mot de passe :
+                                </label>
+                                <input
+                                    type="password"
+                                    id="mot_de_passe"
+                                    v-model="passwordData.mot_de_passe"
+                                    class="w-[49.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                />
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <label
+                                    for="confirmer_mot_de_passe"
+                                    class="w-[25%] ml-10 text-lg font-semibold text-gray-800"
+                                >
+                                    Confirmer Mot de passe :
+                                </label>
+                                <input
+                                    type="password"
+                                    id="confirmer_mot_de_passe"
+                                    v-model="
+                                        passwordData.confirmer_mot_de_passe
+                                    "
+                                    class="w-[49.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                />
+                            </div>
+                            <div class="flex w-[47%] justify-end mt-5">
+                                <button
+                                    @click="updatePassword"
+                                    class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
+                                >
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Phrase introductive -->
-                <div class="w-full text-gray-600 mt-5">
-                    <p class="indent-4 font-poppins">
-                        Dans l'espace profile, vous pouvez voir les informations
-                        de votre compte, de les modifier et de faire plus.
-                    </p>
-                </div>
-
-                <!-- Information et modification sur le profile -->
-                <div class="w-full mt-5">
-                    <div class="flex w-[60%] items-center">
-                        <span
-                            for="nom"
-                            class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Nom :
-                        </span>
-                        <input
-                            type="text"
-                            id="nom"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="userData.nom"
-                        />
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            for="nom d'utilisateur"
-                            class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Nom d'utilisateur :
-                        </span>
-                        <input
-                            type="text"
-                            id="nomutilisateur"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="userData.nom_utilisateur"
-                        />
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            for="email"
-                            class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Email :
-                        </span>
-                        <input
-                            type="text"
-                            id="email"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="userData.email"
-                        />
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            for="departement"
-                            class="w-[27%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Département :
-                        </span>
-                        <input
-                            type="text"
-                            id="departement"
-                            class="w-[50%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="userData.departement"
-                        />
-                    </div>
-                    <div class="flex w-[47%] justify-end mt-5">
-                        <button
-                            @click="updateProfile"
-                            class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
-                        >
-                            Modifier
-                        </button>
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[26%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Changer le mot de passe
-                        </span>
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="mot_de_passe"
-                            class="w-[25%] ml-10 text-lg font-semibold text-gray-800"
-                        >
-                            Mot de passe :
-                        </label>
-                        <input
-                            type="password"
-                            id="mot_de_passe"
-                            v-model="passwordData.mot_de_passe"
-                            class="w-[49.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        />
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="confirmer_mot_de_passe"
-                            class="w-[25%] ml-10 text-lg font-semibold text-gray-800"
-                        >
-                            Confirmer Mot de passe :
-                        </label>
-                        <input
-                            type="password"
-                            id="confirmer_mot_de_passe"
-                            v-model="passwordData.confirmer_mot_de_passe"
-                            class="w-[49.5%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        />
-                    </div>
-                    <div class="flex w-[47%] justify-end mt-5">
-                        <button
-                            @click="updatePassword"
-                            class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
-                        >
-                            Enregistrer
-                        </button>
-                    </div>
-                </div>
+                <!-- Footer -->
+                <Footer />
             </div>
-
-            <!-- Footer -->
-            <Footer />
         </div>
     </div>
 </template>
@@ -157,6 +168,16 @@ import Sidebar from "../assets/SidebarUser.vue";
 import Navbar from "../assets/Navbar.vue";
 import Footer from "../assets/Footer.vue";
 import emitter from "../../utils/eventBus";
+
+// État pour suivre si le sidebar est réduit
+const isSidebarCollapsed = ref(false);
+
+// Fonction appelée quand le sidebar change d'état
+const handleSidebarToggle = (collapsed) => {
+    isSidebarCollapsed.value = collapsed;
+    // Sauvegarde l'état dans le localStorage
+    localStorage.setItem("sidebar-collapsed", collapsed);
+};
 
 const route = useRoute();
 const userData = ref({
@@ -236,5 +257,10 @@ const updatePassword = async () => {
 
 onMounted(() => {
     loadUserData();
+    // Récupère l'état du sidebar depuis le localStorage
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+        isSidebarCollapsed.value = saved === "true";
+    }
 });
 </script>

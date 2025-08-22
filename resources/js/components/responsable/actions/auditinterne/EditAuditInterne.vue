@@ -23,11 +23,21 @@ const route = useRoute();
 const actionId = route.params.id; // ID de l'action sélectionnée
 const frequenceDetails = ref("");
 
+const formatDateUpdate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
 // Données de l'action responsable
 const action = ref({
-    statut_resp: "",
-    observation_resp: "",
-    // Autres données pour affichage
+    constats_id: null,
     num_actions: "",
     description: "",
     constat_libelle: "",
@@ -39,19 +49,20 @@ const action = ref({
     date: "",
     mesure: "",
     observation: "",
+    action: "",
+    statut: "",
 });
+
+// Liste des constats pour le select
+const constats = ref([]);
 
 // Fonction pour formater la date
 const formatDate = (date) => {
-    if (!date) return ""; // Si la date est vide, retourner une chaîne vide
-    if (date.includes("/")) return date; // Si la date est déjà formatée, la retourner telle quelle
+    if (!date) return "";
+    if (date.includes("/")) return date;
     const [year, month, day] = date.split("-");
-    return `${day}/${month}/${year}`; // Reformater en dd/mm/yyyy
+    return `${day}/${month}/${year}`;
 };
-
-// Récupérer les données de l'utilisateur connecté pour le filtrage
-const user = JSON.parse(localStorage.getItem("user") || "{}");
-const userId = user?.responsables_id;
 
 // Fonction pour l’icône
 const getConstatIcon = (value) => {
@@ -108,10 +119,8 @@ const trimmedSuivis = computed(() => {
 // Fonction pour normaliser une chaîne JSON potentiellement imbriquée
 const normalizeJsonString = (jsonString) => {
     if (!jsonString) return "";
-
     let normalizedValue = jsonString;
     let isNormalized = false;
-
     while (!isNormalized) {
         try {
             if (
@@ -120,7 +129,6 @@ const normalizeJsonString = (jsonString) => {
                     normalizedValue.startsWith("{"))
             ) {
                 const parsed = JSON.parse(normalizedValue);
-
                 if (
                     typeof parsed === "string" &&
                     (parsed.startsWith('"') || parsed.startsWith("{"))
@@ -137,20 +145,15 @@ const normalizeJsonString = (jsonString) => {
             isNormalized = true;
         }
     }
-
     return normalizedValue;
 };
 
 // Fonction générique pour formater les données JSON en texte lisible
 const formatJsonForTooltip = (jsonData) => {
     if (!jsonData || typeof jsonData !== "object") return "";
-
     const { type, ...rest } = jsonData;
-
     if (Object.keys(rest).length === 0) return "";
-
     const jsonString = JSON.stringify(rest, null, 2);
-
     return jsonString
         .replace(/",/g, '"')
         .replace(/,/g, "\n")
@@ -170,29 +173,33 @@ const formatJsonForTooltip = (jsonData) => {
         .trim();
 };
 
-// Charger les données de l'action sélectionnée
+// Charger les données de l'action et les constats
 onMounted(async () => {
     try {
+        // Charger les constats pour le select
+        const optionsResponse = await axios.get("/api/actions/createAI");
+        constats.value = optionsResponse.data.constats;
+
         // Charger les données de l'action responsable sélectionnée avec le filtrage par responsable
         const params = {};
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        const userId = user?.responsables_id;
         if (user?.role === "responsable" && userId) {
             params.responsable_id = userId;
         }
 
         const actionResponse = await axios.get(
             `/api/actions-responsables/${actionId}`,
-            {
-                params,
-            }
+            { params }
         );
         const fetchedAction = actionResponse.data;
+
         // Gérer la fréquence
         if (fetchedAction.frequence) {
             try {
                 const normalizedFrequence = normalizeJsonString(
                     fetchedAction.frequence
                 );
-
                 const frequenceData =
                     typeof normalizedFrequence === "object" &&
                     normalizedFrequence !== null
@@ -201,7 +208,6 @@ onMounted(async () => {
                           normalizedFrequence.trim().startsWith("{")
                         ? JSON.parse(normalizedFrequence)
                         : null;
-
                 if (frequenceData) {
                     fetchedAction.frequence =
                         frequenceData.type || "Non défini";
@@ -216,17 +222,19 @@ onMounted(async () => {
             }
         }
 
-        action.value = fetchedAction;
-
         // Assigner les données récupérées
-        Object.assign(action.value, actionResponse.data);
+        Object.assign(action.value, fetchedAction);
 
-        // S'assurer que observation_resp est une chaîne vide si null
-        if (
-            action.value.observation_resp === null ||
-            action.value.observation_resp === undefined
-        ) {
-            action.value.observation_resp = "";
+        // S'assurer que constats_id est défini
+        if (!action.value.constats_id) {
+            console.warn("constats_id non défini dans la réponse API");
+            // Optionnel : tenter de déduire constats_id à partir de constat_libelle
+            const matchingConstat = constats.value.find(
+                (constat) => constat.libelle === action.value.constat_libelle
+            );
+            if (matchingConstat) {
+                action.value.constats_id = matchingConstat.id;
+            }
         }
     } catch (error) {
         console.error("Erreur lors du chargement des données :", error);
@@ -238,19 +246,20 @@ onMounted(async () => {
 const modifierResponsablesAI = async () => {
     try {
         // Validation basique
-        if (!action.value.statut_resp) {
-            toast.error("Veuillez sélectionner un statut");
+        if (!action.value.constats_id) {
+            toast.error("Veuillez sélectionner un constat");
             return;
         }
 
         // Envoyer seulement les données modifiables
         const dataToUpdate = {
-            statut_resp: action.value.statut_resp,
-            observation_resp: action.value.observation_resp || null,
+            constats_id: action.value.constats_id,
         };
 
         // Préparer les paramètres pour l'URL (query parameters)
         const params = {};
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        const userId = user?.responsables_id;
         if (user?.role === "responsable" && userId) {
             params.responsable_id = userId;
         }
@@ -264,10 +273,7 @@ const modifierResponsablesAI = async () => {
         toast.success("Action Audit Interne modifiée avec succès !");
     } catch (error) {
         console.error("Erreur lors de la modification :", error);
-
-        // Afficher un message d'erreur plus détaillé
         if (error.response) {
-            // Le serveur a répondu avec un code d'erreur
             toast.error(
                 `Erreur ${error.response.status}: ${
                     error.response.data.message ||
@@ -275,10 +281,8 @@ const modifierResponsablesAI = async () => {
                 }`
             );
         } else if (error.request) {
-            // La requête a été envoyée mais aucune réponse reçue
             toast.error("Aucune réponse du serveur");
         } else {
-            // Erreur lors de la configuration de la requête
             toast.error(
                 "Erreur lors de la modification de l'action Audit Interne"
             );
@@ -470,8 +474,8 @@ const modifierResponsablesAI = async () => {
                     >
                         <!-- Champ Action -->
                         <div class="flex w-[48%] items-start">
-                            <span class="w-[10%] font-semibold text-gray-800">
-                                Action :
+                            <span class="w-[25%] font-semibold text-gray-800">
+                                Description de la non-conformité :
                             </span>
                             <div
                                 class="w-[90%] font-semibold bg-white border-b border-b-gray-400 px-2 py-2 text-gray-600 whitespace-pre-wrap break-words"
@@ -495,38 +499,128 @@ const modifierResponsablesAI = async () => {
                         </div>
                     </div>
 
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="statut"
-                            class="w-[7%] ml-4 text-lg font-semibold text-gray-800"
+                    <div
+                        class="flex flex-wrap justify-start gap-12 mt-6 w-full text-xl ml-4"
+                    >
+                        <!-- Champ Action -->
+                        <div class="flex w-[48%] items-start">
+                            <span class="w-[10%] font-semibold text-gray-800">
+                                Action :
+                            </span>
+                            <div
+                                class="w-[90%] font-semibold bg-white border-b border-b-gray-400 px-2 py-2 text-gray-600 whitespace-pre-wrap break-words"
+                                style="max-width: 100%"
+                            >
+                                {{ action.action || "Aucune action définie" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Champ Statut -->
+                    <div class="w-full mt-5">
+                        <div
+                            class="w-full border rounded px-4 py-2 text-xl font-semibold text-center"
+                            :class="{
+                                'bg-blue-400 text-white':
+                                    action.statut === 'En cours',
+                                'bg-red-400 text-white':
+                                    action.statut === 'En retard',
+                                'bg-green-400 text-white':
+                                    action.statut === 'Réglé',
+                                'bg-gray-400 text-black':
+                                    action.statut === 'Non Réglé',
+                            }"
                         >
-                            Statut :
-                        </label>
-                        <select
-                            v-model="action.statut_resp"
-                            id="suivi"
-                            class="mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                        >
-                            <option value="" disabled>--- Options ---</option>
-                            <option value="En cours">En cours</option>
-                            <option value="En retard">En retard</option>
-                            <option value="Clôturé">Clôturé</option>
-                            <option value="Abandonné">Abandonné</option>
-                        </select>
+                            {{ action.statut }}
+                        </div>
+                    </div>
+
+                    <!-- Section des mises à jour des suivis -->
+                    <div class="bg-white shadow rounded-lg p-6 mt-8">
+                        <h3 class="text-xl font-bold mb-4">
+                            Mises à jour des Suivis
+                        </h3>
+
+                        <div v-if="action.has_suivis_updates">
+                            <div
+                                v-for="update in action.suivis_updates"
+                                :key="update.suivis_id"
+                                class="border border-orange-200 rounded-lg p-4 mb-4"
+                            >
+                                <div
+                                    class="flex items-center justify-between mb-2"
+                                >
+                                    <h4
+                                        class="font-semibold text-lg text-orange-800"
+                                    >
+                                        {{ update.suivi_nom }}
+                                    </h4>
+                                    <span
+                                        class="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded"
+                                    >
+                                        {{
+                                            formatDateUpdate(update.date_update)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                >
+                                    <div>
+                                        <strong class="text-orange-600"
+                                            >Statut:</strong
+                                        >
+                                        <p
+                                            class="mt-1 p-2 bg-orange-50 rounded"
+                                        >
+                                            {{ update.statut_suivi }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <strong class="text-orange-700"
+                                            >Observation:</strong
+                                        >
+                                        <p
+                                            class="mt-1 p-2 bg-orange-50 rounded"
+                                        >
+                                            {{ update.observation_suivi }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else class="text-center text-gray-500">
+                            <p>
+                                Aucune mise à jour des suivis pour cette action.
+                            </p>
+                        </div>
                     </div>
 
                     <div class="flex w-[60%] items-center mt-5">
                         <label
-                            for="observation"
-                            class="w-[12%] ml-4 text-lg items-start font-semibold text-gray-800"
+                            for="constat"
+                            class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
                         >
-                            Obsérvation :
+                            Constat :
                         </label>
-                        <textarea
-                            id="observation"
-                            class="w-[56%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            v-model="action.observation_resp"
-                        ></textarea>
+                        <select
+                            v-model="action.constats_id"
+                            id="constat"
+                            class="mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                        >
+                            <option value="" disabled>
+                                --- Sélectionner un constat ---
+                            </option>
+                            <option
+                                v-for="constat in constats"
+                                :key="constat.id"
+                                :value="constat.id"
+                            >
+                                {{ constat.code }} - {{ constat.libelle }}
+                            </option>
+                        </select>
                     </div>
 
                     <div class="flex w-full justify-end mt-6">

@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Sanctum\HasApiTokens;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class Actions_suivi extends Model
+class Actions_suivi extends Model implements Auditable
 {
     use HasFactory, HasApiTokens;
+    use \OwenIt\Auditing\Auditable;
 
-    protected $table = 'actions_suivis';
+    protected $table = "actions_suivis";
 
     protected $fillable = [
         'actions_id',
@@ -19,13 +21,40 @@ class Actions_suivi extends Model
         'observation_suivi'
     ];
 
-    public function actions()
+    protected $dates = [
+        'created_at',
+        'updated_at'
+    ];
+
+    public function action()
     {
-        return $this->hasMany(Actions::class, 'actions_id');
+        return $this->belongsTo(Actions::class, 'actions_id');
     }
 
-    public function suivis()
+    public function suivi()
     {
-        return $this->hasMany(Suivi::class, 'suivis_id');
+        return $this->belongsTo(Suivi::class, 'suivis_id');
+    }
+
+    // Configuration d'auditing
+    protected $auditInclude = [
+        'statut_suivi',
+        'observation_suivi'
+    ];
+
+    protected $auditStrict = true;
+
+    public function generateTags(): array
+    {
+        return ['suivi'];
+    }
+
+    // AJOUT : Méthode pour spécifier quels champs inclure dans l'audit
+    public function getAuditInclude(): array
+    {
+        return [
+            'statut_suivi',
+            'observation_suivi'
+        ];
     }
 }

@@ -1,7 +1,7 @@
 <template>
     <div class="overflow-x-auto">
         <table
-            class="table-fixed w-full border-separate border-spacing-y-[0.5rem] border border-gray-300"
+            class="table-fixed w-full border-separate border-spacing-y-[0.5rem]"
         >
             <thead class="bg-gray-300 text-lg">
                 <tr>
@@ -18,10 +18,154 @@
                     <th
                         v-for="(column, index) in columns"
                         :key="index"
-                        class="border border-gray-300 px-4 py-2 text-center"
+                        :class="[
+                            'border border-gray-300 px-4 py-2 text-center relative',
+                            column.field === 'description' ? 'relative' : '',
+                        ]"
+                        :style="
+                            column.field === 'description'
+                                ? {
+                                      width: descriptionWidth + 'px',
+                                      minWidth: '120px',
+                                      maxWidth: '600px',
+                                  }
+                                : column.field === 'responsables_libelle'
+                                ? {
+                                      width: responsablesWidth + 'px',
+                                      minWidth: '120px',
+                                      maxWidth: '600px',
+                                  }
+                                : column.field === 'suivis_noms'
+                                ? {
+                                      width: suivisWidth + 'px',
+                                      minWidth: '120px',
+                                      maxWidth: '600px',
+                                  }
+                                : {}
+                        "
                     >
                         <div class="flex items-center justify-center">
-                            {{ column.label }}
+                            <!-- Bouton cliquable pour le label -->
+                            <button
+                                @click="toggleColumnFilter(column.field)"
+                                class="flex items-center justify-center cursor-pointer hover:text-blue-600"
+                            >
+                                {{ column.label }}
+                                <svg
+                                    class="w-4 h-4 ml-1"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"
+                                    ></path>
+                                </svg>
+                            </button>
+
+                            <!-- Menu déroulant pour le filtrage -->
+                            <div
+                                v-if="activeFilter === column.field"
+                                class="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-md shadow-lg w-64 z-50"
+                            >
+                                <!-- Input de recherche -->
+                                <div class="p-3 border-b border-gray-200">
+                                    <input
+                                        type="text"
+                                        v-model="columnSearches[column.field]"
+                                        @input="
+                                            filterColumnValues(column.field)
+                                        "
+                                        placeholder="Rechercher..."
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <!-- Liste des valeurs avec checkboxes -->
+                                <div class="max-h-60 overflow-y-auto">
+                                    <!-- Option "Tout sélectionner/désélectionner" -->
+                                    <div class="p-2 border-b border-gray-100">
+                                        <label
+                                            class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                :checked="
+                                                    isAllSelected(column.field)
+                                                "
+                                                :indeterminate.prop="
+                                                    isIndeterminate(
+                                                        column.field
+                                                    )
+                                                "
+                                                @change="
+                                                    toggleAllColumnValues(
+                                                        column.field
+                                                    )
+                                                "
+                                                class="mr-2"
+                                            />
+                                            <span
+                                                class="font-medium text-sm text-gray-700"
+                                            >
+                                                {{
+                                                    isAllSelected(column.field)
+                                                        ? "Tout désélectionner"
+                                                        : "Tout sélectionner"
+                                                }}
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Valeurs filtrées -->
+                                    <div
+                                        v-for="value in getFilteredColumnValues(
+                                            column.field
+                                        )"
+                                        :key="value"
+                                        class="p-2"
+                                    >
+                                        <label
+                                            class="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                v-model="
+                                                    columnFilters[column.field]
+                                                "
+                                                :value="value"
+                                                @change="applyFilters"
+                                                class="mr-2"
+                                            />
+                                            <span
+                                                class="text-sm text-gray-700 truncate"
+                                            >
+                                                {{ value || "(Vide)" }}
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Boutons d'action -->
+                                <div
+                                    class="p-3 border-t border-gray-200 flex justify-between"
+                                >
+                                    <button
+                                        @click="resetColumnFilter(column.field)"
+                                        class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                                    >
+                                        Réinitialiser
+                                    </button>
+                                    <button
+                                        @click="closeColumnFilter"
+                                        class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    >
+                                        Fermer
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- Ajouter les flèches de tri pour la colonne "N°" -->
                             <template v-if="column.field === 'num_actions'">
                                 <button
@@ -37,6 +181,22 @@
                                     ▼
                                 </button>
                             </template>
+                            <template
+                                v-if="
+                                    [
+                                        'description',
+                                        'responsables_libelle',
+                                        'suivis_noms',
+                                    ].includes(column.field)
+                                "
+                            >
+                                <span
+                                    class="absolute right-0 top-0 h-full w-2 cursor-col-resize bg-transparent"
+                                    @mousedown="
+                                        (e) => startResize(e, column.field)
+                                    "
+                                ></span>
+                            </template>
                         </div>
                     </th>
                     <th v-if="actions" class="border border-gray-300 px-4 py-2">
@@ -46,7 +206,7 @@
             </thead>
             <tbody class="font-poppins text-center">
                 <!-- Si aucune donnée n'est disponible -->
-                <tr v-if="sortedData.length === 0">
+                <tr v-if="filteredAndSortedData.length === 0">
                     <td
                         :colspan="columns.length + 2"
                         class="py-4 text-gray-500 italic"
@@ -58,18 +218,30 @@
                 <!-- Si des données sont présentes -->
                 <tr
                     v-else
-                    v-for="(row, rowIndex) in sortedData"
+                    v-for="(row, rowIndex) in filteredAndSortedData"
                     :key="rowIndex"
-                    :class="{
-                        'bg-green-300': row.statut_resp === 'En cours',
-                        'bg-red-300': row.statut_resp === 'En retard',
-                        'bg-gray-300': row.statut_resp === 'Clôturé',
-                        'bg-purple-300': row.statut_resp === 'Abandonné',
-                    }"
                     class="shadow-md rounded-md"
                 >
                     <!-- Checkbox pour sélectionner une ligne -->
-                    <td class="border border-gray-300 px-2 py-2 text-center">
+                    <td
+                        class="px-2 py-2 text-center border-l-8"
+                        :class="{
+                            'border-blue-500': row.statut_resp === 'En cours',
+                            'border-red-500': row.statut_resp === 'Retard',
+                            'border-gray-500':
+                                row.statut_resp === 'Actions abandonnées',
+                            'border-white': row.statut_resp === 'Non Réalisé',
+                            'border-green-500': row.statut_resp === 'Réalisé',
+                            'border-green-800':
+                                row.statut_resp === 'Réalisé partiel',
+                            'border-green-600':
+                                row.statut_resp === 'Ecart Réglé',
+                            'border-green-700':
+                                row.statut_resp === 'Ecart Réglé à Suivre',
+                            'border-gray-600':
+                                row.statut_resp === 'Ecart non réglé',
+                        }"
+                    >
                         <input
                             type="checkbox"
                             v-model="selectedRows"
@@ -79,8 +251,38 @@
                     <td
                         v-for="(column, colIndex) in columns"
                         :key="colIndex"
-                        class="px-4 py-2"
-                        :class="column.classes"
+                        :class="[
+                            'px-4 py-2',
+                            [
+                                'description',
+                                'responsables_libelle',
+                                'suivis_noms',
+                            ].includes(column.field)
+                                ? 'overflow-x-auto'
+                                : '',
+                            column.classes || '', // Ajoute la classe personnalisée si elle existe
+                        ]"
+                        :style="
+                            column.field === 'description'
+                                ? {
+                                      width: descriptionWidth + 'px',
+                                      minWidth: '120px',
+                                      maxWidth: '600px',
+                                  }
+                                : column.field === 'responsables_libelle'
+                                ? {
+                                      width: responsablesWidth + 'px',
+                                      minWidth: '120px',
+                                      maxWidth: '600px',
+                                  }
+                                : column.field === 'suivis_noms'
+                                ? {
+                                      width: suivisWidth + 'px',
+                                      minWidth: '120px',
+                                      maxWidth: '600px',
+                                  }
+                                : {}
+                        "
                     >
                         <!-- Icônes pour la colonne "constat_libelle" -->
                         <template v-if="column.field === 'constat_libelle'">
@@ -171,23 +373,44 @@
         v-if="modalVisible"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
     >
-        <div class="bg-white p-6 rounded shadow-lg max-w-lg w-full">
-            <h2 class="text-lg font-bold mb-4">Détails</h2>
-            <p class="text-gray-700 whitespace-pre-wrap">{{ modalContent }}</p>
-            <div class="flex w-full justify-end">
-                <button
-                    class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    @click="closeModal"
-                >
-                    Fermer
-                </button>
+        <div
+            class="bg-white p-0 rounded shadow-lg max-w-2xl w-full"
+            style="max-height: 90vh"
+        >
+            <div
+                style="
+                    padding: 20px;
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+                "
+            >
+                <!-- Contenu scrollable -->
+                <div style="padding: 2px; overflow-y: auto; max-height: 70vh">
+                    <h2 class="text-lg font-bold mb-4">Détails</h2>
+                    <div
+                        class="text-gray-700 whitespace-pre-wrap"
+                        style="padding: 2px"
+                    >
+                        {{ modalContent }}
+                    </div>
+                </div>
+                <!-- Bouton toujours visible en bas -->
+                <div class="flex w-full justify-end mt-4" style="padding: 2px">
+                    <button
+                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        @click="closeModal"
+                    >
+                        Fermer
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onBeforeUnmount, onMounted } from "vue";
 import {
     RefreshCcw,
     FileCheck,
@@ -199,6 +422,7 @@ import {
     Ban,
     Clock,
 } from "lucide-vue-next";
+
 const props = defineProps({
     columns: {
         type: Array,
@@ -219,37 +443,173 @@ const props = defineProps({
     },
 });
 
-// Gestion des lignes sélectionnées
+// Variables existantes
+const descriptionWidth = ref(350);
+const responsablesWidth = ref(250);
+const suivisWidth = ref(250);
 const selectedRows = ref([]);
 const selectAll = ref(false);
-
-// Gestion du tooltip actif
 const activeTooltip = ref({
     rowIndex: null,
     colIndex: null,
 });
+const sortOrder = ref("desc");
+const modalVisible = ref(false);
+const modalContent = ref("");
 
-// Gestion des données triées
-const sortOrder = ref("desc"); // Ordre de tri par défaut (desc)
-const sortedData = computed(() => {
-    return [...props.data].sort((a, b) => {
+// NOUVELLES VARIABLES pour les filtres de colonnes
+const activeFilter = ref(null); // Colonne actuellement filtrée
+const columnFilters = ref({}); // Filtres par colonne {columnField: [values...]}
+const columnSearches = ref({}); // Recherche par colonne {columnField: searchTerm}
+const uniqueColumnValues = ref({}); // Valeurs uniques par colonne
+const filteredColumnValues = ref({}); // Valeurs filtrées par recherche
+
+// Variables pour le redimensionnement (existantes)
+let resizing = false;
+let resizingField = null;
+
+// NOUVELLE COMPUTED pour remplacer sortedData
+const filteredAndSortedData = computed(() => {
+    let filtered = [...props.data];
+
+    // Appliquer les filtres de colonnes
+    Object.keys(columnFilters.value).forEach((field) => {
+        const selectedValues = columnFilters.value[field];
+        if (selectedValues && selectedValues.length > 0) {
+            filtered = filtered.filter((row) => {
+                const value = row[field] || "";
+                return selectedValues.includes(value);
+            });
+        }
+    });
+
+    // Appliquer le tri existant
+    return filtered.sort((a, b) => {
         const numA = parseInt(a.num_actions.split("-")[1]);
         const numB = parseInt(b.num_actions.split("-")[1]);
-        return sortOrder.value === "desc" ? numB - numA : numA - numB; // Inverser la logique
+        return sortOrder.value === "desc" ? numB - numA : numA - numB;
     });
 });
 
-// Fonction pour trier les données
+// Garder sortedData pour compatibilité (si utilisé ailleurs)
+const sortedData = computed(() => filteredAndSortedData.value);
+
+// NOUVELLES MÉTHODES pour les filtres
+const initializeColumnFilters = () => {
+    props.columns.forEach((column) => {
+        const uniqueValues = [
+            ...new Set(props.data.map((row) => row[column.field] || "")),
+        ];
+        uniqueColumnValues.value[column.field] = uniqueValues;
+        filteredColumnValues.value[column.field] = uniqueValues;
+        columnFilters.value[column.field] = [...uniqueValues];
+        columnSearches.value[column.field] = "";
+    });
+};
+
+const toggleColumnFilter = (field) => {
+    if (activeFilter.value === field) {
+        activeFilter.value = null;
+    } else {
+        activeFilter.value = field;
+    }
+};
+
+const closeColumnFilter = () => {
+    activeFilter.value = null;
+};
+
+const filterColumnValues = (field) => {
+    const searchTerm = columnSearches.value[field].toLowerCase();
+    filteredColumnValues.value[field] = uniqueColumnValues.value[field].filter(
+        (value) => (value || "").toString().toLowerCase().includes(searchTerm)
+    );
+};
+
+const getFilteredColumnValues = (field) => {
+    return filteredColumnValues.value[field] || [];
+};
+
+const isAllSelected = (field) => {
+    const selectedValues = columnFilters.value[field] || [];
+    const availableValues = getFilteredColumnValues(field);
+    return (
+        selectedValues.length === availableValues.length &&
+        availableValues.length > 0
+    );
+};
+
+const isIndeterminate = (field) => {
+    const selectedValues = columnFilters.value[field] || [];
+    const availableValues = getFilteredColumnValues(field);
+    return (
+        selectedValues.length > 0 &&
+        selectedValues.length < availableValues.length
+    );
+};
+
+const toggleAllColumnValues = (field) => {
+    const availableValues = getFilteredColumnValues(field);
+    if (isAllSelected(field)) {
+        // Désélectionner toutes les valeurs visibles
+        columnFilters.value[field] = columnFilters.value[field].filter(
+            (value) => !availableValues.includes(value)
+        );
+    } else {
+        // Sélectionner toutes les valeurs visibles
+        const currentSelected = columnFilters.value[field] || [];
+        columnFilters.value[field] = [
+            ...new Set([...currentSelected, ...availableValues]),
+        ];
+    }
+};
+
+const resetColumnFilter = (field) => {
+    columnFilters.value[field] = [...uniqueColumnValues.value[field]];
+    columnSearches.value[field] = "";
+    filteredColumnValues.value[field] = [...uniqueColumnValues.value[field]];
+};
+
+const handleClickOutside = (event) => {
+    if (!event.target.closest(".relative")) {
+        activeFilter.value = null;
+    }
+};
+
+// Méthodes existantes (inchangées)
+const startResize = (e, field) => {
+    resizing = true;
+    resizingField = field;
+    document.body.style.cursor = "col-resize";
+    document.addEventListener("mousemove", handleResize);
+    document.addEventListener("mouseup", stopResize);
+};
+
+const handleResize = (e) => {
+    if (!resizing) return;
+    let newWidth = Math.max(120, Math.min(600, e.clientX - 300));
+    if (resizingField === "description") descriptionWidth.value = newWidth;
+    if (resizingField === "responsables_libelle")
+        responsablesWidth.value = newWidth;
+    if (resizingField === "suivis_noms") suivisWidth.value = newWidth;
+};
+
+const stopResize = () => {
+    resizing = false;
+    resizingField = null;
+    document.body.style.cursor = "";
+    document.removeEventListener("mousemove", handleResize);
+    document.removeEventListener("mouseup", stopResize);
+};
+
 const sortData = (order) => {
     sortOrder.value = order;
 };
 
-// Fonction pour filtrer les actions
 const getFilteredActions = (row) => {
     return props.filterActions(row, props.actions);
 };
 
-// Fonction pour obtenir l'icône en fonction de la valeur de "constat_libelle"
 const getConstatIcon = (value) => {
     const icons = {
         "En Cours": RefreshCcw,
@@ -265,7 +625,6 @@ const getConstatIcon = (value) => {
     return icons[value] || null;
 };
 
-// Fonction pour obtenir la couleur en fonction de la valeur de "constat_libelle"
 const getConstatColor = (value) => {
     const colors = {
         "En Cours": "text-blue-500",
@@ -281,23 +640,22 @@ const getConstatColor = (value) => {
     return colors[value] || "";
 };
 
-// Fonction pour gérer la sélection/désélection de toutes les lignes
 const toggleSelectAll = () => {
     if (selectAll.value) {
-        selectedRows.value = props.data.map((row) => row.num_actions);
+        selectedRows.value = filteredAndSortedData.value.map(
+            (row) => row.num_actions
+        );
     } else {
         selectedRows.value = [];
     }
 };
 
-// Fonction pour vérifier si une colonne a un rendu personnalisé
 const hasCustomRender = (column, row) => {
     if (!column.render) return false;
     const result = column.render(row);
     return result && typeof result === "object" && result.customRender === true;
 };
 
-// Fonction pour obtenir la valeur à afficher dans une cellule
 const getColumnValue = (column, row) => {
     if (column.render) {
         const result = column.render(row);
@@ -313,7 +671,6 @@ const getColumnValue = (column, row) => {
     return row[column.field];
 };
 
-// Fonction pour obtenir le contenu du tooltip
 const getTooltipContent = (column, row) => {
     if (column.render) {
         const result = column.render(row);
@@ -328,25 +685,20 @@ const getTooltipContent = (column, row) => {
     return "";
 };
 
-// Détermine la classe de position du tooltip en fonction de la longueur du contenu
 const getTooltipPositionClass = (column, row) => {
     const content = getTooltipContent(column, row);
-    // Ajuster la largeur en fonction de la longueur du contenu
     if (content.length > 200) return "w-96 left-0";
     if (content.length > 100) return "w-80 left-0";
     return "w-64 left-0";
 };
 
-// Fonctions pour gérer l'affichage du tooltip
 const toggleTooltip = (rowIndex, colIndex) => {
-    // Si le tooltip est déjà actif pour cette cellule, le fermer
     if (
         activeTooltip.value.rowIndex === rowIndex &&
         activeTooltip.value.colIndex === colIndex
     ) {
         hideTooltip();
     } else {
-        // Sinon, ouvrir le tooltip pour cette cellule
         activeTooltip.value = { rowIndex, colIndex };
     }
 };
@@ -355,38 +707,41 @@ const hideTooltip = () => {
     activeTooltip.value = { rowIndex: null, colIndex: null };
 };
 
-const modalVisible = ref(false); // État pour afficher ou masquer la modale
-const modalContent = ref(""); // Contenu à afficher dans la modale
-
-// Fonction pour ouvrir la modale
 const openModal = (content) => {
     modalContent.value = content;
     modalVisible.value = true;
 };
 
-// Fonction pour fermer la modale
 const closeModal = () => {
     modalVisible.value = false;
     modalContent.value = "";
 };
 
-// Mettre à jour `selectAll` si toutes les lignes sont sélectionnées ou non
+// Watchers
+watch(
+    () => props.data,
+    () => {
+        initializeColumnFilters();
+    },
+    { immediate: true }
+);
+
 watch(selectedRows, (newSelectedRows) => {
     selectAll.value =
-        newSelectedRows.length === props.data.length && props.data.length > 0;
+        newSelectedRows.length === filteredAndSortedData.value.length &&
+        filteredAndSortedData.value.length > 0;
 });
 
-// expose pour que le parent puisse accéder à selectedRows, importer les données dans AuditInterne.vue
+// Lifecycle hooks
+onMounted(() => {
+    document.addEventListener("click", handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+    stopResize();
+    document.removeEventListener("click", handleClickOutside);
+});
+
+// Exposer pour le parent
 defineExpose({ selectedRows });
 </script>
-
-<style scoped>
-/* Supprimer les bordures entre les lignes */
-tbody tr td {
-    border: none;
-}
-
-table {
-    border: none;
-}
-</style>

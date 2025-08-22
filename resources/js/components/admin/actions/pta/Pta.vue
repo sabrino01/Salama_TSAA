@@ -14,13 +14,23 @@ import { useRouter } from "vue-router";
 import jsPDF from "jspdf";
 import "jspdf-autotable"; // Pour ajouter des tableaux au PDF
 
+// État pour suivre si le sidebar est réduit
+const isSidebarCollapsed = ref(false);
+
+// Fonction appelée quand le sidebar change d'état
+const handleSidebarToggle = (collapsed) => {
+    isSidebarCollapsed.value = collapsed;
+    // Sauvegarde l'état dans le localStorage
+    localStorage.setItem("sidebar-collapsed", collapsed);
+};
+
 const router = useRouter();
 const actionsPTA = ref([]);
 const sourcesPTA = ref([]);
 const typeActionsPTA = ref([]);
 const responsables = ref([]);
 const suivis = ref([]);
-const constats = ref([]);
+const constatsPTA = ref([]);
 const users = ref([]);
 const totalActions = ref(0);
 const currentPage = ref(1);
@@ -125,10 +135,10 @@ const chargerSuivis = async () => {
     }
 };
 
-const chargerConstats = async () => {
+const chargerConstatsPTA = async () => {
     try {
-        const response = await axios.get("/api/constats");
-        constats.value = response.data;
+        const response = await axios.get("/api/constatsPTA");
+        constatsPTA.value = response.data;
     } catch (error) {
         console.error("Erreur lors du chargement des constats:", error);
     }
@@ -434,13 +444,11 @@ const columns = [
     { label: "N°", field: "num_actions" },
     { label: "Date", field: "date" },
     {
-        label: "DNS",
+        label: "Description non conformité",
         field: "description",
-        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
-        isExpandable: true, // Indique que cette colonne a un contenu extensible
-        render: (row) => row.description, // Retourne directement la valeur
+        cellClass: "custom-description-cell", // Classe personnalisée pour le style
     },
-    { label: "Action", field: "constat_libelle" },
+    { label: "Constat", field: "constat_libelle" },
     {
         label: "Frequence",
         field: "frequence",
@@ -465,15 +473,13 @@ const columns = [
     {
         label: "Responsables",
         field: "responsables_libelle",
-        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
-        isExpandable: true, // Indique que cette colonne a un contenu extensible
+        cellClass: "custom-description-cell", // Classe personnalisée pour le style
         render: (row) => row.responsables_libelle || "—",
     },
     {
         label: "Suivis",
         field: "suivis_noms",
-        classes: "truncate", // Classes Tailwind à appliquer à cette colonne
-        isExpandable: true, // Indique que cette colonne a un contenu extensible
+        cellClass: "custom-description-cell", // Classe personnalisée pour le style
         render: (row) => row.suivis_noms || "—",
     },
     {
@@ -555,7 +561,7 @@ const exportToExcel = async () => {
             chargerTypeActionsPTA(),
             chargerResponsables(),
             chargerSuivis(),
-            chargerConstats(),
+            chargerConstatsPTA(),
             chargerUsers(),
         ]);
 
@@ -566,7 +572,7 @@ const exportToExcel = async () => {
             typeActionsPTA.value,
             responsables.value,
             suivis.value,
-            constats.value,
+            constatsPTA.value,
             users.value
         );
 
@@ -877,8 +883,38 @@ const createActionContent = async (
 
         currentY = addDataWithSeparateLines(
             doc,
-            "Description:",
+            "Description de la non conformité:",
             action.description,
+            currentY,
+            leftMargin,
+            contentWidth,
+            5
+        );
+    }
+
+    // Description avec gestion améliorée
+    if (action.action) {
+        // Calculer l'espace nécessaire pour la description
+        const descriptionLines = splitTextToFitWidth(
+            doc,
+            action.description,
+            contentWidth - 5
+        );
+        const requiredSpace = 8 + descriptionLines.length * 5 + 5; // label + lignes + espacement
+
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            requiredSpace,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Actions:",
+            action.action,
             currentY,
             leftMargin,
             contentWidth,
@@ -967,6 +1003,44 @@ const createActionContent = async (
             doc,
             "Livrable:",
             action.mesure,
+            currentY,
+            leftMargin,
+            contentWidth
+        );
+    }
+
+    if (action.indicateurs_utilisateurs) {
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            20,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Indicateurs Utilisateurs:",
+            action.indicateurs_utilisateurs,
+            currentY,
+            leftMargin,
+            contentWidth
+        );
+    }
+
+    if (action.partenaire) {
+        currentY = await checkSpaceAndAddPage(
+            doc,
+            currentY,
+            20,
+            pageWidth,
+            pageHeight,
+            contentEndY
+        );
+        currentY = addDataWithSeparateLines(
+            doc,
+            "Partenaire:",
+            action.partenaire,
             currentY,
             leftMargin,
             contentWidth
@@ -1258,14 +1332,74 @@ const generateExcelFile = async (
         { header: "Types d'action", key: "type_action", width: 20 },
         { header: "Responsables", key: "responsable", width: 20 },
         { header: "Suivis", key: "suivi", width: 15 },
-        { header: "DNS", key: "description", width: 30 },
-        { header: "Action", key: "constat_libelle", width: 20 },
+        {
+            header: "Description de la non conformité",
+            key: "description",
+            width: 30,
+        },
+        { header: "Constat", key: "constat_libelle", width: 20 },
+        { header: "Actions", key: "action", width: 30 },
         { header: "Fréquences", key: "frequenceWithDetails", width: 15 },
         { header: "Livrables", key: "mesure", width: 20 },
         { header: "Statuts", key: "statut", width: 15 },
         { header: "Ajouté par", key: "nom_utilisateur", width: 20 },
         { header: "Observations", key: "observation", width: 30 },
+        {
+            header: "Indicateurs Utilisateurs",
+            key: "indicateurs_utilisateurs",
+            width: 30,
+        },
+        { header: "Partenaire", key: "partenaire", width: 30 },
     ];
+
+    // Créer des feuilles séparées pour les listes de référence (pour éviter les limites Excel)
+    const createReferenceSheet = (name, data, keyField) => {
+        if (data.length === 0 || !data) return null;
+
+        const refSheet = workbook.addWorksheet(name);
+        refSheet.columns = [{ header: name, key: keyField, width: 30 }];
+
+        data.forEach((item) => {
+            refSheet.addRow({ [keyField]: item[keyField] });
+        });
+
+        // Masquer la feuille de référence
+        refSheet.state = "hidden";
+
+        return refSheet;
+    };
+
+    // Créer les feuilles de référence pour les grandes listes
+    const sourcesRefSheet = createReferenceSheet(
+        "Sources_Ref",
+        sourcesList,
+        "libelle"
+    );
+    const typeActionsRefSheet = createReferenceSheet(
+        "TypeActions_Ref",
+        typeActionsList,
+        "libelle"
+    );
+    const responsablesRefSheet = createReferenceSheet(
+        "Responsables_Ref",
+        responsablesList,
+        "libelle"
+    );
+    const suivisRefSheet = createReferenceSheet(
+        "Suivis_Ref",
+        suivisList,
+        "nom"
+    );
+    const constatsRefSheet = createReferenceSheet(
+        "Constats_Ref",
+        constatsList,
+        "libelle"
+    );
+    const usersRefSheet = createReferenceSheet(
+        "Users_Ref",
+        usersList,
+        "nom_utilisateur"
+    );
 
     // Ajouter les données existantes
     rows.forEach((row) => {
@@ -1278,11 +1412,14 @@ const generateExcelFile = async (
             suivi: row.suivis_noms,
             description: row.description,
             constat_libelle: row.constat_libelle,
+            action: row.action,
             frequenceWithDetails: row.frequenceWithDetails,
             mesure: row.mesure,
             statut: row.statut,
             nom_utilisateur: row.nom_utilisateur,
             observation: row.observation,
+            indicateurs_utilisateurs: row.indicateurs_utilisateurs,
+            partenaire: row.partenaire,
         });
     });
 
@@ -1295,8 +1432,8 @@ const generateExcelFile = async (
     // Définir le début de la ligne pour les formules
     const startRow = rows.length + 2; // 1 = header, +1 pour première ligne libre
 
-    // Définir le nombre de lignes supplémentaires à ajouter (ajustable)
-    const additionalRows = 500; // Vous pouvez ajuster selon vos besoins
+    // Réduire le nombre de lignes supplémentaires pour éviter les problèmes de performance
+    const additionalRows = 200; // Réduit de 500 à 200
 
     // Ajouter des lignes vides avec des formules pour l'auto-incrémentation
     for (let i = 0; i < additionalRows; i++) {
@@ -1326,92 +1463,162 @@ const generateExcelFile = async (
     }
 
     // Définir les options pour la liste déroulante des statuts
-    const statutOptions = ["En cours", "En retard", "Clôturé", "Abandonné"];
+    const statutOptions = [
+        "En cours",
+        "En retard",
+        "Clôturé",
+        "Abandonné",
+        "Non Réalisé",
+        "A Reporter",
+    ];
 
     // Appliquer un style aux cellules pour les rendre plus lisibles
     sheet.getRow(1).font = { bold: true };
     sheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
 
-    // Appliquer les listes déroulantes (data validations)
-    const addDropdown = (col, list) => {
-        // Déterminer la plage pour les validations (commencer après les données existantes)
-        const validationStartRow = 2; // Première ligne après les en-têtes
+    // Fonction optimisée pour ajouter les listes déroulantes
+    const addDropdown = (
+        col,
+        list,
+        useReference = false,
+        refSheetName = null
+    ) => {
+        const validationStartRow = 2;
         const validationEndRow = startRow + additionalRows - 1;
 
-        // Appliquer la validation à la plage
-        for (let i = validationStartRow; i <= validationEndRow; i++) {
-            sheet.getCell(`${col}${i}`).dataValidation = {
-                type: "list",
-                allowBlank: true,
-                formulae: [`"${list.join(",")}"`],
-                showDropDown: true,
-            };
+        // Si la liste est trop grande (>50 éléments) ou si on force l'utilisation de référence
+        if (useReference && refSheetName) {
+            // Utiliser une référence vers une autre feuille
+            const formula = `${refSheetName}!$A$2:$A$${list.length + 1}`;
+
+            for (let i = validationStartRow; i <= validationEndRow; i++) {
+                try {
+                    sheet.getCell(`${col}${i}`).dataValidation = {
+                        type: "list",
+                        allowBlank: true,
+                        formulae: [formula],
+                        showDropDown: true,
+                    };
+                } catch (error) {
+                    console.warn(
+                        `Erreur lors de l'ajout de la validation pour ${col}${i}:`,
+                        error
+                    );
+                }
+            }
+        } else {
+            // Utiliser la méthode traditionnelle pour les petites listes
+            const listString = list.join(",");
+
+            // Vérifier la longueur de la chaîne (Excel a une limite de ~255 caractères)
+            if (listString.length > 255) {
+                console.warn(
+                    `Liste trop longue pour la colonne ${col}, utilisation de la référence recommandée`
+                );
+                return;
+            }
+
+            for (let i = validationStartRow; i <= validationEndRow; i++) {
+                try {
+                    sheet.getCell(`${col}${i}`).dataValidation = {
+                        type: "list",
+                        allowBlank: true,
+                        formulae: [`"${listString}"`],
+                        showDropDown: true,
+                    };
+                } catch (error) {
+                    console.warn(
+                        `Erreur lors de l'ajout de la validation pour ${col}${i}:`,
+                        error
+                    );
+                }
+            }
         }
     };
 
-    // Appliquer les listes déroulantes aux colonnes correspondantes
-    if (sourcesList.length > 0) {
-        addDropdown(
-            "C",
-            sourcesList.map((s) => s.libelle)
-        ); // Sources
-    }
+    // Appliquer les listes déroulantes avec gestion intelligente
+    try {
+        if (sourcesList.length > 0) {
+            const sourceLabels = sourcesList.map((s) => s.libelle);
+            addDropdown(
+                "C",
+                sourceLabels,
+                sourcesList.length > 50,
+                "Sources_Ref"
+            );
+        }
 
-    if (typeActionsList.length > 0) {
-        addDropdown(
-            "D",
-            typeActionsList.map((t) => t.libelle)
-        ); // Types d'action
-    }
+        if (typeActionsList.length > 0) {
+            const typeActionLabels = typeActionsList.map((t) => t.libelle);
+            addDropdown(
+                "D",
+                typeActionLabels,
+                typeActionsList.length > 50,
+                "TypeActions_Ref"
+            );
+        }
 
-    if (responsablesList.length > 0) {
-        addDropdown(
-            "E",
-            responsablesList.map((r) => r.libelle)
-        ); // Responsables
-    }
+        if (responsablesList.length > 0) {
+            const responsableLabels = responsablesList.map((r) => r.libelle);
+            addDropdown(
+                "E",
+                responsableLabels,
+                responsablesList.length > 50,
+                "Responsables_Ref"
+            );
+        }
 
-    if (suivisList.length > 0) {
-        addDropdown(
-            "F",
-            suivisList.map((s) => s.nom)
-        ); // Suivis
-    }
+        if (suivisList.length > 0) {
+            const suiviLabels = suivisList.map((s) => s.nom);
+            addDropdown("F", suiviLabels, suivisList.length > 50, "Suivis_Ref");
+        }
 
-    if (constatsList.length > 0) {
-        addDropdown(
-            "H",
-            constatsList.map((c) => c.libelle)
-        ); // Constats
-    }
+        if (constatsList.length > 0) {
+            const constatLabels = constatsList.map((c) => c.libelle);
+            addDropdown(
+                "H",
+                constatLabels,
+                constatsList.length > 50,
+                "Constats_Ref"
+            );
+        }
 
-    if (usersList.length > 0) {
-        addDropdown(
-            "L",
-            usersList.map((u) => u.nom_utilisateur)
-        ); // Utilisateurs
-    }
+        if (usersList.length > 0) {
+            const userLabels = usersList.map((u) => u.nom_utilisateur);
+            addDropdown("M", userLabels, usersList.length > 50, "Users_Ref");
+        }
 
-    // Appliquer la liste déroulante à la colonne "Fréquences" (colonne I)
-    if (
-        typeof frequenceOptions !== "undefined" &&
-        frequenceOptions.length > 0
-    ) {
-        addDropdown("I", frequenceOptions);
-    }
+        // Appliquer la liste déroulante à la colonne "Fréquences" (colonne J)
+        addDropdown("J", frequenceOptions, false);
 
-    // Appliquer la liste déroulante à la colonne "Statuts" (colonne K)
-    addDropdown("K", statutOptions);
+        // Appliquer la liste déroulante à la colonne "Statuts" (colonne L)
+        addDropdown("L", statutOptions, false);
+    } catch (error) {
+        console.error("Erreur lors de l'application des validations:", error);
+    }
 
     // Activer les filtres pour faciliter la navigation
-    sheet.autoFilter = {
-        from: { row: 1, column: 1 },
-        to: { row: 1, column: 13 },
-    };
+    try {
+        sheet.autoFilter = {
+            from: { row: 1, column: 1 },
+            to: { row: 1, column: 13 },
+        };
+    } catch (error) {
+        console.warn("Impossible d'appliquer les filtres automatiques:", error);
+    }
 
-    // Générer le fichier
-    const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), "PTA.xlsx");
+    // Générer le fichier avec gestion d'erreur
+    try {
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveAs(new Blob([buffer]), "PTA.xlsx");
+        console.log("Export Excel PTA réussi");
+    } catch (error) {
+        console.error(
+            "Erreur lors de la génération du fichier Excel PTA:",
+            error
+        );
+        throw new Error("Impossible de générer le fichier Excel PTA");
+    }
 };
 
 // Fonction pour importer un fichier Excel
@@ -1440,7 +1647,10 @@ const importerFichier = async (event) => {
                 // Extraire les valeurs des cellules principales
                 const numActions = row.getCell(1).value; // Colonne A (N°)
                 const date = row.getCell(2).value; // Colonne B (Date)
-                const description = row.getCell(7).value; // Colonne G (Actions/Description)
+                const description = row.getCell(7).value; // Colonne G (Description)
+                const action = row.getCell(9).value; // Colonne I (Actions)
+                const indicateurs_utilisateurs = row.getCell(15).value; // Colonne I (Indicateurs Utilisateurs)
+                const partenaire = row.getCell(16).value; // Colonne I (Partenaire)
 
                 // Vérifier si la ligne contient des données réelles
                 // Une ligne est considérée comme valide si elle a au moins une date ET soit un numActions, soit une description
@@ -1480,11 +1690,11 @@ const importerFichier = async (event) => {
                 const responsableLibelle = row.getCell(5).value;
                 const suiviNom = row.getCell(6).value;
                 const constatLibelle = row.getCell(8).value;
-                const frequence = row.getCell(9).value;
-                const mesure = row.getCell(10).value;
-                const statut = row.getCell(11).value;
-                const nomUtilisateur = row.getCell(12).value;
-                const observation = row.getCell(13).value;
+                const frequence = row.getCell(10).value;
+                const mesure = row.getCell(11).value;
+                const statut = row.getCell(12).value;
+                const nomUtilisateur = row.getCell(13).value;
+                const observation = row.getCell(14).value;
 
                 importedData.push({
                     num_actions: numActionsValue,
@@ -1495,11 +1705,14 @@ const importerFichier = async (event) => {
                     suivis_noms: suiviNom,
                     description: description,
                     constat_libelle: constatLibelle,
+                    action: action,
                     frequence: frequence,
                     mesure: mesure,
                     statut: statut,
                     nom_utilisateur: nomUtilisateur,
                     observation: observation,
+                    indicateurs_utilisateurs: indicateurs_utilisateurs,
+                    partenaire: partenaire,
                 });
             });
 
@@ -1572,295 +1785,372 @@ const importerFichier = async (event) => {
 onMounted(async () => {
     chargerActions(currentPage.value, searchQuery.value);
     await verifierTousLesStatuts();
+    // Récupère l'état du sidebar depuis le localStorage
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+        isSidebarCollapsed.value = saved === "true";
+    }
 });
 </script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <Sidebar class="w-64 bg-[#0062ff] text-white fixed h-full" />
+        <Sidebar @sidebar-toggle="handleSidebarToggle" />
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col ml-64">
-            <!-- Navbar -->
-            <Navbar />
+        <div
+            :class="[
+                'flex-1 flex flex-col transition-all duration-300',
+                isSidebarCollapsed ? 'ml-16' : 'ml-64',
+            ]"
+        >
+            <Navbar v-if="true" :isSidebarCollapsed="isSidebarCollapsed" />
 
             <!-- Contenu principal avec padding en bas -->
-            <div class="flex-1 p-5 bg-gray-50 pb-16">
-                <!-- Titre -->
-                <div class="flex w-full">
-                    <div
-                        class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
-                    >
-                        Actions
-                    </div>
-                    <div class="basis-[2%]">
-                        <Info />
-                    </div>
-                </div>
-
-                <!-- Phrase introductive -->
-                <div class="w-full text-gray-600 mt-5">
-                    <p class="indent-4 font-poppins">
-                        Dans l'espace actions, vous pourriez voir et gérer les
-                        informations sur les actions, que ce soit Audit Interne
-                        ou PTA, d'y ajouter et encore plus.
-                    </p>
-                </div>
-
-                <!-- Choix d'action à faire(A.I ou PTA) -->
-                <div class="flex w-full mt-5 ml-4 justify-center space-x-4">
-                    <!-- Lien Audit Interne -->
-                    <router-link
-                        to="/admin/actions/auditinterne"
-                        class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
-                        :class="{
-                            'border-b-4 border-blue-600':
-                                $route.path === '/admin/actions/auditinterne',
-                        }"
-                    >
-                        Audit Interne
-                    </router-link>
-
-                    <div class="border-r border-gray-300"></div>
-
-                    <!-- Lien PTA -->
-                    <router-link
-                        to="/admin/actions/pta"
-                        class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
-                        :class="{
-                            'border-b-4 border-blue-600':
-                                $route.path === '/admin/actions/pta',
-                        }"
-                    >
-                        PTA
-                    </router-link>
-                </div>
-
-                <!-- Ajout et barre de recherche -->
-                <div class="flex w-full mt-5 ml-4">
-                    <!-- Bouton d'ajout -->
-                    <router-link to="/admin/actions/pta/ajouter">
-                        <button
-                            class="flex items-center justify-center bg-[#0062ff] text-white px-4 py-2 rounded-md w-38"
-                        >
-                            <Plus class="w-5 h-5 mr-2" /> Ajouter
-                        </button></router-link
-                    >
-
-                    <!-- Barre de recherche -->
-                    <div
-                        class="flex items-center ml-6 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                    >
-                        <Search class="w-5 h-5 mr-2 text-gray-500" />
-                        <input
-                            type="text"
-                            placeholder="Rechercher...."
-                            class="outline-none bg-transparent text-gray-800 placeholder-gray-500"
-                            v-model="searchQuery"
-                            @input="rechercherActions"
-                        />
-                    </div>
-                    <div class="relative">
-                        <label
-                            for="importer"
-                            class="flex items-center justify-center border border-gray-400 ml-4 text-black px-4 py-2 rounded-md w-38 cursor-pointer"
-                        >
-                            Importer
-                        </label>
-                        <input
-                            id="importer"
-                            type="file"
-                            accept=".xlsx, .xls"
-                            @change="importerFichier"
-                            class="hidden"
-                        />
-                    </div>
-                    <div class="relative">
-                        <!-- Bouton Exporter -->
-                        <button
-                            @click="toggleExportMenu"
-                            class="flex items-center justify-center border border-gray-400 ml-4 text-black px-4 py-2 rounded-md w-38"
-                        >
-                            Exporter
-                        </button>
-
-                        <!-- Menu déroulant pour les options d'exportation -->
+            <div class="flex-1 overflow-y-auto bg-gray-50">
+                <div class="p-5">
+                    <!-- Titre -->
+                    <div class="flex w-full">
                         <div
-                            v-if="showExportMenu"
-                            class="absolute mt-2 right-0 bg-white border border-gray-300 rounded-md shadow-lg w-40"
+                            class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
                         >
-                            <button
-                                @click="exportToExcel"
-                                class="w-full text-left px-4 py-2 hover:bg-gray-100 text-green-600"
-                            >
-                                Exporter en Excel
-                            </button>
-                            <button
-                                @click="exportToPdf"
-                                class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                            >
-                                Exporter en PDF
-                            </button>
+                            Actions
+                        </div>
+                        <div class="basis-[2%]">
+                            <Info />
                         </div>
                     </div>
 
-                    <!-- Toggle de pagination -->
-                    <div class="relative ml-4">
-                        <button
-                            @click="togglePagination"
-                            class="flex items-center justify-center border border-gray-400 text-black px-4 py-2 rounded-md"
-                            :class="{
-                                'bg-blue-100': !paginationEnabled,
-                                'bg-white': paginationEnabled,
-                            }"
-                        >
-                            {{
-                                paginationEnabled
-                                    ? "Désactiver Pagination"
-                                    : "Activer Pagination"
-                            }}
-                        </button>
-                    </div>
+                    <div class="min-h-[800px]">
+                        <!-- Phrase introductive -->
+                        <div class="w-full text-gray-600 mt-5">
+                            <p class="indent-4 font-poppins">
+                                Dans l'espace actions, vous pourriez voir et
+                                gérer les informations sur les actions, que ce
+                                soit Audit Interne, PTA, Audit Externe, SWOT,
+                                Enquête de Satisfaction et CAC, d'y ajouter et
+                                encore plus.
+                            </p>
+                        </div>
 
-                    <!-- Vérification du status s'il y a des actions qui doit être en retard -->
-                    <div class="relative ml-4">
-                        <button
-                            @click="verifierTousLesStatuts"
-                            :disabled="isCheckingStatus"
-                            class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        <!-- Choix d'action à faire(A.I ou PTA) -->
+                        <div
+                            class="flex w-full mt-5 ml-4 justify-center space-x-4"
                         >
-                            <!-- Icône de chargement -->
-                            <svg
-                                v-if="isCheckingStatus"
-                                class="animate-spin h-4 w-4"
-                                viewBox="0 0 24 24"
+                            <!-- Lien Audit Interne -->
+                            <router-link
+                                to="/admin/actions/auditinterne"
+                                class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                                :class="{
+                                    'border-b-4 border-blue-600':
+                                        $route.path ===
+                                        '/admin/actions/auditinterne',
+                                }"
                             >
-                                <circle
-                                    class="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    stroke-width="4"
-                                    fill="none"
-                                ></circle>
-                                <path
-                                    class="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                ></path>
-                            </svg>
-                            <!-- Icône de vérification -->
-                            <svg
-                                v-else
-                                class="h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                ></path>
-                            </svg>
-                            {{
-                                isCheckingStatus
-                                    ? "Vérification en cours..."
-                                    : "Vérifier tous les statuts"
-                            }}
-                        </button>
-                    </div>
-                </div>
+                                Audit Interne
+                            </router-link>
 
-                <!-- Tableau PTA -->
-                <div class="mt-5 ml-4">
-                    <Table
-                        ref="tableRef"
-                        :columns="columns"
-                        :data="formattedActions"
-                        :actions="actions"
-                        :filterActions="filterActions"
-                    />
+                            <div class="border-r border-gray-300"></div>
+
+                            <!-- Lien PTA -->
+                            <router-link
+                                to="/admin/actions/pta"
+                                class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                                :class="{
+                                    'border-b-4 border-blue-600':
+                                        $route.path === '/admin/actions/pta',
+                                }"
+                            >
+                                PTA
+                            </router-link>
+
+                            <div class="border-r border-gray-300"></div>
+
+                            <!-- Lien Audit Externe -->
+                            <router-link
+                                to="/admin/actions/ae"
+                                class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                                :class="{
+                                    'border-b-4 border-blue-600':
+                                        $route.path === '/admin/actions/ae',
+                                }"
+                            >
+                                Audit Externe
+                            </router-link>
+
+                            <div class="border-r border-gray-300"></div>
+
+                            <!-- Lien CAC -->
+                            <router-link
+                                to="/admin/actions/cac"
+                                class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                                :class="{
+                                    'border-b-4 border-blue-600':
+                                        $route.path === '/admin/actions/cac',
+                                }"
+                            >
+                                CAC
+                            </router-link>
+
+                            <div class="border-r border-gray-300"></div>
+
+                            <!-- Lien Enquête de Satisfaction -->
+                            <router-link
+                                to="/admin/actions/enquete"
+                                class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                                :class="{
+                                    'border-b-4 border-blue-600':
+                                        $route.path ===
+                                        '/admin/actions/enquete',
+                                }"
+                            >
+                                ENQUETE
+                            </router-link>
+
+                            <div class="border-r border-gray-300"></div>
+
+                            <!-- Lien SWOT -->
+                            <router-link
+                                to="/admin/actions/swot"
+                                class="flex items-center justify-center text-black text-2xl font-bold px-4 py-2 rounded-md w-38"
+                                :class="{
+                                    'border-b-4 border-blue-600':
+                                        $route.path === '/admin/actions/swot',
+                                }"
+                            >
+                                SWOT
+                            </router-link>
+                        </div>
+
+                        <!-- Ajout et barre de recherche -->
+                        <div class="flex w-full mt-5 ml-4">
+                            <!-- Bouton d'ajout -->
+                            <router-link to="/admin/actions/pta/ajouter">
+                                <button
+                                    class="flex items-center justify-center bg-[#0062ff] text-white px-4 py-2 rounded-md w-38"
+                                >
+                                    <Plus class="w-5 h-5 mr-2" /> Ajouter
+                                </button></router-link
+                            >
+
+                            <!-- Barre de recherche -->
+                            <div
+                                class="flex items-center ml-6 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                            >
+                                <Search class="w-5 h-5 mr-2 text-gray-500" />
+                                <input
+                                    type="text"
+                                    placeholder="Rechercher...."
+                                    class="outline-none bg-transparent text-gray-800 placeholder-gray-500"
+                                    v-model="searchQuery"
+                                    @input="rechercherActions"
+                                />
+                            </div>
+                            <div class="relative">
+                                <label
+                                    for="importer"
+                                    class="flex items-center justify-center border border-gray-400 ml-4 text-black px-4 py-2 rounded-md w-38 cursor-pointer"
+                                >
+                                    Importer
+                                </label>
+                                <input
+                                    id="importer"
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    @change="importerFichier"
+                                    class="hidden"
+                                />
+                            </div>
+                            <div class="relative z-50">
+                                <button
+                                    @click="toggleExportMenu"
+                                    class="flex items-center justify-center border border-gray-400 ml-4 text-black px-4 py-2 rounded-md w-38"
+                                >
+                                    Exporter
+                                </button>
+
+                                <div
+                                    v-if="showExportMenu"
+                                    class="absolute mt-2 right-0 bg-white border border-gray-300 rounded-md shadow-lg w-40 z-50"
+                                    style="z-index: 9999"
+                                >
+                                    <button
+                                        @click="exportToExcel"
+                                        class="w-full text-left px-4 py-2 hover:bg-gray-100 text-green-600"
+                                    >
+                                        Exporter en Excel
+                                    </button>
+                                    <button
+                                        @click="exportToPdf"
+                                        class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                                    >
+                                        Exporter en PDF
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Toggle de pagination -->
+                            <div class="relative ml-4">
+                                <button
+                                    @click="togglePagination"
+                                    class="flex items-center justify-center border border-gray-400 text-black px-4 py-2 rounded-md"
+                                    :class="{
+                                        'bg-blue-100': !paginationEnabled,
+                                        'bg-white': paginationEnabled,
+                                    }"
+                                >
+                                    {{
+                                        paginationEnabled
+                                            ? "Désactiver Pagination"
+                                            : "Activer Pagination"
+                                    }}
+                                </button>
+                            </div>
+
+                            <!-- Vérification du status s'il y a des actions qui doit être en retard -->
+                            <div class="relative ml-4">
+                                <button
+                                    @click="verifierTousLesStatuts"
+                                    :disabled="isCheckingStatus"
+                                    class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    <!-- Icône de chargement -->
+                                    <svg
+                                        v-if="isCheckingStatus"
+                                        class="animate-spin h-4 w-4"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            class="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            stroke-width="4"
+                                            fill="none"
+                                        ></circle>
+                                        <path
+                                            class="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
+                                    </svg>
+                                    <!-- Icône de vérification -->
+                                    <svg
+                                        v-else
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        ></path>
+                                    </svg>
+                                    {{
+                                        isCheckingStatus
+                                            ? "Vérification en cours..."
+                                            : "Vérifier tous les statuts"
+                                    }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tableau PTA -->
+                        <div class="mt-5 ml-4">
+                            <Table
+                                ref="tableRef"
+                                :columns="columns"
+                                :data="formattedActions"
+                                :actions="actions"
+                                :filterActions="filterActions"
+                            />
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="flex w-full mt-5 justify-between">
+                            <!-- Résultat -->
+                            <div
+                                class="flex items-center text-gray-500 justify-start px-4 space-x-2"
+                            >
+                                <span>Résultat</span>
+                                <strong>{{
+                                    totalActions === 0
+                                        ? 0
+                                        : paginationEnabled
+                                        ? (currentPage - 1) * perPage + 1
+                                        : 1
+                                }}</strong>
+                                <span>à</span>
+                                <strong>
+                                    {{
+                                        totalActions === 0
+                                            ? 0
+                                            : paginationEnabled
+                                            ? Math.min(
+                                                  currentPage * perPage,
+                                                  totalActions
+                                              )
+                                            : totalActions
+                                    }}
+                                </strong>
+                                <span>sur</span>
+                                <strong>{{ totalActions }}</strong>
+                            </div>
+
+                            <!-- Pagination - masquer quand elle est désactivée -->
+                            <div
+                                v-if="paginationEnabled"
+                                class="flex items-center justify-end space-x-2"
+                            >
+                                <button
+                                    class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                                    :disabled="
+                                        currentPage <= 1 || totalActions === 0
+                                    "
+                                    @click="changerPage(currentPage - 1)"
+                                >
+                                    <ChevronLeft class="w-4 h-4" /> Préc.
+                                </button>
+
+                                <!-- Numéros de page -->
+                                <div class="flex space-x-1">
+                                    <button
+                                        v-for="page in pages"
+                                        :key="page"
+                                        class="flex items-center justify-center w-8 h-8 rounded-md border"
+                                        :class="
+                                            page === currentPage
+                                                ? 'bg-[#0062ff] text-white'
+                                                : 'bg-white text-black border-gray-300'
+                                        "
+                                        @click="changerPage(page)"
+                                    >
+                                        {{ page }}
+                                    </button>
+                                </div>
+
+                                <button
+                                    class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
+                                    :disabled="
+                                        currentPage >= lastPage ||
+                                        totalActions === 0
+                                    "
+                                    @click="changerPage(currentPage + 1)"
+                                >
+                                    Suiv. <ChevronRight class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Footer -->
-                <div class="flex w-full mt-5 justify-between">
-                    <!-- Résultat -->
-                    <div
-                        class="flex items-center text-gray-500 justify-start px-4 space-x-2"
-                    >
-                        <span>Résultat</span>
-                        <strong>{{
-                            totalActions === 0
-                                ? 0
-                                : paginationEnabled
-                                ? (currentPage - 1) * perPage + 1
-                                : 1
-                        }}</strong>
-                        <span>à</span>
-                        <strong>
-                            {{
-                                totalActions === 0
-                                    ? 0
-                                    : paginationEnabled
-                                    ? Math.min(
-                                          currentPage * perPage,
-                                          totalActions
-                                      )
-                                    : totalActions
-                            }}
-                        </strong>
-                        <span>sur</span>
-                        <strong>{{ totalActions }}</strong>
-                    </div>
-
-                    <!-- Pagination - masquer quand elle est désactivée -->
-                    <div
-                        v-if="paginationEnabled"
-                        class="flex items-center justify-end space-x-2"
-                    >
-                        <button
-                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
-                            :disabled="currentPage <= 1 || totalActions === 0"
-                            @click="changerPage(currentPage - 1)"
-                        >
-                            <ChevronLeft class="w-4 h-4" /> Préc.
-                        </button>
-
-                        <!-- Numéros de page -->
-                        <div class="flex space-x-1">
-                            <button
-                                v-for="page in pages"
-                                :key="page"
-                                class="flex items-center justify-center w-8 h-8 rounded-md border"
-                                :class="
-                                    page === currentPage
-                                        ? 'bg-[#0062ff] text-white'
-                                        : 'bg-white text-black border-gray-300'
-                                "
-                                @click="changerPage(page)"
-                            >
-                                {{ page }}
-                            </button>
-                        </div>
-
-                        <button
-                            class="flex items-center bg-white text-black px-3 py-2 rounded-md border border-gray-300 shadow-sm"
-                            :disabled="
-                                currentPage >= lastPage || totalActions === 0
-                            "
-                            @click="changerPage(currentPage + 1)"
-                        >
-                            Suiv. <ChevronRight class="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
+                <Footer />
             </div>
-
-            <!-- Footer -->
-            <Footer />
         </div>
     </div>
 </template>

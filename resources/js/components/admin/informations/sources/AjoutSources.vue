@@ -3,9 +3,19 @@ import Sidebar from "../../../assets/Sidebar.vue";
 import Navbar from "../../../assets/Navbar.vue";
 import Footer from "../../../assets/Footer.vue";
 
-import { reactive } from "vue";
+import { reactive, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+
+// État pour suivre si le sidebar est réduit
+const isSidebarCollapsed = ref(false);
+
+// Fonction appelée quand le sidebar change d'état
+const handleSidebarToggle = (collapsed) => {
+    isSidebarCollapsed.value = collapsed;
+    // Sauvegarde l'état dans le localStorage
+    localStorage.setItem("sidebar-collapsed", collapsed);
+};
 
 const router = useRouter();
 
@@ -56,147 +66,173 @@ const enregistrerSource = async () => {
 const resetError = (field) => {
     erreurs[field] = "";
 };
+
+onMounted(() => {
+    // Récupère l'état du sidebar depuis le localStorage
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+        isSidebarCollapsed.value = saved === "true";
+    }
+});
 </script>
 
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <Sidebar class="w-64 bg-[#0062ff] text-white fixed h-full" />
+        <Sidebar @sidebar-toggle="handleSidebarToggle" />
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col ml-64">
-            <!-- Navbar -->
-            <Navbar />
+        <div
+            :class="[
+                'flex-1 flex flex-col transition-all duration-300',
+                isSidebarCollapsed ? 'ml-16' : 'ml-64',
+            ]"
+        >
+            <Navbar v-if="true" :isSidebarCollapsed="isSidebarCollapsed" />
 
             <!-- Contenu principal avec padding en bas -->
-            <div class="flex-1 p-5 bg-gray-50 pb-16">
-                <!-- Titre -->
-                <div class="flex w-full">
-                    <div
-                        class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
-                    >
-                        Ajout Sources
+            <div class="flex-1 overflow-y-auto bg-gray-50">
+                <div class="p-5">
+                    <!-- Titre -->
+                    <div class="flex w-full">
+                        <div
+                            class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
+                        >
+                            Ajout Sources
+                        </div>
+                        <div class="basis-[2%]">
+                            <Info />
+                        </div>
                     </div>
-                    <div class="basis-[2%]">
-                        <Info />
+
+                    <div class="min-h-[800px]">
+                        <!-- Phrase introductive -->
+                        <div class="w-full text-gray-600 mt-5">
+                            <p class="indent-4 font-poppins">
+                                Ajouter de nouvelle source pour mieux connaître
+                                les actions à faire.
+                            </p>
+                        </div>
+
+                        <!-- Formulaire d'ajout de membre -->
+                        <div class="w-full mt-5">
+                            <div class="flex w-[60%] items-center">
+                                <label
+                                    for="code"
+                                    class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Code :
+                                </label>
+                                <div class="w-[50%]">
+                                    <input
+                                        type="text"
+                                        id="code"
+                                        class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                        :class="{
+                                            'border-gray-400': !erreurs.code,
+                                            'border-red-500': erreurs.code,
+                                        }"
+                                        v-model="source.code"
+                                        @input="resetError('code')"
+                                    />
+                                    <p
+                                        v-if="erreurs.code"
+                                        class="flex text-red-500 text-sm mt-1"
+                                    >
+                                        {{ erreurs.code }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <label
+                                    for="libelle"
+                                    class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Libelle :
+                                </label>
+                                <div class="w-[50%]">
+                                    <input
+                                        type="text"
+                                        id="libelle"
+                                        class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                        :class="{
+                                            'border-gray-400': !erreurs.libelle,
+                                            'border-red-500': erreurs.libelle,
+                                        }"
+                                        v-model="source.libelle"
+                                        @input="resetError('libelle')"
+                                    />
+                                    <p
+                                        v-if="erreurs.libelle"
+                                        class="flex text-red-500 text-sm mt-1"
+                                    >
+                                        {{ erreurs.libelle }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <label
+                                    for="source_pour"
+                                    class="w-[14%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Sources pour :
+                                </label>
+                                <div class="w-[50%]">
+                                    <select
+                                        id="source_pour"
+                                        v-model="source.sources_pour"
+                                        class="w-[32%] border border-gray-400 rounded-md px-4 py-2"
+                                        :class="{
+                                            'border-gray-400':
+                                                !erreurs.sources_pour,
+                                            'border-red-500':
+                                                erreurs.sources_pour,
+                                        }"
+                                        @change="resetError('sources_pour')"
+                                    >
+                                        <option value="auditinterne">
+                                            Audit Interne
+                                        </option>
+                                        <option value="pta">PTA</option>
+                                        <option value="enquete">
+                                            Enquête de satisfaction
+                                        </option>
+                                        <option value="swot">SWOT</option>
+                                        <option value="cac">CAC</option>
+                                        <option value="auditexterne">
+                                            Audit Externe
+                                        </option>
+                                    </select>
+                                    <p
+                                        v-if="erreurs.sources_pour"
+                                        class="flex text-red-500 text-sm mt-1"
+                                    >
+                                        {{ erreurs.sources_pour }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex w-[60%] justify-center mt-5">
+                                <router-link to="/admin/informations/sources"
+                                    ><button
+                                        class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
+                                    >
+                                        Retour
+                                    </button></router-link
+                                >
+                                <button
+                                    @click="enregistrerSource"
+                                    class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
+                                >
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Phrase introductive -->
-                <div class="w-full text-gray-600 mt-5">
-                    <p class="indent-4 font-poppins">
-                        Ajouter de nouvelle source pour mieux connaître les
-                        actions à faire.
-                    </p>
-                </div>
-
-                <!-- Formulaire d'ajout de membre -->
-                <div class="w-full mt-5">
-                    <div class="flex w-[60%] items-center">
-                        <label
-                            for="code"
-                            class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Code :
-                        </label>
-                        <div class="w-[50%]">
-                            <input
-                                type="text"
-                                id="code"
-                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                                :class="{
-                                    'border-gray-400': !erreurs.code,
-                                    'border-red-500': erreurs.code,
-                                }"
-                                v-model="source.code"
-                                @input="resetError('code')"
-                            />
-                            <p
-                                v-if="erreurs.code"
-                                class="flex text-red-500 text-sm mt-1"
-                            >
-                                {{ erreurs.code }}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="libelle"
-                            class="w-[10%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Libelle :
-                        </label>
-                        <div class="w-[50%]">
-                            <input
-                                type="text"
-                                id="libelle"
-                                class="w-full border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                                :class="{
-                                    'border-gray-400': !erreurs.libelle,
-                                    'border-red-500': erreurs.libelle,
-                                }"
-                                v-model="source.libelle"
-                                @input="resetError('libelle')"
-                            />
-                            <p
-                                v-if="erreurs.libelle"
-                                class="flex text-red-500 text-sm mt-1"
-                            >
-                                {{ erreurs.libelle }}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="source_pour"
-                            class="w-[14%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Sources pour :
-                        </label>
-                        <div class="w-[50%]">
-                            <select
-                                id="source_pour"
-                                v-model="source.sources_pour"
-                                class="w-[32%] border border-gray-400 rounded-md px-4 py-2"
-                                :class="{
-                                    'border-gray-400': !erreurs.sources_pour,
-                                    'border-red-500': erreurs.sources_pour,
-                                }"
-                                @change="resetError('sources_pour')"
-                            >
-                                <option value="auditinterne">
-                                    Audit Interne
-                                </option>
-                                <option value="pta">PTA</option>
-                            </select>
-                            <p
-                                v-if="erreurs.sources_pour"
-                                class="flex text-red-500 text-sm mt-1"
-                            >
-                                {{ erreurs.sources_pour }}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex w-[60%] justify-center mt-5">
-                        <router-link to="/admin/informations/sources"
-                            ><button
-                                class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
-                            >
-                                Retour
-                            </button></router-link
-                        >
-                        <button
-                            @click="enregistrerSource"
-                            class="w-[15%] bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
-                        >
-                            Enregistrer
-                        </button>
-                    </div>
-                </div>
+                <!-- Footer -->
+                <Footer />
             </div>
-
-            <!-- Footer -->
-            <Footer />
         </div>
     </div>
 </template>

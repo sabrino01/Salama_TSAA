@@ -12,7 +12,7 @@
 
         <!-- Modal -->
         <div
-            class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 flex flex-col"
+            class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 flex flex-col max-h-[90vh]"
         >
             <!-- Header -->
             <div class="py-4 px-6 border-b border-gray-200">
@@ -20,87 +20,188 @@
             </div>
 
             <!-- Body -->
-            <div class="py-6 px-6 flex-grow overflow-y-auto">
-                <!-- Date et heure du début -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1"
-                        >Date et heure du début</label
-                    >
-                    <input
-                        type="datetime-local"
-                        v-model="debut"
-                        class="w-full rounded-md border border-gray-300 px-3 py-2"
-                        :min="dateActuelle"
-                        @change="checkDateValidity"
-                    />
-                </div>
-
-                <!-- Date et heure de fin (visible seulement si début est rempli) -->
-                <div v-if="debut" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1"
-                        >Date et heure de fin</label
-                    >
-                    <input
-                        type="datetime-local"
-                        v-model="fin"
-                        class="w-full rounded-md border border-gray-300 px-3 py-2"
-                        :min="debut"
-                        @change="checkDateValidity"
-                    />
-                </div>
-
-                <!-- Suivis (visible seulement si fin est rempli) -->
-                <div v-if="fin && debut">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-700"
-                            >Dates et heures de suivi</label
+            <div class="flex-1 overflow-hidden flex flex-col min-h-0">
+                <div class="py-6 px-6 overflow-y-auto flex-1 custom-scrollbar">
+                    <!-- Créneaux principaux (début/fin) -->
+                    <div class="mb-6">
+                        <div
+                            class="flex justify-between items-center mb-3 sticky top-0 bg-white py-2 z-10 border-b border-gray-100"
                         >
-                        <button
-                            @click="ajouterSuivi"
-                            class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-sm"
-                        >
-                            <Plus size="16" />
-                        </button>
-                    </div>
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                                >Créneaux horaires ({{
+                                    creneaux.length
+                                }})</label
+                            >
+                            <button
+                                @click="ajouterCreneau"
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                            >
+                                <Plus size="16" />
+                                Ajouter un créneau
+                            </button>
+                        </div>
 
-                    <div
-                        v-for="(suivi, index) in suivis"
-                        :key="index"
-                        class="flex mb-2"
-                    >
-                        <input
-                            type="datetime-local"
-                            v-model="suivis[index]"
-                            class="flex-grow rounded-md border border-gray-300 px-3 py-2"
-                            :min="fin"
-                        />
-                        <button
-                            @click="supprimerSuivi(index)"
-                            class="ml-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-                        >
-                            <X size="16" />
-                        </button>
+                        <div class="space-y-4">
+                            <div
+                                v-for="(creneau, index) in creneaux"
+                                :key="index"
+                                class="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                            >
+                                <div
+                                    class="flex justify-between items-center mb-3"
+                                >
+                                    <h4
+                                        class="text-sm font-medium text-gray-700 flex items-center gap-2"
+                                    >
+                                        <span
+                                            class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full"
+                                        >
+                                            {{ index + 1 }}
+                                        </span>
+                                        Créneau {{ index + 1 }}
+                                    </h4>
+                                    <button
+                                        v-if="creneaux.length > 1"
+                                        @click="supprimerCreneau(index)"
+                                        class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm transition-colors"
+                                        title="Supprimer ce créneau"
+                                    >
+                                        <X size="14" />
+                                    </button>
+                                </div>
+
+                                <!-- Date et heure de début -->
+                                <div class="mb-3">
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 mb-1"
+                                        >Date et heure de début</label
+                                    >
+                                    <input
+                                        type="datetime-local"
+                                        v-model="creneau.debut"
+                                        class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                        @change="
+                                            checkDateValidityForCreneau(index)
+                                        "
+                                    />
+                                </div>
+
+                                <!-- Date et heure de fin -->
+                                <div class="mb-3">
+                                    <label
+                                        class="block text-sm font-medium text-gray-700 mb-1"
+                                        >Date et heure de fin</label
+                                    >
+                                    <input
+                                        type="datetime-local"
+                                        v-model="creneau.fin"
+                                        class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                        :min="creneau.debut"
+                                        @change="
+                                            checkDateValidityForCreneau(index)
+                                        "
+                                    />
+                                </div>
+
+                                <!-- Suivis pour ce créneau (visible seulement si début et fin sont remplis) -->
+                                <div
+                                    v-if="creneau.debut && creneau.fin"
+                                    class="mt-4 border-t pt-3"
+                                >
+                                    <div
+                                        class="flex justify-between items-center mb-2"
+                                    >
+                                        <label
+                                            class="block text-sm font-medium text-gray-700 flex items-center gap-1"
+                                        >
+                                            <span
+                                                >Dates et heures de suivi</span
+                                            >
+                                            <span
+                                                v-if="creneau.suivis.length > 0"
+                                                class="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full"
+                                            >
+                                                {{ creneau.suivis.length }}
+                                            </span>
+                                        </label>
+                                        <button
+                                            @click="ajouterSuivi(index)"
+                                            class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-sm transition-colors"
+                                            title="Ajouter un suivi"
+                                        >
+                                            <Plus size="14" />
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        class="space-y-2 max-h-40 overflow-y-auto"
+                                    >
+                                        <div
+                                            v-for="(
+                                                suivi, suiviIndex
+                                            ) in creneau.suivis"
+                                            :key="suiviIndex"
+                                            class="flex gap-2"
+                                        >
+                                            <input
+                                                type="datetime-local"
+                                                v-model="
+                                                    creneau.suivis[suiviIndex]
+                                                "
+                                                class="flex-grow rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                                                :min="creneau.fin"
+                                                :placeholder="`Suivi ${
+                                                    suiviIndex + 1
+                                                }`"
+                                            />
+                                            <button
+                                                @click="
+                                                    supprimerSuivi(
+                                                        index,
+                                                        suiviIndex
+                                                    )
+                                                "
+                                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded transition-colors"
+                                                title="Supprimer ce suivi"
+                                            >
+                                                <X size="14" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Footer -->
             <div
-                class="py-3 px-6 border-t border-gray-200 flex justify-end space-x-4"
+                class="py-3 px-6 border-t border-gray-200 flex justify-between items-center bg-white"
             >
-                <button
-                    @click="fermerModal"
-                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
-                >
-                    Annuler
-                </button>
-                <button
-                    @click="enregistrer"
-                    class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                    :disabled="!estValide"
-                >
-                    Enregistrer
-                </button>
+                <div class="text-sm text-gray-600">
+                    {{ creneaux.length }} créneau{{
+                        creneaux.length > 1 ? "x" : ""
+                    }}
+                    • {{ totalSuivis }} suivi{{ totalSuivis > 1 ? "s" : "" }}
+                </div>
+                <div class="flex space-x-4">
+                    <button
+                        @click="fermerModal"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        @click="enregistrer"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                        :disabled="!estValide"
+                        :class="{ 'opacity-50 cursor-not-allowed': !estValide }"
+                    >
+                        Enregistrer
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -125,23 +226,34 @@ export default {
     emits: ["update:modelValue", "save"],
     data() {
         return {
-            debut: "",
-            fin: "",
-            suivis: [],
+            creneaux: [
+                {
+                    debut: "",
+                    fin: "",
+                    suivis: [],
+                },
+            ],
             erreurs: [],
         };
     },
     computed: {
         estValide() {
-            return this.debut && this.fin;
+            return this.creneaux.some(
+                (creneau) => creneau.debut && creneau.fin
+            );
         },
         donneesPonctuelles() {
             return {
                 type: this.titre,
-                debut: this.debut,
-                fin: this.fin,
-                suivis: [...this.suivis],
+                creneaux: this.creneaux.filter(
+                    (creneau) => creneau.debut && creneau.fin
+                ),
             };
+        },
+        totalSuivis() {
+            return this.creneaux.reduce((total, creneau) => {
+                return total + (creneau.suivis ? creneau.suivis.length : 0);
+            }, 0);
         },
         dateActuelle() {
             const maintenant = new Date();
@@ -161,23 +273,42 @@ export default {
             this.resetForm();
         },
         resetForm() {
-            this.debut = "";
-            this.fin = "";
-            this.suivis = [];
+            this.creneaux = [
+                {
+                    debut: "",
+                    fin: "",
+                    suivis: [],
+                },
+            ];
             this.erreurs = [];
         },
-        ajouterSuivi() {
-            this.suivis.push("");
+        ajouterCreneau() {
+            this.creneaux.push({
+                debut: "",
+                fin: "",
+                suivis: [],
+            });
         },
-        supprimerSuivi(index) {
-            this.suivis.splice(index, 1);
+        supprimerCreneau(index) {
+            if (this.creneaux.length > 1) {
+                this.creneaux.splice(index, 1);
+            }
         },
-        checkDateValidity() {
-            if (this.debut && this.fin) {
-                if (new Date(this.fin) <= new Date(this.debut)) {
-                    this.fin = "";
+        ajouterSuivi(creneauIndex) {
+            this.creneaux[creneauIndex].suivis.push("");
+        },
+        supprimerSuivi(creneauIndex, suiviIndex) {
+            this.creneaux[creneauIndex].suivis.splice(suiviIndex, 1);
+        },
+        checkDateValidityForCreneau(creneauIndex) {
+            const creneau = this.creneaux[creneauIndex];
+            if (creneau.debut && creneau.fin) {
+                if (new Date(creneau.fin) <= new Date(creneau.debut)) {
+                    creneau.fin = "";
                     this.erreurs.push(
-                        "La date de fin doit être postérieure à la date de début"
+                        `Créneau ${
+                            creneauIndex + 1
+                        }: La date de fin doit être postérieure à la date de début`
                     );
                 }
             }
@@ -192,3 +323,34 @@ export default {
     },
 };
 </script>
+
+<style scoped>
+/* Scrollbar personnalisée pour une meilleure UX */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Animation pour les nouveaux créneaux */
+.creneau-enter-active {
+    transition: all 0.3s ease;
+}
+
+.creneau-enter-from {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+</style>

@@ -126,8 +126,6 @@
 import { reactive } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
-
-// Import des icônes Lucide
 import { Eye, EyeOff } from "lucide-vue-next";
 
 const router = useRouter();
@@ -139,6 +137,7 @@ const credentials = reactive({
 const erreurs = reactive({
     nom_utilisateur: "",
     mot_de_passe: "",
+    login: "",
 });
 
 const showPassword = reactive({
@@ -146,45 +145,30 @@ const showPassword = reactive({
 });
 
 const handleLogin = async () => {
-    // Réinitialiser les erreurs
     Object.keys(erreurs).forEach((key) => (erreurs[key] = ""));
-
-    // Validation côté frontend
     if (!credentials.nom_utilisateur) {
         erreurs.nom_utilisateur = "Le nom d'utilisateur est requis.";
     }
     if (!credentials.mot_de_passe) {
         erreurs.mot_de_passe = "Le mot de passe est requis.";
     }
-
-    // Si des erreurs existent, arrêter l'exécution
     if (Object.values(erreurs).some((err) => err)) return;
 
     try {
         const response = await axios.post("/api/login", credentials);
-
-        // Stocker le token si votre API en renvoie un
         if (response.data.token) {
             localStorage.setItem("token", response.data.token);
-            // Stocker les informations de l'utilisateur
             localStorage.setItem("user", JSON.stringify(response.data.user));
         }
-
-        // Vérifier les alertes en utilisant la route existante
         const hasAlerts = await checkExistingAlerts(response.data.user.id);
-
-        // Map des rôles vers leurs routes de base
         const roleRoutes = {
             admin: "/admin",
             user: "/user",
             responsable: "/responsable/actions/auditinterne",
             suivi: "/suivi/actions/auditinterne",
         };
-
         const role = response.data.user.role;
-        const baseRoute = roleRoutes[role] || "/"; // fallback si le rôle est inconnu
-
-        // Redirection basée sur le rôle et les alertes
+        const baseRoute = roleRoutes[role] || "/";
         if (["admin", "user"].includes(role)) {
             if (hasAlerts) {
                 router.push(`${baseRoute}/notifications`);
@@ -192,7 +176,6 @@ const handleLogin = async () => {
                 router.push(`${baseRoute}/dashboard`);
             }
         } else {
-            // Pour responsable ou suivi, on va directement à leur route spécifique
             router.push(baseRoute);
         }
     } catch (error) {
@@ -201,30 +184,206 @@ const handleLogin = async () => {
                 erreurs[key] = error.response.data.errors[key][0];
             });
         } else if (error.response && error.response.data.message) {
-            // Erreur générale d'authentification
             erreurs.login = error.response.data.message;
         }
     }
 };
 
-// Fonction pour vérifier les alertes en utilisant les routes existantes
+const parseDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return null;
+    return new Date(dateTimeStr);
+};
+
+const calculerJoursRestants = (dateTimeStr) => {
+    if (!dateTimeStr) return 0;
+    const inputDate = parseDateTime(dateTimeStr);
+    if (!inputDate) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const inputDateOnly = new Date(inputDate);
+    inputDateOnly.setHours(0, 0, 0, 0);
+    const diffTime = inputDateOnly - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+};
+
+const formatDateHeure = (dateTimeStr) => {
+    if (!dateTimeStr) return "";
+    const date = parseDateTime(dateTimeStr);
+    if (!date) return dateTimeStr;
+    return date.toLocaleString("fr-FR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+const getNotificationThresholds = (typeFrequence, typeEvent) => {
+    const defaults = { commencement: 7, retard: 7 };
+    if (typeEvent === "suivi") {
+        return { commencement: 4, retard: 4 };
+    }
+    switch (typeFrequence) {
+        case "ponctuel":
+        case "hebdomadaire":
+        case "annuel":
+        case "mensuel":
+        case "bimestriel":
+        case "trimestriel":
+        case "quadrimestriel":
+        case "semestriel":
+            return defaults;
+        default:
+            return defaults;
+    }
+};
+
+const getNotificationClass = (typeFrequence, typeEvent, dateTimeStr) => {
+    const jours = calculerJoursRestants(dateTimeStr);
+    const seuils = getNotificationThresholds(typeFrequence, typeEvent);
+    if (jours === 0) return "border-blue-400";
+    if (jours > 0) {
+        if (jours <= seuils.commencement) {
+            return "border-yellow-400";
+        }
+        return "border-green-400";
+    }
+    if (jours < 0) {
+        if (Math.abs(jours) <= seuils.retard) {
+            return "border-orange-400";
+        }
+        return "border-red-400";
+    }
+    return "border-gray-400";
+};
+
+const formatNotificationStatus = (typeFrequence, typeEvent, dateTimeStr) => {
+    const jours = calculerJoursRestants(dateTimeStr);
+    if (jours === 0) return "(Aujourd'hui)";
+    if (jours > 0) return `(dans ${jours} jour${jours > 1 ? "s" : ""})`;
+    return `(il y a ${Math.abs(jours)} jour${Math.abs(jours) > 1 ? "s" : ""})`;
+};
+
+const getNextRecurrentDate = (dateDebut, intervalMois) => {
+    const aujourd = new Date();
+    const prochaine = new Date(dateDebut);
+    while (prochaine <= aujourd) {
+        prochaine.setMonth(prochaine.getMonth() + intervalMois);
+    }
+    return prochaine;
+};
+
+const getNextAnnualDate = (dateDebut) => {
+    const aujourd = new Date();
+    const prochaine = new Date(dateDebut);
+    prochaine.setFullYear(aujourd.getFullYear());
+    if (prochaine <= aujourd) {
+        prochaine.setFullYear(prochaine.getFullYear() + 1);
+    }
+    return prochaine;
+};
+
+const getRecurrentNotifications = (frequenceObj) => {
+    if (!frequenceObj || typeof frequenceObj === "string") {
+        return [];
+    }
+    const notifications = [];
+    const today = new Date();
+
+    if (
+        [
+            "Mensuel",
+            "Bimestriel",
+            "Trimestriel",
+            "Quadrimestriel",
+            "Semestriel",
+        ].includes(frequenceObj.type)
+    ) {
+        const planification = frequenceObj.planification;
+        if (planification) {
+            const debut = parseDateTime(planification.dateHeureDebut);
+            const fin = parseDateTime(
+                planification.dateHeureFin || planification.dateHeureFinale
+            );
+            if (debut && fin) {
+                const intervalles = {
+                    Mensuel: 1,
+                    Bimestriel: 2,
+                    Trimestriel: 3,
+                    Quadrimestriel: 4,
+                    Semestriel: 6,
+                };
+                const intervalMois = intervalles[frequenceObj.type];
+                const prochaineDeclenchement = getNextRecurrentDate(
+                    debut,
+                    intervalMois
+                );
+                const joursRestants = calculerJoursRestants(
+                    prochaineDeclenchement.toISOString()
+                );
+                if (Math.abs(joursRestants) <= 7) {
+                    notifications.push({
+                        type: "recurrent",
+                        joursRestants,
+                        message: `Prochaine occurrence : ${formatDateHeure(
+                            prochaineDeclenchement.toISOString()
+                        )}`,
+                        details: `Se répète tous les ${intervalMois} mois jusqu'au ${formatDateHeure(
+                            fin.toISOString()
+                        )}`,
+                        class: getNotificationClass(
+                            frequenceObj.type.toLowerCase(),
+                            "debut",
+                            prochaineDeclenchement.toISOString()
+                        ),
+                    });
+                }
+            }
+        }
+    }
+
+    if (frequenceObj.type === "Annuel" && frequenceObj.dateHeure) {
+        const debut = parseDateTime(frequenceObj.dateHeure.debut);
+        if (debut) {
+            const prochaineAnnee = getNextAnnualDate(debut);
+            const joursRestants = calculerJoursRestants(
+                prochaineAnnee.toISOString()
+            );
+            if (Math.abs(joursRestants) <= 7) {
+                notifications.push({
+                    type: "recurrent",
+                    joursRestants,
+                    message: `Prochaine occurrence : ${formatDateHeure(
+                        prochaineAnnee.toISOString()
+                    )}`,
+                    details: "Se répète chaque année",
+                    class: getNotificationClass(
+                        "annuel",
+                        "debut",
+                        prochaineAnnee.toISOString()
+                    ),
+                });
+            }
+        }
+    }
+
+    return notifications;
+};
+
 const checkExistingAlerts = async (userId) => {
     try {
-        // Vérifie d'abord si les alertes sont activées
         const isAlertEnabled = localStorage.getItem("appAlert") === "true";
-
         if (!isAlertEnabled) {
             return false;
         }
-
-        // Utilise la route getAllNotifications existante
         const response = await axios.get(`/api/notifications`, {
             params: {
                 user_id: userId,
+                with_pagination: false,
             },
         });
-
-        // Vérifie d'abord que les données existent et ont le bon format
         if (
             !response.data ||
             !response.data.en_cours ||
@@ -233,16 +392,11 @@ const checkExistingAlerts = async (userId) => {
             console.error("Format de réponse invalide:", response.data);
             return false;
         }
-
-        // Vérifie si en_cours.data existe (pagination)
         const enCours = response.data.en_cours.data || [];
         const enRetard = response.data.en_retard.data || [];
-
-        // Vérifie s'il y a des alertes actives dans les données
         const hasActiveAlerts =
             enCours.some((item) => needsAlert(item.frequence)) ||
             enRetard.some((item) => needsAlert(item.frequence));
-
         return hasActiveAlerts;
     } catch (error) {
         console.error("Erreur lors de la vérification des alertes:", error);
@@ -250,25 +404,25 @@ const checkExistingAlerts = async (userId) => {
     }
 };
 
-// Fonction pour vérifier si une fréquence nécessite une alerte
 const needsAlert = (frequence) => {
     if (!frequence) return false;
-
     try {
         const frequenceObj =
             typeof frequence === "string" ? JSON.parse(frequence) : frequence;
-
-        // Utilise la même logique que dans votre composant Notifications.vue
         const infosDebut = verifierAlerteDebut(frequenceObj);
         const infosSuivis = verifierAlerteSuivis(frequenceObj);
-
-        return infosDebut.doitAlerter || infosSuivis.doitAlerter;
+        const recurrentNotifications = getRecurrentNotifications(frequenceObj);
+        return (
+            infosDebut.doitAlerter ||
+            infosSuivis.doitAlerter ||
+            recurrentNotifications.length > 0
+        );
     } catch (error) {
         console.error("Erreur lors de l'analyse de la fréquence:", error);
         return false;
     }
 };
-// Données pour la gestion des fréquences
+
 const joursMap = {
     Lundi: 1,
     Mardi: 2,
@@ -287,17 +441,12 @@ const calculerJoursRestantsParJour = (
 ) => {
     const jourIndex = joursMap[jourString];
     if (jourIndex === undefined) return 0;
-
     const aujourdhui = new Date();
     const jourActuel = aujourdhui.getDay();
     let joursRestants = (jourIndex - jourActuel + 7) % 7;
-
-    // Si c'est aujourd'hui mais qu'on a déjà dépassé l'heure, on ajoute 7 jours
     if (joursRestants === 0) {
         joursRestants = 7;
     }
-
-    // Ajustements pour les périodes spécifiques
     if (type) {
         if (periode === "semaineProchaine" && joursRestants < 7) {
             joursRestants += 7;
@@ -309,7 +458,6 @@ const calculerJoursRestantsParJour = (
             );
             const jourPremierMois = premierJourMoisProchain.getDay();
             joursRestants = (jourIndex - jourPremierMois + 7) % 7;
-
             const dernierJourMoisCourant = new Date(
                 aujourdhui.getFullYear(),
                 aujourdhui.getMonth() + 1,
@@ -317,8 +465,6 @@ const calculerJoursRestantsParJour = (
             ).getDate();
             joursRestants += dernierJourMoisCourant - aujourdhui.getDate();
         }
-
-        // Ajustement pour les fréquences mensuelles et plus
         const moisSupplementaires = {
             Mensuel: 1,
             Bimestriel: 2,
@@ -326,27 +472,22 @@ const calculerJoursRestantsParJour = (
             Quadrimestriel: 4,
             Semestriel: 6,
         };
-
         if (moisSupplementaires[type]) {
             joursRestants += moisSupplementaires[type] * 30;
         }
     }
-
     return joursRestants;
 };
 
 const verifierAlerteDebut = (frequenceObj) => {
     if (typeof frequenceObj === "string") return { doitAlerter: false };
-
     let doitAlerter = false;
     let joursRestants = 0;
-
     switch (frequenceObj.type) {
         case "Ponctuel":
             joursRestants = calculerJoursRestants(frequenceObj.debut);
             doitAlerter = joursRestants >= -7 && joursRestants <= 7;
             break;
-
         case "Hebdomadaire":
             if (
                 frequenceObj.mode === "dateHeure" &&
@@ -376,7 +517,6 @@ const verifierAlerteDebut = (frequenceObj) => {
                 doitAlerter = joursRestants >= -4 && joursRestants <= 4;
             }
             break;
-
         case "Mensuel":
         case "Bimestriel":
         case "Trimestriel":
@@ -384,14 +524,13 @@ const verifierAlerteDebut = (frequenceObj) => {
         case "Semestriel":
         case "Annuel":
             const plagesAlerte = {
-                Mensuel: 5, // ±5 jours
-                Bimestriel: 7, // ±7 jours
-                Trimestriel: 10, // ±10 jours
-                Quadrimestriel: 10, // ±10 jours
-                Semestriel: 14, // ±14 jours
-                Annuel: 21, // ±21 jours
+                Mensuel: 5,
+                Bimestriel: 7,
+                Trimestriel: 10,
+                Quadrimestriel: 10,
+                Semestriel: 14,
+                Annuel: 21,
             };
-
             if (frequenceObj.mode === "dateHeure" && frequenceObj.dateHeure) {
                 joursRestants = calculerJoursRestants(
                     frequenceObj.dateHeure.debut
@@ -419,16 +558,13 @@ const verifierAlerteDebut = (frequenceObj) => {
             }
             break;
     }
-
     return { doitAlerter, joursRestants };
 };
 
 const verifierAlerteSuivis = (frequenceObj) => {
     if (typeof frequenceObj === "string") return { doitAlerter: false };
-
     let doitAlerter = false;
     let joursRestants = 0;
-
     switch (frequenceObj.type) {
         case "Ponctuel":
             if (frequenceObj.suivis?.length > 0) {
@@ -436,7 +572,6 @@ const verifierAlerteSuivis = (frequenceObj) => {
                 doitAlerter = joursRestants >= -4 && joursRestants <= 4;
             }
             break;
-
         case "Hebdomadaire":
             if (
                 frequenceObj.mode === "dateHeure" &&
@@ -464,7 +599,6 @@ const verifierAlerteSuivis = (frequenceObj) => {
                 }
             }
             break;
-
         case "Mensuel":
         case "Bimestriel":
         case "Trimestriel":
@@ -478,14 +612,13 @@ const verifierAlerteSuivis = (frequenceObj) => {
                 joursRestants = calculerJoursRestants(
                     frequenceObj.dateHeure.suivis[0]
                 );
-                // Plages d'alerte selon le type
                 const plagesAlerte = {
-                    Mensuel: 3, // ±3 jours
-                    Bimestriel: 5, // ±5 jours
-                    Trimestriel: 7, // ±7 jours
-                    Quadrimestriel: 7, // ±7 jours
-                    Semestriel: 10, // ±10 jours
-                    Annuel: 14, // ±14 jours
+                    Mensuel: 3,
+                    Bimestriel: 5,
+                    Trimestriel: 7,
+                    Quadrimestriel: 7,
+                    Semestriel: 10,
+                    Annuel: 14,
                 };
                 const plage = plagesAlerte[frequenceObj.type] || 7;
                 doitAlerter = joursRestants >= -plage && joursRestants <= plage;
@@ -507,7 +640,6 @@ const verifierAlerteSuivis = (frequenceObj) => {
                         }
                     });
                     joursRestants = minJours;
-                    // Même plages d'alerte que ci-dessus
                     const plagesAlerte = {
                         Mensuel: 3,
                         Bimestriel: 5,
@@ -523,15 +655,13 @@ const verifierAlerteSuivis = (frequenceObj) => {
             }
             break;
     }
-
     return { doitAlerter, joursRestants };
 };
 
-// Fonction pour réinitialiser l'erreur d'un champ spécifique
 const resetError = (field) => {
     erreurs[field] = "";
     if (field === "nom_utilisateur" || field === "mot_de_passe") {
-        erreurs.login = ""; // Réinitialiser l'erreur générale
+        erreurs.login = "";
     }
 };
 </script>

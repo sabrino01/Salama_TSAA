@@ -1,7 +1,23 @@
 <template>
-    <div class="h-screen w-64 bg-[#282aa1] text-white flex flex-col p-4">
+    <div
+        :class="[
+            'h-screen bg-[#282aa1] text-white flex flex-col p-4 transition-all duration-300 fixed left-0 top-0 z-40',
+            isCollapsed ? 'w-16' : 'w-64',
+        ]"
+    >
+        <!-- Bouton pour basculer le sidebar -->
+        <div class="flex justify-end mb-4">
+            <button
+                @click="toggleSidebar"
+                class="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center hover:bg-white hover:text-purple-600 transition-colors duration-200"
+            >
+                <ChevronLeft v-if="!isCollapsed" class="w-4 h-4" />
+                <ChevronRight v-else class="w-4 h-4" />
+            </button>
+        </div>
+
         <!-- Logo -->
-        <div class="mb-6">
+        <div class="mb-6" v-if="!isCollapsed">
             <img
                 src="/image/tsaa.png"
                 alt="Logo Salama Tsaa"
@@ -9,34 +25,71 @@
             />
         </div>
 
+        <!-- Logo réduit -->
+        <div class="mb-6 flex justify-center" v-else>
+            <div
+                class="w-8 h-8 bg-white rounded-full flex items-center justify-center"
+            >
+                <span class="text-purple-600 font-bold text-sm">T</span>
+            </div>
+        </div>
+
         <!-- Navigation -->
         <nav class="flex flex-col space-y-2">
             <router-link
                 to="/responsable/actions/auditinterne"
                 :class="[
-                    'flex items-center space-x-2 p-3 rounded-lg',
+                    'flex items-center p-3 rounded-lg group relative',
+                    isCollapsed ? 'justify-center' : 'space-x-2',
                     isRouteActive('/responsable/actions')
                         ? 'bg-white text-black'
                         : 'hover:bg-white hover:text-black',
                 ]"
             >
-                <Settings />
-                <span>Actions</span>
+                <Settings class="w-6 h-6 flex-shrink-0" />
+                <span v-if="!isCollapsed">Actions</span>
+                <!-- Tooltip pour mode réduit -->
+                <div
+                    v-if="isCollapsed"
+                    class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50"
+                >
+                    Actions
+                </div>
             </router-link>
         </nav>
     </div>
 </template>
 
 <script setup>
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
-import { Settings } from "lucide-vue-next";
+import { Settings, ChevronLeft, ChevronRight } from "lucide-vue-next";
 
 const route = useRoute();
+const isCollapsed = ref(false);
+
+// Émettre les changements d'état du sidebar vers le parent
+const emit = defineEmits(["sidebar-toggle"]);
+
+// Toggle sidebar
+const toggleSidebar = () => {
+    isCollapsed.value = !isCollapsed.value;
+    localStorage.setItem("responsable-sidebar-collapsed", isCollapsed.value);
+    emit("sidebar-toggle", isCollapsed.value);
+};
+
+// Détecter état sidebar depuis le storage au montage
+onMounted(() => {
+    const saved = localStorage.getItem("responsable-sidebar-collapsed");
+    if (saved !== null) {
+        isCollapsed.value = saved === "true";
+        emit("sidebar-toggle", isCollapsed.value);
+    }
+});
 
 // Vérifier si une route est active (pour le style de surlignage)
 const isRouteActive = (routePath) => {
     if (routePath === "/responsable/actions") {
-        // Pour le bouton Actions qui couvre plusieurs chemins
         return route.path.startsWith("/responsable/actions");
     }
     return route.path.startsWith(routePath);

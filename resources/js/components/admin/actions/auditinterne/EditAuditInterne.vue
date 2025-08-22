@@ -18,6 +18,18 @@ import axios from "axios";
 import { frequenceOptions } from "../../../../utils/frequenceOptions.js";
 import { useStatusManager } from "../../../../utils/usesStatusManager.js";
 import { Plus, Trash } from "lucide-vue-next";
+import moment from "moment";
+import "moment-timezone";
+
+// État pour suivre si le sidebar est réduit
+const isSidebarCollapsed = ref(false);
+
+// Fonction appelée quand le sidebar change d'état
+const handleSidebarToggle = (collapsed) => {
+    isSidebarCollapsed.value = collapsed;
+    // Sauvegarde l'état dans le localStorage
+    localStorage.setItem("sidebar-collapsed", collapsed);
+};
 
 // Router et route pour récupérer l'ID de l'action
 const router = useRouter();
@@ -38,6 +50,7 @@ const action = ref({
     frequence: "",
     mesure: "",
     statut: "",
+    action: "",
 });
 
 // Initialisez le composable
@@ -80,14 +93,7 @@ const verifierStatutAutomatique = async () => {
 
 const formatDateUpdate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+    return moment.utc(dateString).format("DD/MM/YYYY à HH:mm");
 };
 
 // Ajouter ou retirer un suivi
@@ -380,742 +386,866 @@ onMounted(async () => {
     } catch (error) {
         console.error("Erreur lors du chargement des données :", error);
     }
+    // Récupère l'état du sidebar depuis le localStorage
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+        isSidebarCollapsed.value = saved === "true";
+    }
 });
 </script>
 
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <Sidebar class="w-64 bg-[#0062ff] text-white fixed h-full" />
+        <Sidebar @sidebar-toggle="handleSidebarToggle" />
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col ml-64">
-            <!-- Navbar -->
-            <Navbar />
+        <div
+            :class="[
+                'flex-1 flex flex-col transition-all duration-300',
+                isSidebarCollapsed ? 'ml-16' : 'ml-64',
+            ]"
+        >
+            <Navbar v-if="true" :isSidebarCollapsed="isSidebarCollapsed" />
 
             <!-- Contenu principal avec padding en bas -->
-            <div class="flex-1 p-5 bg-gray-50 pb-16">
-                <!-- Titre -->
-                <div class="flex w-full">
-                    <div
-                        class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
-                    >
-                        Editer Audit Interne
-                    </div>
-                    <div class="basis-[2%]">
-                        <Info />
-                    </div>
-                </div>
-
-                <!-- Phrase introductive -->
-                <div class="w-full text-gray-600 mt-5">
-                    <p class="indent-4 font-poppins">
-                        Dans cet espace, vous pourriez éditer l'Audit Interne
-                        pour pouvoir faire des modifications sur l'Audit Interne
-                        sélectionnée.
-                    </p>
-                </div>
-
-                <!-- Formulaire de modification d'Audit Interne -->
-                <div class="w-full mt-5">
-                    <div class="flex w-[40%] justify-end">
-                        <input
-                            type="text"
-                            id="num_actions"
-                            class="w-[14%] border rounded-md px-4 py-2 bg-gray-100"
-                            v-model="action.num_actions"
-                        />
-                    </div>
-
-                    <div class="flex w-[60%] items-center">
-                        <label
-                            for="date"
-                            class="w-[8%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Date :
-                        </label>
-                        <input
-                            type="date"
-                            id="date"
-                            class="w-[16%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            disabled
-                            v-model="action.date"
-                        />
-                    </div>
-
-                    <div class="flex flex-wrap gap-x-8 gap-y-6 mt-5">
-                        <!-- Source -->
-                        <div class="flex items-center ml-4">
-                            <label
-                                for="source"
-                                class="text-lg font-semibold text-gray-800 w-20"
-                            >
-                                Source :
-                            </label>
-                            <select
-                                v-model="action.sources_id"
-                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="">--- Options ---</option>
-                                <option
-                                    v-for="source in sources"
-                                    :key="source.id"
-                                    :value="source.id"
-                                >
-                                    {{ source.code }} - {{ source.libelle }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- Type d'actions -->
-                        <div class="flex items-center">
-                            <label
-                                for="typeactions"
-                                class="text-lg font-semibold text-gray-800 mr-2 w-30"
-                            >
-                                Type d'actions :
-                            </label>
-                            <select
-                                v-model="action.type_actions_id"
-                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="">--- Options ---</option>
-                                <option
-                                    v-for="type in typeActions"
-                                    :key="type.id"
-                                    :value="type.id"
-                                >
-                                    {{ type.code }} - {{ type.libelle }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <!-- Constat -->
-                        <div class="flex items-center">
-                            <label
-                                for="action"
-                                class="text-lg font-semibold text-gray-800 mr-2 w-20"
-                            >
-                                Constat :
-                            </label>
-                            <select
-                                v-model="action.constats_id"
-                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            >
-                                <option value="">--- Options ---</option>
-                                <option
-                                    v-for="constat in constats"
-                                    :key="constat.id"
-                                    :value="constat.id"
-                                >
-                                    {{ constat.code }} - {{ constat.libelle }}
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Suivis -->
-                    <div class="flex flex-wrap w-full ml-4 mt-5">
-                        <label
-                            class="text-lg font-semibold text-gray-800 mt-2 w-20"
-                            >Suivis :</label
-                        >
+            <div class="flex-1 overflow-y-auto bg-gray-50">
+                <div class="p-5">
+                    <!-- Titre -->
+                    <div class="flex w-full">
                         <div
-                            v-for="(suivi, index) in action.suivis_id"
-                            :key="'suivi-' + index"
-                            class="flex items-center gap-2"
+                            class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
                         >
-                            <select
-                                v-model="action.suivis_id[index]"
-                                class="border border-gray-400 rounded-md ml-2 mt-2 px-4 py-2 bg-transparent"
-                            >
-                                <option value="">--- Options ---</option>
-                                <option
-                                    v-for="s in suivis"
-                                    :key="s.id"
-                                    :value="s.id"
-                                >
-                                    {{ s.nom }}
-                                </option>
-                            </select>
-                            <button
-                                type="button"
-                                @click="removeSuivi(index)"
-                                class="text-red-600 mt-2 font-bold text-xl"
-                            >
-                                <Trash />
-                            </button>
+                            Editer Audit Interne
                         </div>
-                        <button
-                            type="button"
-                            @click="addSuivi"
-                            class="text-green-600 mt-2 font-bold"
-                        >
-                            <Plus />
-                        </button>
-                    </div>
-
-                    <!-- Responsables -->
-                    <div class="flex flex-wrap w-full ml-4 mt-5">
-                        <label
-                            class="text-lg font-semibold text-gray-800 mt-2 mr-4 w-30"
-                            >Responsables :</label
-                        >
-                        <div
-                            v-for="(
-                                responsable, index
-                            ) in action.responsables_id"
-                            :key="'responsable-' + index"
-                            class="flex items-center gap-2"
-                        >
-                            <select
-                                v-model="action.responsables_id[index]"
-                                class="border border-gray-400 rounded-md ml-2 mt-2 px-4 py-2 bg-transparent"
-                            >
-                                <option value="">--- Options ---</option>
-                                <option
-                                    v-for="r in responsables"
-                                    :key="r.id"
-                                    :value="r.id"
-                                >
-                                    {{ r.code }} - {{ r.libelle }}
-                                </option>
-                            </select>
-                            <button
-                                type="button"
-                                @click="removeResponsable(index)"
-                                class="text-red-600 mt-2 font-bold text-xl"
-                            >
-                                <trash />
-                            </button>
-                        </div>
-                        <button
-                            type="button"
-                            @click="addResponsable"
-                            class="text-green-600 mt-2 font-bold"
-                        >
-                            <Plus />
-                        </button>
-                    </div>
-
-                    <!-- Groupe Fréquence et Mesure -->
-                    <div class="flex flex-wrap gap-x-8 gap-y-6 mt-6">
-                        <!-- Fréquence -->
-                        <div class="flex items-start ml-4">
-                            <label
-                                for="frequence"
-                                class="text-lg font-semibold text-gray-800 mr-4 w-30"
-                            >
-                                Fréquence :
-                            </label>
-                            <div class="ml-2 flex flex-col">
-                                <select
-                                    v-model="selectedOption"
-                                    @change="handleOptionChange"
-                                    class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                                >
-                                    <option value="">--- Options ---</option>
-                                    <option
-                                        v-for="option in options"
-                                        :key="option"
-                                        :value="option"
-                                    >
-                                        {{ option }}
-                                    </option>
-                                </select>
-
-                                <div
-                                    class="mt-1 text-gray-900 font-poppins whitespace-pre-wrap text-sm"
-                                >
-                                    <FrequencePonctuel
-                                        v-if="selectedOption === 'Ponctuel'"
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceAnnuel
-                                        v-if="selectedOption === 'Annuel'"
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceQuotidien
-                                        v-if="selectedOption === 'Quotidien'"
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceToutAnnee
-                                        v-if="
-                                            selectedOption === 'Tout l\'année'
-                                        "
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceHebdomadaire
-                                        v-if="selectedOption === 'Hebdomadaire'"
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceMensuel
-                                        v-if="selectedOption === 'Mensuel'"
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceBimestriel
-                                        v-if="selectedOption === 'Bimestriel'"
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceTrimestriel
-                                        v-if="selectedOption === 'Trimestriel'"
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceQuadrimestriel
-                                        v-if="
-                                            selectedOption === 'Quadrimestriel'
-                                        "
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                    <FrequenceSemestriel
-                                        v-if="selectedOption === 'Semestriel'"
-                                        v-model:showModal="showModal"
-                                        v-model="action.frequence"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- livrable -->
-                        <div class="flex items-start">
-                            <label
-                                for="livrable"
-                                class="text-lg font-semibold text-gray-800 w-20"
-                            >
-                                Livrable :
-                            </label>
-                            <input
-                                type="text"
-                                id="livrable"
-                                v-model="action.mesure"
-                                class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            />
+                        <div class="basis-[2%]">
+                            <Info />
                         </div>
                     </div>
 
-                    <!-- Composants dynamiques -->
-
-                    <!-- Groupe Action & Observation -->
-                    <div class="flex flex-wrap gap-x-6 gap-y-6 mt-6">
-                        <!-- Action -->
-                        <div class="flex items-start w-full md:w-[40%] ml-4">
-                            <label
-                                for="description"
-                                class="text-lg font-semibold text-gray-800 w-20"
-                            >
-                                Action :
-                            </label>
-                            <textarea
-                                id="description"
-                                v-model="action.description"
-                                class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
-                                rows="3"
-                            ></textarea>
-                        </div>
-
-                        <!-- Observation -->
-                        <div class="flex items-start w-full md:w-[40%]">
-                            <label
-                                for="observation"
-                                class="text-lg font-semibold text-gray-800 mr-2 w-30"
-                            >
-                                Obsérvation :
-                            </label>
-                            <textarea
-                                id="observation"
-                                v-model="action.observation"
-                                class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
-                                rows="3"
-                            ></textarea>
-                        </div>
-                    </div>
-
-                    <div class="flex w-[60%] items-center mt-5">
-                        <label
-                            for="statut"
-                            class="w-[7%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Statut :
-                        </label>
-                        <select
-                            v-model="action.statut"
-                            id="statut"
-                            class="mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
-                            :class="{
-                                'border-red-500 bg-red-50':
-                                    action.statut === 'En retard',
-                            }"
-                        >
-                            <option value="" disabled>--- Options ---</option>
-                            <option value="En cours">En cours</option>
-                            <option value="En retard">En retard</option>
-                            <option value="Clôturé">Clôturé</option>
-                            <option value="Abandonné">Abandonné</option>
-                        </select>
-
-                        <!-- Bouton de vérification du statut -->
-                        <button
-                            @click="verifierStatut"
-                            :disabled="isCheckingStatus"
-                            class="px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {{
-                                isCheckingStatus
-                                    ? "Vérification..."
-                                    : "Vérifier Statut"
-                            }}
-                        </button>
-                    </div>
-                    <!-- Indicateur visuel pour les actions en retard -->
-                    <div
-                        v-if="action.statut === 'En retard'"
-                        class="flex items-center gap-2 mt-2 p-3 ml-4 bg-red-50 border border-red-200 rounded-md"
-                    >
-                        <svg
-                            class="w-5 h-5 text-red-600"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                            />
-                        </svg>
-                        <span class="text-red-800 font-medium"
-                            >Cette action est en retard selon sa fréquence</span
-                        >
-                    </div>
-
-                    <!-- Affichage du message de statut -->
-                    <div
-                        v-if="statusMessage"
-                        class="mt-2 p-2 ml-4 bg-blue-50 border border-blue-200 rounded text-blue-800 text-sm"
-                    >
-                        {{ statusMessage }}
-                    </div>
-
-                    <!-- Section des mises à jour des responsables ET suivis -->
-                    <div
-                        class="bg-white shadow rounded-lg p-6 mt-8"
-                        v-if="action.has_updates"
-                    >
-                        <h3 class="text-xl font-bold mb-4">
-                            <i class="fas fa-eye mr-2"></i>
-                            Mises à jour des Responsables et Suivis
-                        </h3>
-
-                        <div
-                            class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4"
-                        >
-                            <p class="text-sm text-yellow-800">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Ces informations proviennent des responsables et
-                                suivis et ne peuvent pas être modifiées ici.
+                    <div class="min-h-[800px]">
+                        <!-- Phrase introductive -->
+                        <div class="w-full text-gray-600 mt-5">
+                            <p class="indent-4 font-poppins">
+                                Dans cet espace, vous pourriez éditer l'Audit
+                                Interne pour pouvoir faire des modifications sur
+                                l'Audit Interne sélectionnée.
                             </p>
                         </div>
 
-                        <!-- Mises à jour des responsables -->
-                        <div
-                            v-if="action.has_responsables_updates"
-                            class="mb-6"
-                        >
-                            <h4
-                                class="text-lg font-semibold mb-3 text-blue-700"
-                            >
-                                <i class="fas fa-users mr-2"></i>
-                                Mises à jour des Responsables
-                            </h4>
-
-                            <div
-                                v-for="update in action.responsables_updates"
-                                :key="'resp-' + update.responsables_id"
-                                class="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50"
-                            >
-                                <div
-                                    class="flex items-center justify-between mb-2"
-                                >
-                                    <h5
-                                        class="font-semibold text-lg text-gray-700"
-                                    >
-                                        <i class="fas fa-user mr-2"></i>
-                                        {{ update.responsable_nom }}
-                                    </h5>
-                                    <span class="text-sm text-gray-500">
-                                        <i class="fas fa-calendar mr-1"></i>
-                                        {{
-                                            formatDateUpdate(update.date_update)
-                                        }}
-                                    </span>
-                                </div>
-
-                                <div
-                                    class="grid grid-cols-1 md:grid-cols-2 gap-4"
-                                >
-                                    <div>
-                                        <strong class="text-blue-600">
-                                            <i class="fas fa-flag mr-1"></i>
-                                            Statut:
-                                        </strong>
-                                        <div
-                                            class="mt-1 p-3 bg-blue-100 rounded border-l-4 border-blue-500"
-                                        >
-                                            <p class="text-blue-800">
-                                                {{ update.statut_resp }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <strong class="text-green-600">
-                                            <i class="fas fa-comment mr-1"></i>
-                                            Observation:
-                                        </strong>
-                                        <div
-                                            class="mt-1 p-3 bg-green-100 rounded border-l-4 border-green-500"
-                                        >
-                                            <p class="text-green-800">
-                                                {{ update.observation_resp }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+                        <!-- Formulaire de modification d'Audit Interne -->
+                        <div class="w-full mt-5">
+                            <div class="flex w-[40%] justify-end">
+                                <input
+                                    type="text"
+                                    id="num_actions"
+                                    class="w-[14%] border rounded-md px-4 py-2 bg-gray-100"
+                                    v-model="action.num_actions"
+                                />
                             </div>
-                        </div>
 
-                        <!-- Mises à jour des suivis -->
-                        <div v-if="action.has_suivis_updates" class="mb-6">
-                            <h4
-                                class="text-lg font-semibold mb-3 text-purple-700"
-                            >
-                                <i class="fas fa-clipboard-check mr-2"></i>
-                                Mises à jour des Suivis
-                            </h4>
-
-                            <div
-                                v-for="update in action.suivis_updates"
-                                :key="'suivi-' + update.suivis_id"
-                                class="border border-purple-200 rounded-lg p-4 mb-4 bg-purple-50"
-                            >
-                                <div
-                                    class="flex items-center justify-between mb-2"
+                            <div class="flex w-[60%] items-center">
+                                <label
+                                    for="date"
+                                    class="w-[8%] ml-4 text-lg font-semibold text-gray-800"
                                 >
-                                    <h5
-                                        class="font-semibold text-lg text-gray-700"
-                                    >
-                                        <i class="fas fa-clipboard mr-2"></i>
-                                        {{ update.suivi_nom }}
-                                    </h5>
-                                    <span class="text-sm text-gray-500">
-                                        <i class="fas fa-calendar mr-1"></i>
-                                        {{
-                                            formatDateUpdate(update.date_update)
-                                        }}
-                                    </span>
-                                </div>
-
-                                <div
-                                    class="grid grid-cols-1 md:grid-cols-2 gap-4"
-                                >
-                                    <div>
-                                        <strong class="text-purple-600">
-                                            <i class="fas fa-flag mr-1"></i>
-                                            Statut:
-                                        </strong>
-                                        <div
-                                            class="mt-1 p-3 bg-purple-100 rounded border-l-4 border-purple-500"
-                                        >
-                                            <p class="text-purple-800">
-                                                {{ update.statut_suivi }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <strong class="text-orange-600">
-                                            <i class="fas fa-comment mr-1"></i>
-                                            Observation:
-                                        </strong>
-                                        <div
-                                            class="mt-1 p-3 bg-orange-100 rounded border-l-4 border-orange-500"
-                                        >
-                                            <p class="text-orange-800">
-                                                {{ update.observation_suivi }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+                                    Date :
+                                </label>
+                                <input
+                                    type="date"
+                                    id="date"
+                                    class="w-[16%] border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    disabled
+                                    v-model="action.date"
+                                />
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Message si pas de mises à jour -->
-                    <div v-else class="bg-white shadow rounded-lg mt-8">
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-inbox text-4xl mb-4"></i>
-                            <p>
-                                Aucune mise à jour des responsables ou suivis
-                                pour cette action.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Section Observation par Suivi -->
-                    <div
-                        v-if="action.has_updates"
-                        class="bg-white shadow rounded-lg p-6 mb-6 mt-8"
-                    >
-                        <h3 class="text-xl font-bold mb-4">
-                            <i
-                                class="fas fa-clipboard-list mr-2 text-purple-600"
-                            ></i>
-                            Observation par Suivi
-                        </h3>
-
-                        <div
-                            class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4"
-                        >
-                            <p class="text-sm text-purple-800">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Cette section permet d'ajouter des observations
-                                de suivi puisque des responsables ont mis à jour
-                                cette action.
-                            </p>
-                        </div>
-
-                        <!-- Formulaire pour ajouter une nouvelle observation -->
-                        <div class="border border-gray-200 rounded-lg p-4 mb-4">
-                            <h4 class="font-semibold mb-3">
-                                <i class="fas fa-plus mr-2 text-green-600"></i>
-                                Ajouter une nouvelle observation par suivi
-                            </h4>
-
-                            <div>
-                                <div class="mb-4">
+                            <div class="flex flex-wrap gap-x-8 gap-y-6 mt-5">
+                                <!-- Source -->
+                                <div class="flex items-center ml-4">
                                     <label
-                                        class="block text-sm font-medium text-gray-700 mb-2"
+                                        for="source"
+                                        class="text-lg font-semibold text-gray-800 w-20"
                                     >
-                                        <i class="fas fa-calendar mr-1"></i>
-                                        Date de suivi
+                                        Source :
                                     </label>
-                                    <input
-                                        type="date"
-                                        v-model="dateObservationSuivi"
-                                        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        :max="getCurrentDate()"
-                                    />
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        Si aucune date n'est sélectionnée, la
-                                        date actuelle sera utilisée.
-                                    </p>
+                                    <select
+                                        v-model="action.sources_id"
+                                        class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    >
+                                        <option value="">
+                                            --- Options ---
+                                        </option>
+                                        <option
+                                            v-for="source in sources"
+                                            :key="source.id"
+                                            :value="source.id"
+                                        >
+                                            {{ source.code }} -
+                                            {{ source.libelle }}
+                                        </option>
+                                    </select>
                                 </div>
 
-                                <div class="mb-4">
+                                <!-- Type d'actions -->
+                                <div class="flex items-center">
                                     <label
-                                        class="block text-sm font-medium text-gray-700 mb-2"
+                                        for="typeactions"
+                                        class="text-lg font-semibold text-gray-800 mr-2 w-30"
                                     >
-                                        <i class="fas fa-edit mr-1"></i>
-                                        Observation
+                                        Type d'actions :
                                     </label>
-                                    <textarea
-                                        v-model="nouvelleObservationSuivi"
-                                        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        rows="4"
-                                        placeholder="Entrez votre observation..."
-                                        required
-                                    ></textarea>
+                                    <select
+                                        v-model="action.type_actions_id"
+                                        class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    >
+                                        <option value="">
+                                            --- Options ---
+                                        </option>
+                                        <option
+                                            v-for="type in typeActions"
+                                            :key="type.id"
+                                            :value="type.id"
+                                        >
+                                            {{ type.code }} - {{ type.libelle }}
+                                        </option>
+                                    </select>
                                 </div>
 
-                                <div class="flex justify-end">
+                                <!-- Constat -->
+                                <div class="flex items-center">
+                                    <label
+                                        for="action"
+                                        class="text-lg font-semibold text-gray-800 mr-2 w-20"
+                                    >
+                                        Constat :
+                                    </label>
+                                    <select
+                                        v-model="action.constats_id"
+                                        class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                        disabled
+                                    >
+                                        <option value="">
+                                            --- Options ---
+                                        </option>
+                                        <option
+                                            v-for="constat in constats"
+                                            :key="constat.id"
+                                            :value="constat.id"
+                                        >
+                                            {{ constat.code }} -
+                                            {{ constat.libelle }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Suivis -->
+                            <div class="flex flex-wrap w-full ml-4 mt-5">
+                                <label
+                                    class="text-lg font-semibold text-gray-800 mt-2 w-20"
+                                    >Suivis :</label
+                                >
+                                <div
+                                    v-for="(suivi, index) in action.suivis_id"
+                                    :key="'suivi-' + index"
+                                    class="flex items-center gap-2"
+                                >
+                                    <select
+                                        v-model="action.suivis_id[index]"
+                                        class="border border-gray-400 rounded-md ml-2 mt-2 px-4 py-2 bg-transparent"
+                                    >
+                                        <option value="">
+                                            --- Options ---
+                                        </option>
+                                        <option
+                                            v-for="s in suivis"
+                                            :key="s.id"
+                                            :value="s.id"
+                                        >
+                                            {{ s.nom }}
+                                        </option>
+                                    </select>
                                     <button
                                         type="button"
-                                        @click="ajouterObservationSuivi"
-                                        :disabled="
-                                            !nouvelleObservationSuivi.trim()
-                                        "
-                                        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        <Plus class="inline mr-1" />
-                                        Ajouter
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Affichage des observations existantes -->
-                        <div v-if="action.has_observations_suivi">
-                            <h4 class="font-semibold mb-3">
-                                <i
-                                    class="fas fa-history mr-2 text-blue-600"
-                                ></i>
-                                Historique des observations par suivi
-                            </h4>
-
-                            <div
-                                v-for="(
-                                    observation, index
-                                ) in action.observations_suivi"
-                                :key="index"
-                                class="border border-blue-200 rounded-lg p-4 mb-3 bg-blue-50"
-                            >
-                                <div
-                                    class="flex justify-between items-start mb-2"
-                                >
-                                    <span class="text-sm text-blue-600">
-                                        <i class="fas fa-calendar mr-1"></i>
-                                        {{ formatDateSuivi(observation.date) }}
-                                    </span>
-                                    <button
-                                        @click="
-                                            supprimerObservationSuivi(index)
-                                        "
-                                        class="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 rounded transition-colors"
-                                        title="Supprimer cette observation"
+                                        @click="removeSuivi(index)"
+                                        class="text-red-600 mt-2 font-bold text-xl"
                                     >
                                         <Trash />
                                     </button>
                                 </div>
-                                <div
-                                    class="bg-white rounded p-3 border-l-4 border-blue-500"
+                                <button
+                                    type="button"
+                                    @click="addSuivi"
+                                    class="text-green-600 mt-2 font-bold"
                                 >
-                                    <p class="text-gray-800">
-                                        {{ observation.observation }}
+                                    <Plus />
+                                </button>
+                            </div>
+
+                            <!-- Responsables -->
+                            <div class="flex flex-wrap w-full ml-4 mt-5">
+                                <label
+                                    class="text-lg font-semibold text-gray-800 mt-2 mr-4 w-30"
+                                    >Responsables :</label
+                                >
+                                <div
+                                    v-for="(
+                                        responsable, index
+                                    ) in action.responsables_id"
+                                    :key="'responsable-' + index"
+                                    class="flex items-center gap-2"
+                                >
+                                    <select
+                                        v-model="action.responsables_id[index]"
+                                        class="border border-gray-400 rounded-md ml-2 mt-2 px-4 py-2 bg-transparent"
+                                    >
+                                        <option value="">
+                                            --- Options ---
+                                        </option>
+                                        <option
+                                            v-for="r in responsables"
+                                            :key="r.id"
+                                            :value="r.id"
+                                        >
+                                            {{ r.code }} - {{ r.libelle }}
+                                        </option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        @click="removeResponsable(index)"
+                                        class="text-red-600 mt-2 font-bold text-xl"
+                                    >
+                                        <trash />
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="addResponsable"
+                                    class="text-green-600 mt-2 font-bold"
+                                >
+                                    <Plus />
+                                </button>
+                            </div>
+
+                            <!-- Groupe Fréquence et Mesure -->
+                            <div class="flex flex-wrap gap-x-8 gap-y-6 mt-6">
+                                <!-- Fréquence -->
+                                <div class="flex items-start ml-4">
+                                    <label
+                                        for="frequence"
+                                        class="text-lg font-semibold text-gray-800 mr-4 w-30"
+                                    >
+                                        Fréquence :
+                                    </label>
+                                    <div class="ml-2 flex flex-col">
+                                        <select
+                                            v-model="selectedOption"
+                                            @change="handleOptionChange"
+                                            class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                        >
+                                            <option value="">
+                                                --- Options ---
+                                            </option>
+                                            <option
+                                                v-for="option in options"
+                                                :key="option"
+                                                :value="option"
+                                            >
+                                                {{ option }}
+                                            </option>
+                                        </select>
+
+                                        <div
+                                            class="mt-1 text-gray-900 font-poppins whitespace-pre-wrap text-sm"
+                                        >
+                                            <FrequencePonctuel
+                                                v-if="
+                                                    selectedOption ===
+                                                    'Ponctuel'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceAnnuel
+                                                v-if="
+                                                    selectedOption === 'Annuel'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceQuotidien
+                                                v-if="
+                                                    selectedOption ===
+                                                    'Quotidien'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceToutAnnee
+                                                v-if="
+                                                    selectedOption ===
+                                                    'Tout l\'année'
+                                                "
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceHebdomadaire
+                                                v-if="
+                                                    selectedOption ===
+                                                    'Hebdomadaire'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceMensuel
+                                                v-if="
+                                                    selectedOption === 'Mensuel'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceBimestriel
+                                                v-if="
+                                                    selectedOption ===
+                                                    'Bimestriel'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceTrimestriel
+                                                v-if="
+                                                    selectedOption ===
+                                                    'Trimestriel'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceQuadrimestriel
+                                                v-if="
+                                                    selectedOption ===
+                                                    'Quadrimestriel'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                            <FrequenceSemestriel
+                                                v-if="
+                                                    selectedOption ===
+                                                    'Semestriel'
+                                                "
+                                                v-model:showModal="showModal"
+                                                v-model="action.frequence"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- livrable -->
+                                <div class="flex items-start">
+                                    <label
+                                        for="livrable"
+                                        class="text-lg font-semibold text-gray-800 w-20"
+                                    >
+                                        Livrable :
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="livrable"
+                                        v-model="action.mesure"
+                                        class="border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Composants dynamiques -->
+
+                            <!-- Groupe Action & Observation -->
+                            <div class="flex flex-wrap gap-x-6 gap-y-6 mt-6">
+                                <!-- Action -->
+                                <div
+                                    class="flex items-start w-full md:w-[40%] ml-4"
+                                >
+                                    <label
+                                        for="description"
+                                        class="text-lg font-semibold text-gray-800 w-40"
+                                    >
+                                        Description de la non conformité :
+                                    </label>
+                                    <textarea
+                                        id="description"
+                                        v-model="action.description"
+                                        class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
+                                        rows="3"
+                                    ></textarea>
+                                </div>
+
+                                <!-- Observation -->
+                                <div class="flex items-start w-full md:w-[40%]">
+                                    <label
+                                        for="observation"
+                                        class="text-lg font-semibold text-gray-800 mr-2 w-30"
+                                    >
+                                        Obsérvation :
+                                    </label>
+                                    <textarea
+                                        id="observation"
+                                        v-model="action.observation"
+                                        class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
+                                        rows="3"
+                                    ></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Groupe Action & Observation -->
+                            <div class="flex flex-wrap gap-x-6 gap-y-6 mt-6">
+                                <!-- Action -->
+                                <div
+                                    class="flex items-start w-full md:w-[40%] ml-4"
+                                >
+                                    <label
+                                        for="description"
+                                        class="text-lg font-semibold text-gray-800 w-20"
+                                    >
+                                        Action :
+                                    </label>
+                                    <textarea
+                                        id="description"
+                                        v-model="action.action"
+                                        class="flex-1 border border-gray-400 rounded-md px-4 py-2 bg-transparent resize-none"
+                                        rows="3"
+                                    ></textarea>
+                                </div>
+                            </div>
+
+                            <div class="flex w-[60%] items-center mt-5">
+                                <label
+                                    for="statut"
+                                    class="w-[7%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Statut :
+                                </label>
+                                <select
+                                    v-model="action.statut"
+                                    id="statut"
+                                    class="mr-4 border border-gray-400 rounded-md px-4 py-2 bg-transparent"
+                                    :class="{
+                                        'border-red-500 bg-red-50':
+                                            action.statut === 'En retard',
+                                    }"
+                                >
+                                    <option value="" disabled>
+                                        --- Options ---
+                                    </option>
+                                    <option value="En cours">En cours</option>
+                                    <option value="En retard">En retard</option>
+                                    <option value="Réglé">Réglé</option>
+                                    <option value="Non Réglé">Non Réglé</option>
+                                </select>
+
+                                <!-- Bouton de vérification du statut -->
+                                <button
+                                    @click="verifierStatut"
+                                    :disabled="isCheckingStatus"
+                                    class="px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {{
+                                        isCheckingStatus
+                                            ? "Vérification..."
+                                            : "Vérifier Statut"
+                                    }}
+                                </button>
+                            </div>
+                            <!-- Indicateur visuel pour les actions en retard -->
+                            <div
+                                v-if="action.statut === 'En retard'"
+                                class="flex items-center gap-2 mt-2 p-3 ml-4 bg-red-50 border border-red-200 rounded-md"
+                            >
+                                <svg
+                                    class="w-5 h-5 text-red-600"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                    />
+                                </svg>
+                                <span class="text-red-800 font-medium"
+                                    >Cette action est en retard selon sa
+                                    fréquence</span
+                                >
+                            </div>
+
+                            <!-- Affichage du message de statut -->
+                            <div
+                                v-if="statusMessage"
+                                class="mt-2 p-2 ml-4 bg-blue-50 border border-blue-200 rounded text-blue-800 text-sm"
+                            >
+                                {{ statusMessage }}
+                            </div>
+
+                            <!-- Section des mises à jour des responsables ET suivis -->
+                            <div
+                                class="bg-white shadow rounded-lg p-6 mt-8"
+                                v-if="action.has_updates"
+                            >
+                                <h3 class="text-xl font-bold mb-4">
+                                    <i class="fas fa-eye mr-2"></i>
+                                    Mises à jour des Responsables et Suivis
+                                </h3>
+
+                                <div
+                                    class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4"
+                                >
+                                    <p class="text-sm text-yellow-800">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        Ces informations proviennent des
+                                        responsables et suivis et ne peuvent pas
+                                        être modifiées ici.
+                                    </p>
+                                </div>
+
+                                <!-- Mises à jour des responsables -->
+                                <div
+                                    v-if="action.has_responsables_updates"
+                                    class="mb-6"
+                                >
+                                    <h4
+                                        class="text-lg font-semibold mb-3 text-blue-700"
+                                    >
+                                        <i class="fas fa-users mr-2"></i>
+                                        Mises à jour des Responsables
+                                    </h4>
+
+                                    <div
+                                        v-for="update in action.responsables_updates"
+                                        :key="'resp-' + update.responsables_id"
+                                        class="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50"
+                                    >
+                                        <div
+                                            class="flex items-center justify-between mb-2"
+                                        >
+                                            <h5
+                                                class="font-semibold text-lg text-gray-700"
+                                            >
+                                                <i class="fas fa-user mr-2"></i>
+                                                {{ update.responsable_nom }}
+                                            </h5>
+                                            <span class="text-sm text-gray-500">
+                                                <i
+                                                    class="fas fa-calendar mr-1"
+                                                ></i>
+                                                {{
+                                                    formatDateUpdate(
+                                                        update.date_update
+                                                    )
+                                                }}
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                        >
+                                            <div>
+                                                <strong class="text-blue-600">
+                                                    <i
+                                                        class="fas fa-flag mr-1"
+                                                    ></i>
+                                                    Statut:
+                                                </strong>
+                                                <div
+                                                    class="mt-1 p-3 bg-blue-100 rounded border-l-4 border-blue-500"
+                                                >
+                                                    <p class="text-blue-800">
+                                                        {{ update.statut_resp }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <strong class="text-green-600">
+                                                    <i
+                                                        class="fas fa-comment mr-1"
+                                                    ></i>
+                                                    Observation:
+                                                </strong>
+                                                <div
+                                                    class="mt-1 p-3 bg-green-100 rounded border-l-4 border-green-500"
+                                                >
+                                                    <p class="text-green-800">
+                                                        {{
+                                                            update.observation_resp
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mises à jour des suivis -->
+                                <div
+                                    v-if="action.has_suivis_updates"
+                                    class="mb-6"
+                                >
+                                    <h4
+                                        class="text-lg font-semibold mb-3 text-purple-700"
+                                    >
+                                        <i
+                                            class="fas fa-clipboard-check mr-2"
+                                        ></i>
+                                        Mises à jour des Suivis
+                                    </h4>
+
+                                    <div
+                                        v-for="update in action.suivis_updates"
+                                        :key="'suivi-' + update.suivis_id"
+                                        class="border border-purple-200 rounded-lg p-4 mb-4 bg-purple-50"
+                                    >
+                                        <div
+                                            class="flex items-center justify-between mb-2"
+                                        >
+                                            <h5
+                                                class="font-semibold text-lg text-gray-700"
+                                            >
+                                                <i
+                                                    class="fas fa-clipboard mr-2"
+                                                ></i>
+                                                {{ update.suivi_nom }}
+                                            </h5>
+                                            <span class="text-sm text-gray-500">
+                                                <i
+                                                    class="fas fa-calendar mr-1"
+                                                ></i>
+                                                {{
+                                                    formatDateUpdate(
+                                                        update.date_update
+                                                    )
+                                                }}
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                        >
+                                            <div>
+                                                <strong class="text-purple-600">
+                                                    <i
+                                                        class="fas fa-flag mr-1"
+                                                    ></i>
+                                                    Statut:
+                                                </strong>
+                                                <div
+                                                    class="mt-1 p-3 bg-purple-100 rounded border-l-4 border-purple-500"
+                                                >
+                                                    <p class="text-purple-800">
+                                                        {{
+                                                            update.statut_suivi
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <strong class="text-orange-600">
+                                                    <i
+                                                        class="fas fa-comment mr-1"
+                                                    ></i>
+                                                    Observation:
+                                                </strong>
+                                                <div
+                                                    class="mt-1 p-3 bg-orange-100 rounded border-l-4 border-orange-500"
+                                                >
+                                                    <p class="text-orange-800">
+                                                        {{
+                                                            update.observation_suivi
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Message si pas de mises à jour -->
+                            <div v-else class="bg-white shadow rounded-lg mt-8">
+                                <div class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-inbox text-4xl mb-4"></i>
+                                    <p>
+                                        Aucune mise à jour des responsables ou
+                                        suivis pour cette action.
                                     </p>
                                 </div>
                             </div>
-                        </div>
 
-                        <div v-else class="text-center py-4 text-gray-500">
-                            <i class="fas fa-clipboard text-2xl mb-2"></i>
-                            <p>Aucune observation de suivi pour le moment.</p>
-                        </div>
-                    </div>
-
-                    <div class="flex w-auto justify-end mt-6">
-                        <router-link to="/admin/actions/auditinterne"
-                            ><button
-                                class="w-auto transparent text-black font-semibold rounded-md px-4 py-2"
+                            <!-- Section Observation par Suivi -->
+                            <div
+                                class="bg-white shadow rounded-lg p-6 mb-6 mt-8"
                             >
-                                Retour
-                            </button></router-link
-                        >
-                        <button
-                            @click="modifierAI"
-                            class="w-auto bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
-                        >
-                            Modifier
-                        </button>
+                                <h3 class="text-xl font-bold mb-4">
+                                    <i
+                                        class="fas fa-clipboard-list mr-2 text-purple-600"
+                                    ></i>
+                                    Observation par Suivi
+                                </h3>
+
+                                <!-- Formulaire pour ajouter une nouvelle observation -->
+                                <div
+                                    class="border border-gray-200 rounded-lg p-4 mb-4"
+                                >
+                                    <h4 class="font-semibold mb-3">
+                                        <i
+                                            class="fas fa-plus mr-2 text-green-600"
+                                        ></i>
+                                        Ajouter une nouvelle observation par
+                                        suivi
+                                    </h4>
+
+                                    <div>
+                                        <div class="mb-4">
+                                            <label
+                                                class="block text-sm font-medium text-gray-700 mb-2"
+                                            >
+                                                <i
+                                                    class="fas fa-calendar mr-1"
+                                                ></i>
+                                                Date de suivi
+                                            </label>
+                                            <input
+                                                type="date"
+                                                v-model="dateObservationSuivi"
+                                                class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                :max="getCurrentDate()"
+                                            />
+                                            <p
+                                                class="text-xs text-gray-500 mt-1"
+                                            >
+                                                Si aucune date n'est
+                                                sélectionnée, la date actuelle
+                                                sera utilisée.
+                                            </p>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <label
+                                                class="block text-sm font-medium text-gray-700 mb-2"
+                                            >
+                                                <i class="fas fa-edit mr-1"></i>
+                                                Observation
+                                            </label>
+                                            <textarea
+                                                v-model="
+                                                    nouvelleObservationSuivi
+                                                "
+                                                class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                rows="4"
+                                                placeholder="Entrez votre observation..."
+                                                required
+                                            ></textarea>
+                                        </div>
+
+                                        <div class="flex justify-end">
+                                            <button
+                                                type="button"
+                                                @click="ajouterObservationSuivi"
+                                                :disabled="
+                                                    !nouvelleObservationSuivi.trim()
+                                                "
+                                                class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                <Plus class="inline mr-1" />
+                                                Ajouter
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Affichage des observations existantes -->
+                                <div v-if="action.has_observations_suivi">
+                                    <h4 class="font-semibold mb-3">
+                                        <i
+                                            class="fas fa-history mr-2 text-blue-600"
+                                        ></i>
+                                        Historique des observations par suivi
+                                    </h4>
+
+                                    <div
+                                        v-for="(
+                                            observation, index
+                                        ) in action.observations_suivi"
+                                        :key="index"
+                                        class="border border-blue-200 rounded-lg p-4 mb-3 bg-blue-50"
+                                    >
+                                        <div
+                                            class="flex justify-between items-start mb-2"
+                                        >
+                                            <span class="text-sm text-blue-600">
+                                                <i
+                                                    class="fas fa-calendar mr-1"
+                                                ></i>
+                                                {{
+                                                    formatDateSuivi(
+                                                        observation.date
+                                                    )
+                                                }}
+                                            </span>
+                                            <button
+                                                @click="
+                                                    supprimerObservationSuivi(
+                                                        index
+                                                    )
+                                                "
+                                                class="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 rounded transition-colors"
+                                                title="Supprimer cette observation"
+                                            >
+                                                <Trash />
+                                            </button>
+                                        </div>
+                                        <div
+                                            class="bg-white rounded p-3 border-l-4 border-blue-500"
+                                        >
+                                            <p class="text-gray-800">
+                                                {{ observation.observation }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-else
+                                    class="text-center py-4 text-gray-500"
+                                >
+                                    <i
+                                        class="fas fa-clipboard text-2xl mb-2"
+                                    ></i>
+                                    <p>
+                                        Aucune observation de suivi pour le
+                                        moment.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="flex w-auto justify-end mt-6">
+                                <router-link to="/admin/actions/auditinterne"
+                                    ><button
+                                        class="w-auto transparent text-black font-semibold rounded-md px-4 py-2"
+                                    >
+                                        Retour
+                                    </button></router-link
+                                >
+                                <button
+                                    @click="modifierAI"
+                                    class="w-auto bg-[#0062ff] text-white font-semibold rounded-md px-4 py-2"
+                                >
+                                    Modifier
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Footer -->
-            <Footer />
+                <!-- Footer -->
+                <Footer />
+            </div>
         </div>
     </div>
 </template>

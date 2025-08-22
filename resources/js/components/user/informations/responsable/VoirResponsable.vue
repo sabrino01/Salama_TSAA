@@ -7,6 +7,16 @@ import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
 
+// État pour suivre si le sidebar est réduit
+const isSidebarCollapsed = ref(false);
+
+// Fonction appelée quand le sidebar change d'état
+const handleSidebarToggle = (collapsed) => {
+    isSidebarCollapsed.value = collapsed;
+    // Sauvegarde l'état dans le localStorage
+    localStorage.setItem("sidebar-collapsed", collapsed);
+};
+
 const route = useRoute();
 const responsable = ref({});
 
@@ -18,116 +28,134 @@ onMounted(async () => {
     } catch (error) {
         toast.error("Erreur lors du chargement du Responsable", error);
     }
+    // Récupère l'état du sidebar depuis le localStorage
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+        isSidebarCollapsed.value = saved === "true";
+    }
 });
 </script>
 <template>
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <Sidebar class="w-64 bg-[#0062ff] text-white fixed h-full" />
+        <Sidebar @sidebar-toggle="handleSidebarToggle" />
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col ml-64">
-            <!-- Navbar -->
-            <Navbar />
+        <div
+            :class="[
+                'flex-1 flex flex-col transition-all duration-300',
+                isSidebarCollapsed ? 'ml-16' : 'ml-64',
+            ]"
+        >
+            <Navbar v-if="true" :isSidebarCollapsed="isSidebarCollapsed" />
 
             <!-- Contenu principal avec padding en bas -->
-            <div class="flex-1 p-5 bg-gray-50 pb-16">
-                <!-- Titre -->
-                <div class="flex w-full">
-                    <div
-                        class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
-                    >
-                        Voir Responsable
+            <div class="flex-1 overflow-y-auto bg-gray-50">
+                <div class="p-5">
+                    <!-- Titre -->
+                    <div class="flex w-full">
+                        <div
+                            class="basis-[98%] text-4xl indent-4 font-bold text-gray-800"
+                        >
+                            Voir Responsable
+                        </div>
+                        <div class="basis-[2%]">
+                            <Info />
+                        </div>
                     </div>
-                    <div class="basis-[2%]">
-                        <Info />
+
+                    <div class="min-h-[800px]">
+                        <!-- Phrase introductive -->
+                        <div class="w-full text-gray-600 mt-5">
+                            <p class="indent-4 font-poppins">
+                                Voir le responsable pour connaître plus
+                                d'informations sur le responsable sélectionné.
+                            </p>
+                        </div>
+
+                        <!-- Voir le responsable -->
+                        <div class="w-full mt-5">
+                            <div class="flex w-[60%] items-center">
+                                <span
+                                    class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Code :
+                                </span>
+                                <span
+                                    class="w-[50%] px-4 text-lg font-semibold"
+                                    >{{ responsable.code }}</span
+                                >
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <span
+                                    class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Libelle :
+                                </span>
+                                <span
+                                    class="w-[50%] px-4 text-lg font-semibold"
+                                    >{{ responsable.libelle }}</span
+                                >
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <span
+                                    class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Description :
+                                </span>
+                                <span
+                                    class="w-[50%] px-4 text-lg font-semibold"
+                                    >{{ responsable.description }}</span
+                                >
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <span
+                                    class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Email :
+                                </span>
+                                <span
+                                    class="w-[50%] px-4 text-lg font-semibold"
+                                    >{{ responsable.email }}</span
+                                >
+                            </div>
+                            <div class="flex w-[60%] items-center mt-5">
+                                <span
+                                    class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
+                                >
+                                    Nom d'utilisateur :
+                                </span>
+                                <span
+                                    class="w-[50%] px-4 text-lg font-semibold"
+                                    >{{ responsable.nom_utilisateur }}</span
+                                >
+                            </div>
+                            <div class="flex w-[61.6%] justify-center mt-5">
+                                <router-link to="/user/informations/responsable"
+                                    ><button
+                                        class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
+                                    >
+                                        Retour
+                                    </button></router-link
+                                >
+                                <router-link
+                                    :to="`/user/informations/responsable/editer/${responsable.id}`"
+                                    class="w-[15%]"
+                                >
+                                    <button
+                                        class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
+                                    >
+                                        Editer
+                                    </button>
+                                </router-link>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Phrase introductive -->
-                <div class="w-full text-gray-600 mt-5">
-                    <p class="indent-4 font-poppins">
-                        Voir le responsable pour connaître plus d'informations
-                        sur le responsable sélectionné.
-                    </p>
-                </div>
-
-                <!-- Voir le responsable -->
-                <div class="w-full mt-5">
-                    <div class="flex w-[60%] items-center">
-                        <span
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Code :
-                        </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold">{{
-                            responsable.code
-                        }}</span>
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Libelle :
-                        </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold">{{
-                            responsable.libelle
-                        }}</span>
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Description :
-                        </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold">{{
-                            responsable.description
-                        }}</span>
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[12%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Email :
-                        </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold">{{
-                            responsable.email
-                        }}</span>
-                    </div>
-                    <div class="flex w-[60%] items-center mt-5">
-                        <span
-                            class="w-[17%] ml-4 text-lg font-semibold text-gray-800"
-                        >
-                            Nom d'utilisateur :
-                        </span>
-                        <span class="w-[50%] px-4 text-lg font-semibold">{{
-                            responsable.nom_utilisateur
-                        }}</span>
-                    </div>
-                    <div class="flex w-[61.6%] justify-center mt-5">
-                        <router-link to="/user/informations/responsable"
-                            ><button
-                                class="w-[15%] transparent text-black font-semibold rounded-md px-4 py-2"
-                            >
-                                Retour
-                            </button></router-link
-                        >
-                        <router-link
-                            :to="`/user/informations/responsable/editer/${responsable.id}`"
-                            class="w-[15%]"
-                        >
-                            <button
-                                class="bg-green-500 text-white font-semibold rounded-md px-4 py-2"
-                            >
-                                Editer
-                            </button>
-                        </router-link>
-                    </div>
-                </div>
+                <!-- Footer -->
+                <Footer />
             </div>
-
-            <!-- Footer -->
-            <Footer />
         </div>
     </div>
 </template>

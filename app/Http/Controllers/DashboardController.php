@@ -22,78 +22,59 @@ class DashboardController extends Controller
             $query->where('users_id', $request->user_id);
         }
 
-        // Appliquer les filtres de date selon le type de recherche
-        $type = $request->input('type', '1');
+        // Récupère toutes les actions (filtrage date fait après)
+        $actions = $query->get();
 
-        switch ($type) {
-            case '1': // Jours
-                $dateDebut = $request->input('date_debut');
-                $dateFin = $request->input('date_fin', $dateDebut);
+        // Récupère les dates du JSON
+        $filteredActions = $actions->filter(function ($action) use ($request) {
+            $observations = json_decode($action->observation_par_suivi, true);
+            if (!$observations || !is_array($observations))
+                return false;
 
-                $query->whereDate('date', '>=', $dateDebut)
-                    ->whereDate('date', '<=', $dateFin);
-                break;
+            // Prend la dernière date (ou la première selon besoin)
+            $date = $observations[count($observations) - 1]['date'] ?? null;
+            if (!$date)
+                return false;
 
-            case '2': // Mois
-                $mois = $request->input('mois');
-                $annee = $request->input('annee');
+            $type = $request->input('type', '1');
+            switch ($type) {
+                case '1': // Jours
+                    $dateDebut = $request->input('date_debut');
+                    $dateFin = $request->input('date_fin', $dateDebut);
+                    return $date >= $dateDebut && $date <= $dateFin;
+                case '2': // Mois
+                    $mois = $request->input('mois');
+                    $annee = $request->input('annee');
+                    $moisFin = $request->input('mois_fin', $mois);
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    $dateStart = "$annee-" . str_pad($mois, 2, '0', STR_PAD_LEFT) . "-01";
+                    $dateEnd = "$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-" . date('t', strtotime("$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-01"));
+                    return $date >= $dateStart && $date <= $dateEnd;
+                case '3': // Ans
+                    $annee = $request->input('annee');
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    return substr($date, 0, 4) >= $annee && substr($date, 0, 4) <= $anneeFin;
+            }
+            return true;
+        });
 
-                if ($request->has('mois_fin') && $request->has('annee_fin')) {
-                    // Recherche entre deux mois
-                    $moisFin = $request->input('mois_fin');
-                    $anneeFin = $request->input('annee_fin');
+        // Groupement par type de constat
+        $resultats = $filteredActions->groupBy(function ($action) {
+            return $action->constat->libelle ?? 'Inconnu';
+        })->map(function ($group) {
+            return count($group);
+        });
 
-                    // Calculer la date de début et de fin
-                    $dateDebut = "$annee-" . str_pad($mois, 2, '0', STR_PAD_LEFT) . "-01";
+        $total = $resultats->sum();
 
-                    // Dernier jour du mois de fin
-                    $dernierJour = date('t', strtotime("$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-01"));
-                    $dateFin = "$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-$dernierJour";
-
-                    $query->whereDate('date', '>=', $dateDebut)
-                        ->whereDate('date', '<=', $dateFin);
-                } else {
-                    // Recherche pour un seul mois
-                    $query->whereYear('date', $annee)
-                        ->whereMonth('date', $mois);
-                }
-                break;
-
-            case '3': // Ans
-                $annee = $request->input('annee');
-
-                if ($request->has('annee_fin')) {
-                    // Recherche entre deux années
-                    $anneeFin = $request->input('annee_fin');
-
-                    $query->whereYear('date', '>=', $annee)
-                        ->whereYear('date', '<=', $anneeFin);
-                } else {
-                    // Recherche pour une seule année
-                    $query->whereYear('date', $annee);
-                }
-                break;
-        }
-
-        // Obtenir les résultats groupés par type de constat
-        $resultats = $query->join('constats', 'actions.constats_id', '=', 'constats.id')
-            ->select('constats.libelle', DB::raw('count(*) as nombre'))
-            ->groupBy('constats.libelle')
-            ->get();
-
-        // Calculer le total pour les pourcentages
-        $total = $resultats->sum('nombre');
-
-        // Calculer les pourcentages pour chaque type de constat
-        $statistiques = $resultats->map(function ($item) use ($total) {
-            $pourcentage = $total > 0 ? ($item->nombre / $total) * 100 : 0;
-
+        $statistiques = $resultats->map(function ($nombre, $libelle) use ($total) {
+            $pourcentage = $total > 0 ? ($nombre / $total) * 100 : 0;
             return [
-                'libelle' => $item->libelle,
-                'nombre' => (int) $item->nombre,
+                'libelle' => $libelle,
+                'nombre' => (int) $nombre,
                 'pourcentage' => $pourcentage
             ];
-        });
+        })->values();
 
         return response()->json($statistiques);
     }
@@ -102,92 +83,344 @@ class DashboardController extends Controller
     {
         $query = Actions::query();
 
-        // Ajouter le filtre pour num_actions commençant par AI-
         $query->where('num_actions', 'like', 'AI-%');
+
+        if ($request->has('user_id') && !empty($request->user_id)) {
+            $query->where('users_id', $request->user_id);
+        }
+
+        // Récupère toutes les actions (filtrage date fait après)
+        $actions = $query->get();
+
+        // Récupère les dates du JSON
+        $filteredActions = $actions->filter(function ($action) use ($request) {
+            $observations = json_decode($action->observation_par_suivi, true);
+            if (!$observations || !is_array($observations))
+                return false;
+
+            // Prend la dernière date (ou la première selon besoin)
+            $date = $observations[count($observations) - 1]['date'] ?? null;
+            if (!$date)
+                return false;
+
+            $type = $request->input('type', '1');
+            switch ($type) {
+                case '1': // Jours
+                    $dateDebut = $request->input('date_debut');
+                    $dateFin = $request->input('date_fin', $dateDebut);
+                    return $date >= $dateDebut && $date <= $dateFin;
+                case '2': // Mois
+                    $mois = $request->input('mois');
+                    $annee = $request->input('annee');
+                    $moisFin = $request->input('mois_fin', $mois);
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    $dateStart = "$annee-" . str_pad($mois, 2, '0', STR_PAD_LEFT) . "-01";
+                    $dateEnd = "$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-" . date('t', strtotime("$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-01"));
+                    return $date >= $dateStart && $date <= $dateEnd;
+                case '3': // Ans
+                    $annee = $request->input('annee');
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    return substr($date, 0, 4) >= $annee && substr($date, 0, 4) <= $anneeFin;
+            }
+            return true;
+        });
+
+        // Groupement par type de constat
+        $resultats = $filteredActions->groupBy(function ($action) {
+            return $action->constat->libelle ?? 'Inconnu';
+        })->map(function ($group) {
+            return count($group);
+        });
+
+        $total = $resultats->sum();
+
+        $statistiques = $resultats->map(function ($nombre, $libelle) use ($total) {
+            $pourcentage = $total > 0 ? ($nombre / $total) * 100 : 0;
+            return [
+                'libelle' => $libelle,
+                'nombre' => (int) $nombre,
+                'pourcentage' => $pourcentage
+            ];
+        })->values();
+
+        return response()->json($statistiques);
+    }
+
+    public function indexAE(Request $request)
+    {
+        $query = Actions::query();
+
+        // Ajouter le filtre pour num_actions commençant par AE-
+        $query->where('num_actions', 'like', 'AE-%');
 
         // Filtrer par utilisateur si spécifié
         if ($request->has('user_id') && !empty($request->user_id)) {
             $query->where('users_id', $request->user_id);
         }
 
-        // Appliquer les filtres de date selon le type de recherche
-        $type = $request->input('type', '1');
+        // Récupère toutes les actions (filtrage date fait après)
+        $actions = $query->get();
 
-        switch ($type) {
-            case '1': // Jours
-                $dateDebut = $request->input('date_debut');
-                $dateFin = $request->input('date_fin', $dateDebut);
+        // Récupère les dates du JSON
+        $filteredActions = $actions->filter(function ($action) use ($request) {
+            $observations = json_decode($action->observation_par_suivi, true);
+            if (!$observations || !is_array($observations))
+                return false;
 
-                $query->whereDate('date', '>=', $dateDebut)
-                    ->whereDate('date', '<=', $dateFin);
-                break;
+            // Prend la dernière date (ou la première selon besoin)
+            $date = $observations[count($observations) - 1]['date'] ?? null;
+            if (!$date)
+                return false;
 
-            case '2': // Mois
-                $mois = $request->input('mois');
-                $annee = $request->input('annee');
-
-                if ($request->has('mois_fin') && $request->has('annee_fin')) {
-                    // Recherche entre deux mois
-                    $moisFin = $request->input('mois_fin');
-                    $anneeFin = $request->input('annee_fin');
-
-                    // Calculer la date de début et de fin
-                    $dateDebut = "$annee-" . str_pad($mois, 2, '0', STR_PAD_LEFT) . "-01";
-
-                    // Dernier jour du mois de fin
-                    $dernierJour = date('t', strtotime("$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-01"));
-                    $dateFin = "$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-$dernierJour";
-
-                    $query->whereDate('date', '>=', $dateDebut)
-                        ->whereDate('date', '<=', $dateFin);
-                } else {
-                    // Recherche pour un seul mois
-                    $query->whereYear('date', $annee)
-                        ->whereMonth('date', $mois);
-                }
-                break;
-
-            case '3': // Ans
-                $annee = $request->input('annee');
-
-                if ($request->has('annee_fin')) {
-                    // Recherche entre deux années
-                    $anneeFin = $request->input('annee_fin');
-
-                    $query->whereYear('date', '>=', $annee)
-                        ->whereYear('date', '<=', $anneeFin);
-                } else {
-                    // Recherche pour une seule année
-                    $query->whereYear('date', $annee);
-                }
-                break;
-        }
-
-        // Obtenir les résultats groupés par type de constat
-        $resultats = $query->join('constats', 'actions.constats_id', '=', 'constats.id')
-            ->select('constats.libelle', DB::raw('count(*) as nombre'))
-            ->groupBy('constats.libelle')
-            ->get();
-
-        // Calculer le total pour les pourcentages
-        $total = $resultats->sum('nombre');
-
-        // Calculer les pourcentages pour chaque type de constat
-        $statistiques = $resultats->map(function ($item) use ($total) {
-            $pourcentage = $total > 0 ? ($item->nombre / $total) * 100 : 0;
-
-            return [
-                'libelle' => $item->libelle,
-                'nombre' => (int) $item->nombre,
-                'pourcentage' => $pourcentage
-            ];
+            $type = $request->input('type', '1');
+            switch ($type) {
+                case '1': // Jours
+                    $dateDebut = $request->input('date_debut');
+                    $dateFin = $request->input('date_fin', $dateDebut);
+                    return $date >= $dateDebut && $date <= $dateFin;
+                case '2': // Mois
+                    $mois = $request->input('mois');
+                    $annee = $request->input('annee');
+                    $moisFin = $request->input('mois_fin', $mois);
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    $dateStart = "$annee-" . str_pad($mois, 2, '0', STR_PAD_LEFT) . "-01";
+                    $dateEnd = "$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-" . date('t', strtotime("$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-01"));
+                    return $date >= $dateStart && $date <= $dateEnd;
+                case '3': // Ans
+                    $annee = $request->input('annee');
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    return substr($date, 0, 4) >= $annee && substr($date, 0, 4) <= $anneeFin;
+            }
+            return true;
         });
 
-        //Log::info('Statistiques AI:', $statistiques->toArray());
+        // Groupement par type de constat
+        $resultats = $filteredActions->groupBy(function ($action) {
+            return $action->constat->libelle ?? 'Inconnu';
+        })->map(function ($group) {
+            return count($group);
+        });
+
+        $total = $resultats->sum();
+
+        $statistiques = $resultats->map(function ($nombre, $libelle) use ($total) {
+            $pourcentage = $total > 0 ? ($nombre / $total) * 100 : 0;
+            return [
+                'libelle' => $libelle,
+                'nombre' => (int) $nombre,
+                'pourcentage' => $pourcentage
+            ];
+        })->values();
 
         return response()->json($statistiques);
     }
 
+    public function indexSWOT(Request $request)
+    {
+        $query = Actions::query();
+
+        // Ajouter le filtre pour num_actions commençant par SWOT-
+        $query->where('num_actions', 'like', 'SWOT-%');
+
+        // Filtrer par utilisateur si spécifié
+        if ($request->has('user_id') && !empty($request->user_id)) {
+            $query->where('users_id', $request->user_id);
+        }
+
+        // Récupère toutes les actions (filtrage date fait après)
+        $actions = $query->get();
+
+        // Récupère les dates du JSON
+        $filteredActions = $actions->filter(function ($action) use ($request) {
+            $observations = json_decode($action->observation_par_suivi, true);
+            if (!$observations || !is_array($observations))
+                return false;
+
+            // Prend la dernière date (ou la première selon besoin)
+            $date = $observations[count($observations) - 1]['date'] ?? null;
+            if (!$date)
+                return false;
+
+            $type = $request->input('type', '1');
+            switch ($type) {
+                case '1': // Jours
+                    $dateDebut = $request->input('date_debut');
+                    $dateFin = $request->input('date_fin', $dateDebut);
+                    return $date >= $dateDebut && $date <= $dateFin;
+                case '2': // Mois
+                    $mois = $request->input('mois');
+                    $annee = $request->input('annee');
+                    $moisFin = $request->input('mois_fin', $mois);
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    $dateStart = "$annee-" . str_pad($mois, 2, '0', STR_PAD_LEFT) . "-01";
+                    $dateEnd = "$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-" . date('t', strtotime("$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-01"));
+                    return $date >= $dateStart && $date <= $dateEnd;
+                case '3': // Ans
+                    $annee = $request->input('annee');
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    return substr($date, 0, 4) >= $annee && substr($date, 0, 4) <= $anneeFin;
+            }
+            return true;
+        });
+
+        // Groupement par type de constat
+        $resultats = $filteredActions->groupBy(function ($action) {
+            return $action->constat->libelle ?? 'Inconnu';
+        })->map(function ($group) {
+            return count($group);
+        });
+
+        $total = $resultats->sum();
+
+        $statistiques = $resultats->map(function ($nombre, $libelle) use ($total) {
+            $pourcentage = $total > 0 ? ($nombre / $total) * 100 : 0;
+            return [
+                'libelle' => $libelle,
+                'nombre' => (int) $nombre,
+                'pourcentage' => $pourcentage
+            ];
+        })->values();
+
+        return response()->json($statistiques);
+    }
+
+    public function indexCAC(Request $request)
+    {
+        $query = Actions::query();
+
+        // Ajouter le filtre pour num_actions commençant par CAC-
+        $query->where('num_actions', 'like', 'CAC-%');
+
+        // Filtrer par utilisateur si spécifié
+        if ($request->has('user_id') && !empty($request->user_id)) {
+            $query->where('users_id', $request->user_id);
+        }
+
+        // Récupère toutes les actions (filtrage date fait après)
+        $actions = $query->get();
+
+        // Récupère les dates du JSON
+        $filteredActions = $actions->filter(function ($action) use ($request) {
+            $observations = json_decode($action->observation_par_suivi, true);
+            if (!$observations || !is_array($observations))
+                return false;
+
+            // Prend la dernière date (ou la première selon besoin)
+            $date = $observations[count($observations) - 1]['date'] ?? null;
+            if (!$date)
+                return false;
+
+            $type = $request->input('type', '1');
+            switch ($type) {
+                case '1': // Jours
+                    $dateDebut = $request->input('date_debut');
+                    $dateFin = $request->input('date_fin', $dateDebut);
+                    return $date >= $dateDebut && $date <= $dateFin;
+                case '2': // Mois
+                    $mois = $request->input('mois');
+                    $annee = $request->input('annee');
+                    $moisFin = $request->input('mois_fin', $mois);
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    $dateStart = "$annee-" . str_pad($mois, 2, '0', STR_PAD_LEFT) . "-01";
+                    $dateEnd = "$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-" . date('t', strtotime("$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-01"));
+                    return $date >= $dateStart && $date <= $dateEnd;
+                case '3': // Ans
+                    $annee = $request->input('annee');
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    return substr($date, 0, 4) >= $annee && substr($date, 0, 4) <= $anneeFin;
+            }
+            return true;
+        });
+
+        // Groupement par type de constat
+        $resultats = $filteredActions->groupBy(function ($action) {
+            return $action->constat->libelle ?? 'Inconnu';
+        })->map(function ($group) {
+            return count($group);
+        });
+
+        $total = $resultats->sum();
+
+        $statistiques = $resultats->map(function ($nombre, $libelle) use ($total) {
+            $pourcentage = $total > 0 ? ($nombre / $total) * 100 : 0;
+            return [
+                'libelle' => $libelle,
+                'nombre' => (int) $nombre,
+                'pourcentage' => $pourcentage
+            ];
+        })->values();
+
+        return response()->json($statistiques);
+    }
+
+    public function indexES(Request $request)
+    {
+        $query = Actions::query();
+
+        // Ajouter le filtre pour num_actions commençant par ES-
+        $query->where('num_actions', 'like', 'ES-%');
+
+        // Filtrer par utilisateur si spécifié
+        if ($request->has('user_id') && !empty($request->user_id)) {
+            $query->where('users_id', $request->user_id);
+        }
+
+        // Récupère toutes les actions (filtrage date fait après)
+        $actions = $query->get();
+
+        // Récupère les dates du JSON
+        $filteredActions = $actions->filter(function ($action) use ($request) {
+            $observations = json_decode($action->observation_par_suivi, true);
+            if (!$observations || !is_array($observations))
+                return false;
+
+            // Prend la dernière date (ou la première selon besoin)
+            $date = $observations[count($observations) - 1]['date'] ?? null;
+            if (!$date)
+                return false;
+
+            $type = $request->input('type', '1');
+            switch ($type) {
+                case '1': // Jours
+                    $dateDebut = $request->input('date_debut');
+                    $dateFin = $request->input('date_fin', $dateDebut);
+                    return $date >= $dateDebut && $date <= $dateFin;
+                case '2': // Mois
+                    $mois = $request->input('mois');
+                    $annee = $request->input('annee');
+                    $moisFin = $request->input('mois_fin', $mois);
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    $dateStart = "$annee-" . str_pad($mois, 2, '0', STR_PAD_LEFT) . "-01";
+                    $dateEnd = "$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-" . date('t', strtotime("$anneeFin-" . str_pad($moisFin, 2, '0', STR_PAD_LEFT) . "-01"));
+                    return $date >= $dateStart && $date <= $dateEnd;
+                case '3': // Ans
+                    $annee = $request->input('annee');
+                    $anneeFin = $request->input('annee_fin', $annee);
+                    return substr($date, 0, 4) >= $annee && substr($date, 0, 4) <= $anneeFin;
+            }
+            return true;
+        });
+
+        // Groupement par type de constat
+        $resultats = $filteredActions->groupBy(function ($action) {
+            return $action->constat->libelle ?? 'Inconnu';
+        })->map(function ($group) {
+            return count($group);
+        });
+
+        $total = $resultats->sum();
+
+        $statistiques = $resultats->map(function ($nombre, $libelle) use ($total) {
+            $pourcentage = $total > 0 ? ($nombre / $total) * 100 : 0;
+            return [
+                'libelle' => $libelle,
+                'nombre' => (int) $nombre,
+                'pourcentage' => $pourcentage
+            ];
+        })->values();
+
+        return response()->json($statistiques);
+    }
     /**
      * Récupérer la liste des utilisateurs
      *
@@ -217,6 +450,18 @@ class DashboardController extends Controller
                 ->where('num_actions', 'like', $prefix . '-%')
                 ->count(),
             'abandonne' => Actions::where('statut', 'Abandonné')
+                ->where('num_actions', 'like', $prefix . '-%')
+                ->count(),
+            'regle' => Actions::where('statut', 'Réglé')
+                ->where('num_actions', 'like', $prefix . '-%')
+                ->count(),
+            'non_regle' => Actions::where('statut', 'Non Réglé')
+                ->where('num_actions', 'like', $prefix . '-%')
+                ->count(),
+            'non_realise' => Actions::where('statut', 'Non Réalisé')
+                ->where('num_actions', 'like', $prefix . '-%')
+                ->count(),
+            'a_reporter' => Actions::where('statut', 'A Reporter')
                 ->where('num_actions', 'like', $prefix . '-%')
                 ->count(),
         ];
@@ -262,4 +507,79 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function getCACActionsByStatus(Request $request)
+    {
+        $statut = $request->statut;
+
+        $query = Actions::where('statut', $statut)
+            ->where('num_actions', 'like', 'CAC-%')
+            ->select('id', 'description', 'num_actions', 'statut', 'users_id')
+            ->orderBy('id', 'desc');
+
+        $actions = $query->get();
+
+        return response()->json([
+            'actions' => $actions,
+            'total' => Actions::where('statut', $statut)
+                ->where('num_actions', 'like', 'CAC-%')
+                ->count()
+        ]);
+    }
+
+    public function getAEActionsByStatus(Request $request)
+    {
+        $statut = $request->statut;
+
+        $query = Actions::where('statut', $statut)
+            ->where('num_actions', 'like', 'AE-%')
+            ->select('id', 'description', 'num_actions', 'statut', 'users_id')
+            ->orderBy('id', 'desc');
+
+        $actions = $query->get();
+
+        return response()->json([
+            'actions' => $actions,
+            'total' => Actions::where('statut', $statut)
+                ->where('num_actions', 'like', 'AE-%')
+                ->count()
+        ]);
+    }
+
+    public function getSWOTActionsByStatus(Request $request)
+    {
+        $statut = $request->statut;
+
+        $query = Actions::where('statut', $statut)
+            ->where('num_actions', 'like', 'SWOT-%')
+            ->select('id', 'description', 'num_actions', 'statut', 'users_id')
+            ->orderBy('id', 'desc');
+
+        $actions = $query->get();
+
+        return response()->json([
+            'actions' => $actions,
+            'total' => Actions::where('statut', $statut)
+                ->where('num_actions', 'like', 'SWOT-%')
+                ->count()
+        ]);
+    }
+
+    public function getESActionsByStatus(Request $request)
+    {
+        $statut = $request->statut;
+
+        $query = Actions::where('statut', $statut)
+            ->where('num_actions', 'like', 'ES-%')
+            ->select('id', 'description', 'num_actions', 'statut', 'users_id')
+            ->orderBy('id', 'desc');
+
+        $actions = $query->get();
+
+        return response()->json([
+            'actions' => $actions,
+            'total' => Actions::where('statut', $statut)
+                ->where('num_actions', 'like', 'ES-%')
+                ->count()
+        ]);
+    }
 }

@@ -3,77 +3,32 @@
     <div class="relative w-full">
         <!-- Résumé des données pour l'option annuelle -->
         <div
-            v-if="annuelData && (annuelData.dateHeure || annuelData.joursHeure)"
+            v-if="annuelData && annuelData.dateHeure"
             class="ml-4 text-sm text-gray-700"
         >
-            <!-- Affichage pour mode "Date et heure" -->
-            <template
-                v-if="annuelData.mode === 'dateHeure' && annuelData.dateHeure"
+            <div>
+                <span class="font-medium">Début:</span>
+                {{ formatDate(annuelData.dateHeure.debut) }}
+            </div>
+            <div>
+                <span class="font-medium">Fin:</span>
+                {{ formatDate(annuelData.dateHeure.fin) }}
+            </div>
+            <div
+                v-if="
+                    annuelData.dateHeure.suivis &&
+                    annuelData.dateHeure.suivis.length > 0
+                "
             >
-                <div>
-                    <span class="font-medium">Début:</span>
-                    {{ formatDate(annuelData.dateHeure.debut) }}
-                </div>
-                <div>
-                    <span class="font-medium">Fin:</span>
-                    {{ formatDate(annuelData.dateHeure.fin) }}
-                </div>
-                <div
-                    v-if="
-                        annuelData.dateHeure.suivis &&
-                        annuelData.dateHeure.suivis.length > 0
-                    "
+                <span class="font-medium">Suivis:</span>
+                <span
+                    v-for="(suivi, index) in annuelData.dateHeure.suivis"
+                    :key="index"
                 >
-                    <span class="font-medium">Suivis:</span>
-                    <span
-                        v-for="(suivi, index) in annuelData.dateHeure.suivis"
-                        :key="index"
-                    >
-                        {{ index > 0 ? ", " : "" }}
-                        suivi {{ index + 1 }}: {{ formatDate(suivi) }}
-                    </span>
-                </div>
-            </template>
-
-            <!-- Affichage pour mode "Jours et heure" -->
-            <template
-                v-if="annuelData.mode === 'joursHeure' && annuelData.joursHeure"
-            >
-                <div>
-                    <span class="font-medium">Jours:</span>
-                    {{ annuelData.joursHeure.jours.join(", ") }}
-                </div>
-                <div>
-                    <span class="font-medium">Heures:</span>
-                    {{ annuelData.joursHeure.heureDebut }} -
-                    {{ annuelData.joursHeure.heureFin }}
-                </div>
-                <div>
-                    <span class="font-medium">Période:</span>
-                    {{
-                        annuelData.joursHeure.periodeMois === "premier"
-                            ? "Premier mois"
-                            : "Dernier mois"
-                    }}
-                </div>
-                <div>
-                    <span class="font-medium">Répétition:</span>
-                    {{
-                        annuelData.joursHeure.frequence === "uneFois"
-                            ? "Une fois"
-                            : "Tous les ans"
-                    }}
-                </div>
-                <div
-                    v-if="
-                        annuelData.joursHeure.suivis &&
-                        annuelData.joursHeure.suivis.length > 0
-                    "
-                >
-                    <span class="font-medium">Suivis:</span>
-                    {{ annuelData.joursHeure.suivis.length }} suivi(s)
-                </div>
-            </template>
+                    {{ index > 0 ? ", " : "" }}
+                    suivi {{ index + 1 }}: {{ formatDate(suivi) }}
+                </span>
+            </div>
         </div>
 
         <!-- Modal pour l'option annuelle -->
